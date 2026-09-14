@@ -53,7 +53,7 @@ export const FinalCTA: React.FC = () => {
 
         <Reveal delay={0.25}>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Button href="#pricing" variant="secondary" size="lg" withArrow>
+            <Button href="/app" variant="secondary" size="lg" withArrow>
               START BUILDING
             </Button>
             <Button href="#pricing" variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10">

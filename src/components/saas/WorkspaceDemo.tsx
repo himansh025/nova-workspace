@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import Sidebar from "@/components/product-ui/Sidebar";
 import TaskBoard from "@/components/product-ui/TaskBoard";
 import AIPanel from "@/components/product-ui/AIPanel";
@@ -26,11 +27,17 @@ export const WorkspaceDemo: React.FC<WorkspaceDemoProps> = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded hidden sm:inline">
             Project: Platform Core 2.0
           </span>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <Link
+            href="/app"
+            className="flex items-center gap-1 px-2.5 py-1 rounded bg-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/30 border border-[var(--color-accent)]/40 text-[11px] font-medium text-white transition-colors"
+          >
+            <span>Launch Studio →</span>
+          </Link>
         </div>
       </div>
 

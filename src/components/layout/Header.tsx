@@ -81,21 +81,21 @@ export const Header: React.FC = () => {
 
           {/* RIGHT: Auth & CTA (Desktop) */}
           <div className="hidden md:flex items-center gap-3">
-            <button
-              onClick={() => {}}
+            <Link
+              href="/app"
               className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-foreground)] px-3 py-2 transition-colors"
             >
               Log in
-            </button>
-            <Button href="#pricing" variant="primary" size="sm" withArrow>
-              Get started
+            </Link>
+            <Button href="/app" variant="primary" size="sm" withArrow>
+              Launch App
             </Button>
           </div>
 
           {/* Mobile Right Controls */}
           <div className="flex md:hidden items-center gap-2.5">
-            <Button href="#pricing" variant="primary" size="sm">
-              Get started
+            <Button href="/app" variant="primary" size="sm">
+              Launch App
             </Button>
             <button
               onClick={() => setIsMobileMenuOpen(true)}

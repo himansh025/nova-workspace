@@ -1,0 +1,1534 @@
+{
+  "projects": [
+    {
+      "id": "prj-1",
+      "name": "Platform Core 2.0",
+      "slug": "platform-core",
+      "description": "High-performance distributed telemetry, state sync, and real-time computation engine.",
+      "sprint": "Sprint 48",
+      "progressPercent": 84,
+      "cycleTime": "1.4d",
+      "velocity": "+24% vs avg",
+      "activeBranch": "main@u981r6l",
+      "repository": "github.com/nova-arch/platform-core",
+      "createdAt": "2026-08-01T10:00:00Z",
+      "updatedAt": "2026-09-13T17:09:09.272Z"
+    },
+    {
+      "id": "prj-2",
+      "name": "Edge Compute Gateway",
+      "slug": "edge-gateway",
+      "description": "Global low-latency edge routing layer with sub-10ms TTFB and automated SSL offloading.",
+      "sprint": "Sprint 12",
+      "progressPercent": 62,
+      "cycleTime": "1.1d",
+      "velocity": "+18% vs avg",
+      "activeBranch": "main@b72a09c",
+      "repository": "github.com/nova-arch/edge-gateway",
+      "createdAt": "2026-08-15T09:00:00Z",
+      "updatedAt": "2026-09-12T14:15:00Z"
+    },
+    {
+      "id": "prj-3",
+      "name": "Auth & Identity Service 3.0",
+      "slug": "auth-service",
+      "description": "Zero-trust identity mesh, OAuth 2.1 PKCE server, and granular RBAC authorization engine.",
+      "sprint": "Sprint 29",
+      "progressPercent": 45,
+      "cycleTime": "2.3d",
+      "velocity": "+9% vs avg",
+      "activeBranch": "feat/oauth-v3@c193ab2",
+      "repository": "github.com/nova-arch/auth-service",
+      "createdAt": "2026-08-20T11:30:00Z",
+      "updatedAt": "2026-09-13T12:00:00Z"
+    }
+  ],
+  "team": [
+    {
+      "id": "usr-1",
+      "name": "Elena Rostova",
+      "email": "elena@nova.dev",
+      "role": "Lead Architect",
+      "avatar": "",
+      "initials": "ER",
+      "status": "online",
+      "activeTasksCount": 3
+    },
+    {
+      "id": "usr-2",
+      "name": "Marcus Chen",
+      "email": "marcus@nova.dev",
+      "role": "Staff Frontend Engineer",
+      "avatar": "",
+      "initials": "MC",
+      "status": "online",
+      "activeTasksCount": 2
+    },
+    {
+      "id": "usr-3",
+      "name": "Siddharth N.",
+      "email": "siddharth@nova.dev",
+      "role": "Distributed Systems Lead",
+      "avatar": "",
+      "initials": "SN",
+      "status": "away",
+      "activeTasksCount": 3
+    },
+    {
+      "id": "usr-4",
+      "name": "Devon Vance",
+      "email": "devon@nova.dev",
+      "role": "Graphics & Realtime Specialist",
+      "avatar": "",
+      "initials": "DV",
+      "status": "online",
+      "activeTasksCount": 2
+    },
+    {
+      "id": "usr-5",
+      "name": "Aaliyah Patel",
+      "email": "aaliyah@nova.dev",
+      "role": "Security & Compliance Lead",
+      "avatar": "",
+      "initials": "AP",
+      "status": "offline",
+      "activeTasksCount": 2
+    }
+  ],
+  "tasks": [
+    {
+      "id": "tsk-1",
+      "key": "NV-842",
+      "projectId": "prj-1",
+      "title": "Stream zero-copy binary parser for telemetry events",
+      "description": "Implement zero-copy memory buffers using WebAssembly memory allocation to parse 100k incoming events/sec without garbage collector pauses.",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "Performance",
+        "Core",
+        "Telemetry"
+      ],
+      "branch": "feat/binary-parser",
+      "estimate": "3 pts",
+      "createdAt": "2026-09-10T08:30:00Z",
+      "updatedAt": "2026-09-13T16:57:02.600Z"
+    },
+    {
+      "id": "tsk-2",
+      "key": "NV-847",
+      "projectId": "prj-1",
+      "title": "Implement optimistic offline mutations in sync engine",
+      "description": "Persist mutation queues in IndexedDB with deterministic conflict resolution clocks to guarantee reconciliation upon reconnect.",
+      "status": "review",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-2",
+        "name": "Marcus Chen",
+        "avatar": "",
+        "initials": "MC"
+      },
+      "tags": [
+        "State",
+        "Client",
+        "CRDT"
+      ],
+      "branch": "fix/offline-sync",
+      "estimate": "5 pts",
+      "createdAt": "2026-09-11T10:15:00Z",
+      "updatedAt": "2026-09-13T14:40:00Z"
+    },
+    {
+      "id": "tsk-3",
+      "key": "NV-851",
+      "projectId": "prj-1",
+      "title": "Consolidate edge compute middleware headers",
+      "description": "Standardize request context propagation, trace IDs, and geo-ip headers across all V8 edge runtime worker delegates.",
+      "status": "done",
+      "priority": "medium",
+      "assignee": {
+        "id": "usr-3",
+        "name": "Siddharth N.",
+        "avatar": "",
+        "initials": "SN"
+      },
+      "tags": [
+        "Infra",
+        "Edge"
+      ],
+      "branch": "infra/edge-headers",
+      "estimate": "2 pts",
+      "createdAt": "2026-09-09T14:00:00Z",
+      "updatedAt": "2026-09-12T19:10:00Z"
+    },
+    {
+      "id": "tsk-4",
+      "key": "NV-859",
+      "projectId": "prj-1",
+      "title": "Audit WebGL shader memory allocations on unmount",
+      "description": "Clean up orphan GPU buffers and texture handles when switching views to prevent memory leaks during extended browser sessions.",
+      "status": "review",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-4",
+        "name": "Devon Vance",
+        "avatar": "",
+        "initials": "DV"
+      },
+      "tags": [
+        "Graphics",
+        "Bug"
+      ],
+      "estimate": "3 pts",
+      "createdAt": "2026-09-12T11:00:00Z",
+      "updatedAt": "2026-09-13T16:57:16.822Z"
+    },
+    {
+      "id": "tsk-5",
+      "key": "NV-860",
+      "projectId": "prj-1",
+      "title": "Mitigate connection pool exhaustion under sudden traffic spikes",
+      "description": "Introduce adaptive queuing and backpressure shed algorithms in the connection multiplexer to avoid Postgres pool saturation.",
+      "status": "in_progress",
+      "priority": "urgent",
+      "assignee": {
+        "id": "usr-3",
+        "name": "Siddharth N.",
+        "avatar": "",
+        "initials": "SN"
+      },
+      "tags": [
+        "Database",
+        "Reliability"
+      ],
+      "branch": "fix/conn-pool-queue",
+      "estimate": "5 pts",
+      "createdAt": "2026-09-12T15:20:00Z",
+      "updatedAt": "2026-09-13T16:57:25.526Z"
+    },
+    {
+      "id": "tsk-6",
+      "key": "NV-862",
+      "projectId": "prj-1",
+      "title": "Enforce strict CSP & Subresource Integrity policy across micro-frontends",
+      "description": "Generate dynamic cryptographic nonces for inline script execution and enforce sha384 subresource hashes on external assets.",
+      "status": "review",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-5",
+        "name": "Aaliyah Patel",
+        "avatar": "",
+        "initials": "AP"
+      },
+      "tags": [
+        "Security",
+        "Compliance"
+      ],
+      "branch": "security/csp-sri",
+      "estimate": "3 pts",
+      "createdAt": "2026-09-11T13:40:00Z",
+      "updatedAt": "2026-09-13T11:20:00Z"
+    },
+    {
+      "id": "tsk-7",
+      "key": "NV-865",
+      "projectId": "prj-1",
+      "title": "Differential CRDT state delta compaction engine",
+      "description": "Compress historical operation logs into snapshot states when operation sequence exceeds 10,000 steps.",
+      "status": "backlog",
+      "priority": "medium",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "CRDT",
+        "Storage"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-13T09:00:00Z",
+      "updatedAt": "2026-09-13T16:56:51.159Z"
+    },
+    {
+      "id": "tsk-8",
+      "key": "NV-868",
+      "projectId": "prj-1",
+      "title": "Virtualized tree renderer for 50,000+ dependency nodes",
+      "description": "Build windowed DOM rendering for large multi-repo AST hierarchies to keep frame rate pinned at 60fps.",
+      "status": "backlog",
+      "priority": "low",
+      "assignee": {
+        "id": "usr-2",
+        "name": "Marcus Chen",
+        "avatar": "",
+        "initials": "MC"
+      },
+      "tags": [
+        "UI",
+        "Optimization"
+      ],
+      "estimate": "3 pts",
+      "createdAt": "2026-09-13T10:15:00Z",
+      "updatedAt": "2026-09-13T16:56:48.417Z"
+    },
+    {
+      "id": "tsk-9",
+      "key": "NV-870",
+      "projectId": "prj-1",
+      "title": "Webhook delivery exponential backoff with dead-letter queue",
+      "description": "Implement reliable retry semantics with jitter and dead-letter archiving for third-party HTTP callback subscribers.",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-3",
+        "name": "Siddharth N.",
+        "avatar": "",
+        "initials": "SN"
+      },
+      "tags": [
+        "Webhooks",
+        "Queues"
+      ],
+      "branch": "feat/webhook-retry",
+      "estimate": "5 pts",
+      "createdAt": "2026-09-08T11:00:00Z",
+      "updatedAt": "2026-09-11T16:00:00Z"
+    },
+    {
+      "id": "tsk-10",
+      "key": "NV-873",
+      "projectId": "prj-1",
+      "title": "Multi-tenant token isolation check in JWT verifier",
+      "description": "Verify audience claims and tenant organization bindings on every cryptographic token decode to prevent cross-tenant leakage.",
+      "status": "done",
+      "priority": "urgent",
+      "assignee": {
+        "id": "usr-5",
+        "name": "Aaliyah Patel",
+        "avatar": "",
+        "initials": "AP"
+      },
+      "tags": [
+        "Security",
+        "Auth"
+      ],
+      "branch": "sec/jwt-isolation",
+      "estimate": "2 pts",
+      "createdAt": "2026-09-09T09:30:00Z",
+      "updatedAt": "2026-09-10T15:45:00Z"
+    }
+  ],
+  "specs": [
+    {
+      "id": "spec-1",
+      "key": "SPEC-104",
+      "projectId": "prj-1",
+      "title": "Real-time collaborative CRDT state sync protocol",
+      "summary": "Sub-50ms peer state propagation with deterministic vector clocks and conflict-free delta reconciliation.",
+      "content": "## Architecture Specification: CRDT State Sync Protocol\n\n### 1. Context & Motivation\nEngineering teams need instant, sub-50ms collaborative updates across concurrent sessions without locking documents or experiencing merge anomalies.\n\n### 2. Protocol Design\n- **State Primitive**: State-based Delta-CRDT with Lamport timestamps.\n- **Transport**: WebSocket bidirectional streaming over binary protocol buffer framing.\n- **Storage Strategy**: Local SQLite/IndexedDB journal caching with background cloud sync.\n\n### 3. Verification Criteria\n- p99 round-trip latency under 45ms across 1,000 concurrent active users.\n- Deterministic convergence in chaotic network partitions.\n- Zero data loss on abrupt client termination.",
+      "status": "approved",
+      "author": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "tags": [
+        "CRDT",
+        "Distributed",
+        "Approved"
+      ],
+      "createdAt": "2026-09-02T10:00:00Z",
+      "updatedAt": "2026-09-08T14:30:00Z"
+    },
+    {
+      "id": "spec-2",
+      "key": "SPEC-105",
+      "projectId": "prj-1",
+      "title": "Edge vector search schema for contextual AI reasoning",
+      "summary": "Continuous multi-repo git commit & pull request semantic embeddings indexed directly on edge nodes.",
+      "content": "## Architecture Specification: Edge Vector Search\n\n### 1. Problem Definition\nThe Nova AI Context Engine requires instant semantic search over git commit logs, PR reviews, task trees, and architecture specs without incurring round-trip latency to central clusters.\n\n### 2. Storage & Model Architecture\n- **Embedding Model**: Text-embedding-3-small (1536 dims) quantized to 8-bit integers.\n- **Index Engine**: Hierarchical Navigable Small World (HNSW) graph on edge memory.\n- **Cache Invalidation**: Webhook push notifications from GitHub/GitLab trigger incremental delta updates.\n\n### 3. Open Discussion Points\n- Need consensus on vector memory cache limit per active workspace (proposing 256MB).\n- Reviewing schema for AST node linking.",
+      "status": "review",
+      "author": {
+        "id": "usr-4",
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "tags": [
+        "AI",
+        "Vector",
+        "In-Review"
+      ],
+      "createdAt": "2026-09-05T12:00:00Z",
+      "updatedAt": "2026-09-12T17:10:00Z"
+    },
+    {
+      "id": "spec-3",
+      "key": "SPEC-106",
+      "projectId": "prj-1",
+      "title": "Zero-downtime database migration strategy",
+      "summary": "Dual-write shadow pipeline for customer authentication and workspace tenant tables.",
+      "content": "## Architecture Specification: Zero-Downtime Migration\n\n### 1. Executive Summary\nThis document establishes the four-phase migration framework for updating schema definitions in high-volume production tables without locks.\n\n### 2. Migration Phases\n1. **Expand**: Add new nullable columns and dual-write triggers.\n2. **Backfill**: Asynchronous worker pool migrates legacy rows in chunks of 5,000.\n3. **Switch Read**: Direct primary read paths to the new schema with automatic fallback.\n4. **Contract**: Safely drop deprecated columns once traffic stabilizes over 72 hours.\n\n### 3. Rollback Playbook\nIf write latency p99 exceeds 35ms during Phase 2, automated circuit breakers pause the backfill and disable shadow triggers immediately.",
+      "status": "approved",
+      "author": {
+        "id": "usr-3",
+        "name": "Siddharth N.",
+        "initials": "SN"
+      },
+      "tags": [
+        "Database",
+        "Migration",
+        "Approved"
+      ],
+      "createdAt": "2026-09-01T09:00:00Z",
+      "updatedAt": "2026-09-07T11:00:00Z"
+    }
+  ],
+  "releases": [
+    {
+      "id": "rel-1",
+      "version": "v2.4.0-production",
+      "projectId": "prj-1",
+      "status": "canary",
+      "canaryPercentage": 52,
+      "checksPassed": 5,
+      "totalChecks": 5,
+      "checks": [
+        {
+          "id": "chk-1",
+          "name": "Unit & Integration Test Suite",
+          "category": "test",
+          "status": "passed",
+          "duration": "342ms",
+          "details": "482 tests passed across 34 suites with 98.4% statement coverage"
+        },
+        {
+          "id": "chk-2",
+          "name": "Static AST Security & CVE Audit",
+          "category": "security",
+          "status": "passed",
+          "duration": "180ms",
+          "details": "0 critical, 0 high vulnerabilities detected. All package licenses compliant"
+        },
+        {
+          "id": "chk-3",
+          "name": "Schema Migration Shadow Dry-Run",
+          "category": "database",
+          "status": "passed",
+          "duration": "520ms",
+          "details": "Dual-write simulation executed against staging cluster with 0 write conflicts"
+        },
+        {
+          "id": "chk-4",
+          "name": "Minimal Container Build & Digest Verification",
+          "category": "build",
+          "status": "passed",
+          "duration": "890ms",
+          "details": "Docker image digest sha256:7f42c1... signed with Cosign key"
+        },
+        {
+          "id": "chk-5",
+          "name": "E2E Distributed Smoke Simulation",
+          "category": "e2e",
+          "status": "passed",
+          "duration": "1240ms",
+          "details": "Synthetic client journeys completed across 6 global AWS/Cloudflare regions"
+        }
+      ],
+      "changelog": [
+        "Feature: Universal command palette with sub-50ms fuzzy search and keyboard shortcuts",
+        "Enhancement: Contextual AI engine directly cross-references live project tasks and specs",
+        "Fix: Resolved memory leak during long-lived WebSocket sessions",
+        "Perf: Consolidated edge compute middleware headers eliminating 14ms latency",
+        "Security: Added JWT multi-tenant claim isolation verification in auth gateway"
+      ],
+      "createdAt": "2026-09-12T16:00:00Z",
+      "updatedAt": "2026-09-13T17:09:04.285Z"
+    }
+  ],
+  "activities": [
+    {
+      "id": "act-1789319344285",
+      "type": "release",
+      "actor": {
+        "name": "Automated Pipeline",
+        "initials": "CI"
+      },
+      "action": "passed all preflight verification checks",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318869841",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 52%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318869541",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 53%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318868625",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 54%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318868615",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 56%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318868593",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 58%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318868326",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 59%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318868211",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 60%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318868042",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 61%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318868009",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 62%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867977",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 63%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867892",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 64%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867859",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 65%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867760",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 66%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867677",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 67%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867377",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 68%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867342",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 69%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867293",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 70%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867118",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 71%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867100",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 73%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867089",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 78%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867061",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 81%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867048",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 85%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318867028",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 87%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866426",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 88%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866415",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 87%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866386",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 86%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866372",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 85%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866332",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 83%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866315",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 82%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866098",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 81%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866090",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 80%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866069",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 78%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866057",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 72%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866015",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 67%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318866000",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 64%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865931",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 63%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865913",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 61%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865902",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 62%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865873",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 59%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865859",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 57%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865836",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 55%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865807",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 54%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865786",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 52%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865775",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 50%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865747",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 48%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865734",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 45%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865713",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 44%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865679",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 42%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865646",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 41%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865447",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 40%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865416",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 39%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865406",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 37%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865381",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 36%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865333",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 35%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865311",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 34%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865263",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 33%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865130",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 32%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865106",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 29%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865086",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 26%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865068",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 24%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865055",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 23%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865029",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 22%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318865003",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 21%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864988",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 20%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864965",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 19%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864930",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 17%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864846",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 16%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864797",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 15%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864748",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 14%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864534",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 13%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864501",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 14%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864410",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 15%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864331",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 16%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864311",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 17%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864223",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 18%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864154",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 19%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864087",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 20%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864052",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 22%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864039",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 23%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318864017",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 24%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318863899",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 25%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318863815",
+      "type": "release",
+      "actor": {
+        "name": "Deployment Engine",
+        "initials": "DE"
+      },
+      "action": "updated canary rollout to 26%",
+      "target": "v2.4.0-production",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318645526",
+      "type": "task_status",
+      "actor": {
+        "name": "Siddharth N.",
+        "initials": "SN"
+      },
+      "action": "moved to IN PROGRESS",
+      "target": "NV-860",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318643784",
+      "type": "task_status",
+      "actor": {
+        "name": "Siddharth N.",
+        "initials": "SN"
+      },
+      "action": "moved to REVIEW",
+      "target": "NV-860",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318642653",
+      "type": "task_status",
+      "actor": {
+        "name": "Siddharth N.",
+        "initials": "SN"
+      },
+      "action": "moved to IN PROGRESS",
+      "target": "NV-860",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318638232",
+      "type": "task_status",
+      "actor": {
+        "name": "Siddharth N.",
+        "initials": "SN"
+      },
+      "action": "moved to REVIEW",
+      "target": "NV-860",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318636822",
+      "type": "task_status",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "moved to REVIEW",
+      "target": "NV-859",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318633687",
+      "type": "task_status",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "moved to IN PROGRESS",
+      "target": "NV-859",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318629497",
+      "type": "task_status",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "moved to REVIEW",
+      "target": "NV-859",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318603077",
+      "type": "task_status",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "moved to IN PROGRESS",
+      "target": "NV-859",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789318600491",
+      "type": "task_status",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "moved to REVIEW",
+      "target": "NV-859",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1",
+      "type": "release",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "promoted canary traffic to 25%",
+      "target": "v2.4.0-production",
+      "timestamp": "10m ago"
+    },
+    {
+      "id": "act-2",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "started working on",
+      "target": "NV-842 (Zero-copy binary parser)",
+      "timestamp": "32m ago"
+    },
+    {
+      "id": "act-3",
+      "type": "commit",
+      "actor": {
+        "name": "Marcus Chen",
+        "initials": "MC"
+      },
+      "action": "pushed commit 7b23f1e to",
+      "target": "fix/offline-sync",
+      "timestamp": "1h ago"
+    },
+    {
+      "id": "act-4",
+      "type": "spec_approved",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "approved architecture spec",
+      "target": "SPEC-104 (CRDT State Sync)",
+      "timestamp": "2h ago"
+    },
+    {
+      "id": "act-5",
+      "type": "task_status",
+      "actor": {
+        "name": "Siddharth N.",
+        "initials": "SN"
+      },
+      "action": "moved to Done",
+      "target": "NV-851 (Edge compute middleware headers)",
+      "timestamp": "4h ago"
+    }
+  ],
+  "settings": {
+    "workspaceName": "Nova Engineering Labs",
+    "slug": "nova-core",
+    "defaultBranch": "main",
+    "githubConnected": true,
+    "gitlabConnected": false,
+    "linearSync": true,
+    "autoAssignReviewers": true
+  }
+}

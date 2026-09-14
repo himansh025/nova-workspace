@@ -73,21 +73,22 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
       {/* Bottom CTAs */}
       <div className="border-t border-white/10 pt-6 flex flex-col gap-3">
         <Button
-          href="#pricing"
+          href="/app"
           variant="secondary"
           size="lg"
           withArrow
           onClick={onClose}
           className="w-full justify-center"
         >
-          Get Started Free
+          Launch Workspace App
         </Button>
-        <button
+        <Link
+          href="/app"
           onClick={onClose}
-          className="w-full py-3 text-sm text-white/70 hover:text-white text-center font-medium"
+          className="w-full py-3 text-sm text-white/70 hover:text-white text-center font-medium block"
         >
           Sign in to Workspace
-        </button>
+        </Link>
       </div>
     </div>
   );

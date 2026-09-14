@@ -87,7 +87,7 @@ export const Hero: React.FC = () => {
           data-hero-cta
           className="mt-8 flex flex-wrap items-center justify-center gap-4"
         >
-          <Button href="#pricing" variant="primary" size="lg" withArrow>
+          <Button href="/app" variant="primary" size="lg" withArrow>
             START BUILDING
           </Button>
           <Button
