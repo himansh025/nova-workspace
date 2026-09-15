@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
+  Zap,
   GitPullRequest,
   FileCode2,
   Network,
@@ -42,6 +43,24 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+
+    setActivePersona({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      initials: user.initials,
+      activeTasks: [
+        "NV-842: Zero-copy binary parser",
+        "NV-865: CRDT state delta compaction",
+        "NV-870: Webhook exponential retry"
+      ]
+    });
+  }, [user]);
+
+  useEffect(() => {
     fetch("/api/tasks")
       .then((res) => res.json())
       .then((data) => {
@@ -73,6 +92,12 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       href: "/app/tasks",
       icon: <CheckSquare className="w-4 h-4" />,
       count: counts.tasks
+    },
+    {
+      label: "Sprint Planning",
+      href: "/app/sprints",
+      icon: <Zap className="w-4 h-4 text-amber-400" />,
+      badge: "Sprint 24"
     },
     {
       label: "Pull Requests",
@@ -189,6 +214,15 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           <span>Exit to Public Website</span>
         </Link>
 
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors text-[11px]"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Sign Out</span>
+        </button>
+
         {/* Interactive User Persona Trigger */}
         <button
           onClick={() => setIsProfileModalOpen(true)}
@@ -196,14 +230,14 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           title="Manage User Profile & Identity"
         >
           <div className="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[11px] font-bold text-indigo-400 shrink-0">
-            {activePersona.initials}
+            {user?.initials || activePersona.initials}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-[11px] font-medium text-white truncate group-hover:text-indigo-400 transition-colors">
-              {activePersona.name}
+              {user?.name || activePersona.name}
             </span>
             <span className="text-[9px] font-mono text-neutral-400 truncate">
-              {activePersona.role} • Active
+              {(user?.role || activePersona.role)} • {user ? "Authenticated" : "Active"}
             </span>
           </div>
         </button>

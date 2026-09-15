@@ -93,6 +93,16 @@
       "initials": "AP",
       "status": "offline",
       "activeTasksCount": 2
+    },
+    {
+      "name": "Devon Vance",
+      "email": "tester_1789483535526@acme.dev",
+      "role": "Senior Security Specialist",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      "initials": "DV",
+      "status": "online",
+      "id": "usr-mu2sakyw",
+      "activeTasksCount": 0
     }
   ],
   "tasks": [
@@ -118,7 +128,7 @@
       "branch": "feat/binary-parser",
       "estimate": "3 pts",
       "createdAt": "2026-09-10T08:30:00Z",
-      "updatedAt": "2026-09-13T16:57:02.600Z"
+      "updatedAt": "2026-09-15T18:16:35.406Z"
     },
     {
       "id": "tsk-2",
@@ -454,6 +464,17 @@
     }
   ],
   "activities": [
+    {
+      "id": "act-1789483535528",
+      "type": "member_joined",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "joined workspace squad",
+      "target": "Senior Security Specialist",
+      "timestamp": "Just now"
+    },
     {
       "id": "act-1789319344285",
       "type": "release",

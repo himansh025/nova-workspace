@@ -56,28 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data && data.authenticated && data.user) {
           setUser(data.user);
         } else {
-          // Default demo fallback user if not explicitly logged in
-          setUser({
-            id: "usr-1",
-            name: "Elena Rostova",
-            email: "elena@nova.dev",
-            role: "Lead Architect",
-            organization: "Nova Engineering Labs",
-            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-            initials: "ER",
-          });
+          setUser(null);
         }
       })
       .catch(() => {
-        setUser({
-          id: "usr-1",
-          name: "Elena Rostova",
-          email: "elena@nova.dev",
-          role: "Lead Architect",
-          organization: "Nova Engineering Labs",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-          initials: "ER",
-        });
+        setUser(null);
       })
       .finally(() => {
         setIsLoading(false);

@@ -1,33 +1,47 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import WorkspaceNav from "@/components/workspace/WorkspaceNav";
 import CommandPalette from "@/components/workspace/CommandPalette";
 import TaskModal from "@/components/workspace/TaskModal";
 import { ToastProvider } from "@/components/workspace/ToastProvider";
-import { AuthProvider } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 
-export default function WorkspaceLayout({
-  children
-}: {
-  children: React.ReactNode;
-}) {
+function WorkspaceShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/login");
+    }
+  }, [isLoading, user, router]);
+
   const refreshGlobal = () => {
-    // Notify window or trigger re-renders
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("task-saved"));
     }
   };
 
+  if (isLoading || !user) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0B0C0E] text-neutral-200">
+        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono text-neutral-300">
+          <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
+          Verifying session...
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <div className="flex h-screen w-screen overflow-hidden bg-[#0B0C0E] text-neutral-200 font-sans">
+    <ToastProvider>
+      <div className="flex h-screen w-screen overflow-hidden bg-[#0B0C0E] text-neutral-200 font-sans">
       {/* Persistent Sidebar (Desktop) */}
       <WorkspaceSidebar className="hidden lg:flex" />
 
@@ -72,7 +86,10 @@ export default function WorkspaceLayout({
         onTaskSaved={refreshGlobal}
       />
       </div>
-      </ToastProvider>
-    </AuthProvider>
+    </ToastProvider>
   );
+}
+
+export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
+  return <WorkspaceShell>{children}</WorkspaceShell>;
 }

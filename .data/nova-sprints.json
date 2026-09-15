@@ -1,0 +1,226 @@
+{
+  "sprints": [
+    {
+      "id": "sprint-24",
+      "name": "Sprint 24: Distributed CRDT & Canary Mesh",
+      "goal": "Stabilize CRDT state delta compaction, zero-copy binary parser, and deploy canary traffic to 25%.",
+      "status": "active",
+      "startDate": "2026-09-08",
+      "endDate": "2026-09-22",
+      "totalDays": 14,
+      "currentDay": 8,
+      "totalPoints": 42,
+      "completedPoints": 0,
+      "remainingPoints": 42,
+      "taskIds": [
+        "task-1",
+        "task-2",
+        "task-3",
+        "task-7",
+        "task-9",
+        "task-10",
+        "task-4"
+      ],
+      "burndown": [
+        {
+          "day": 1,
+          "date": "Sep 08",
+          "idealRemaining": 42,
+          "actualRemaining": 42
+        },
+        {
+          "day": 2,
+          "date": "Sep 09",
+          "idealRemaining": 39,
+          "actualRemaining": 42
+        },
+        {
+          "day": 3,
+          "date": "Sep 10",
+          "idealRemaining": 36,
+          "actualRemaining": 37
+        },
+        {
+          "day": 4,
+          "date": "Sep 11",
+          "idealRemaining": 33,
+          "actualRemaining": 34
+        },
+        {
+          "day": 5,
+          "date": "Sep 12",
+          "idealRemaining": 30,
+          "actualRemaining": 29
+        },
+        {
+          "day": 6,
+          "date": "Sep 13",
+          "idealRemaining": 27,
+          "actualRemaining": 26
+        },
+        {
+          "day": 7,
+          "date": "Sep 14",
+          "idealRemaining": 24,
+          "actualRemaining": 26
+        },
+        {
+          "day": 8,
+          "date": "Sep 15",
+          "idealRemaining": 21,
+          "actualRemaining": 42
+        },
+        {
+          "day": 9,
+          "date": "Sep 16",
+          "idealRemaining": 18,
+          "actualRemaining": null
+        },
+        {
+          "day": 10,
+          "date": "Sep 17",
+          "idealRemaining": 15,
+          "actualRemaining": null
+        },
+        {
+          "day": 11,
+          "date": "Sep 18",
+          "idealRemaining": 12,
+          "actualRemaining": null
+        },
+        {
+          "day": 12,
+          "date": "Sep 19",
+          "idealRemaining": 9,
+          "actualRemaining": null
+        },
+        {
+          "day": 13,
+          "date": "Sep 20",
+          "idealRemaining": 6,
+          "actualRemaining": null
+        },
+        {
+          "day": 14,
+          "date": "Sep 21",
+          "idealRemaining": 0,
+          "actualRemaining": null
+        }
+      ]
+    },
+    {
+      "id": "sprint-25",
+      "name": "Sprint 25: Multi-region Sharding & Auth Guard",
+      "goal": "Implement cross-region data replication, session revocation cascade, and edge audit log aggregation.",
+      "status": "planned",
+      "startDate": "2026-09-23",
+      "endDate": "2026-10-07",
+      "totalDays": 14,
+      "currentDay": 0,
+      "totalPoints": 34,
+      "completedPoints": 0,
+      "remainingPoints": 34,
+      "taskIds": [
+        "task-5",
+        "task-6",
+        "task-8"
+      ],
+      "burndown": [
+        {
+          "day": 1,
+          "date": "Sep 23",
+          "idealRemaining": 34,
+          "actualRemaining": 34
+        },
+        {
+          "day": 14,
+          "date": "Oct 07",
+          "idealRemaining": 0,
+          "actualRemaining": null
+        }
+      ]
+    },
+    {
+      "id": "sprint-23",
+      "name": "Sprint 23: Outgoing Webhooks & Schema Validation",
+      "goal": "Finalized HMAC signature verification, dead-letter retry queue, and JSON schema preflight checks.",
+      "status": "completed",
+      "startDate": "2026-08-25",
+      "endDate": "2026-09-07",
+      "totalDays": 14,
+      "currentDay": 14,
+      "totalPoints": 38,
+      "completedPoints": 38,
+      "remainingPoints": 0,
+      "taskIds": [],
+      "burndown": []
+    }
+  ],
+  "velocityHistory": [
+    {
+      "sprintId": "sprint-21",
+      "sprintName": "Sprint 21",
+      "committedPoints": 35,
+      "completedPoints": 33,
+      "completionRate": 94.2
+    },
+    {
+      "sprintId": "sprint-22",
+      "sprintName": "Sprint 22",
+      "committedPoints": 40,
+      "completedPoints": 38,
+      "completionRate": 95
+    },
+    {
+      "sprintId": "sprint-23",
+      "sprintName": "Sprint 23",
+      "committedPoints": 38,
+      "completedPoints": 38,
+      "completionRate": 100
+    }
+  ],
+  "pokerVotes": {
+    "task-1": [
+      {
+        "taskId": "task-1",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-08T10:00:00Z"
+      },
+      {
+        "taskId": "task-1",
+        "voter": "Siddharth N.",
+        "points": 5,
+        "timestamp": "2026-09-08T10:02:00Z"
+      },
+      {
+        "taskId": "task-1",
+        "voter": "Marcus Chen",
+        "points": 8,
+        "timestamp": "2026-09-15T18:16:35.410Z"
+      }
+    ],
+    "task-7": [
+      {
+        "taskId": "task-7",
+        "voter": "Elena Rostova",
+        "points": 13,
+        "timestamp": "2026-09-08T10:05:00Z"
+      },
+      {
+        "taskId": "task-7",
+        "voter": "Siddharth N.",
+        "points": 13,
+        "timestamp": "2026-09-08T10:06:00Z"
+      }
+    ],
+    "task-2": [
+      {
+        "taskId": "task-2",
+        "voter": "Elena Rostova",
+        "points": 5,
+        "timestamp": "2026-09-15T15:03:55.266Z"
+      }
+    ]
+  }
+}

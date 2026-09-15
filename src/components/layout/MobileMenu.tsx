@@ -83,7 +83,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
           Launch Workspace App
         </Button>
         <Link
-          href="/app"
+          href="/login"
           onClick={onClose}
           className="w-full py-3 text-sm text-white/70 hover:text-white text-center font-medium block"
         >

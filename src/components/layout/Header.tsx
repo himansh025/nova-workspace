@@ -82,7 +82,7 @@ export const Header: React.FC = () => {
           {/* RIGHT: Auth & CTA (Desktop) */}
           <div className="hidden md:flex items-center gap-3">
             <Link
-              href="/app"
+              href="/login"
               className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-foreground)] px-3 py-2 transition-colors"
             >
               Log in

@@ -16,29 +16,29 @@
   --color-border-subtle: #F0F2F5;
   --color-border-strong: #D1D5DB;
   
-  /* Brand Accent: Deep Violet / Electric Indigo */
-  --color-accent: #5E43F3;
-  --color-accent-hover: #4F35E2;
-  --color-accent-subtle: rgba(94, 67, 243, 0.07);
-  --color-accent-border: rgba(94, 67, 243, 0.22);
-  --color-accent-foreground: #FFFFFF;
+  /* Brand Accent: Executive Indigo */
+  --color-accent: #7C8AF9;
+  --color-accent-hover: #697BE8;
+  --color-accent-subtle: rgba(124, 138, 249, 0.08);
+  --color-accent-border: rgba(124, 138, 249, 0.2);
+  --color-accent-foreground: #EEF2FF;
 
   /* Optional Secondary Accent: Soft Blue */
   --color-secondary-accent: #0284C7;
   --color-secondary-accent-subtle: rgba(2, 132, 199, 0.08);
 
   /* Status Colors */
-  --color-success: #10B981;
-  --color-success-subtle: rgba(16, 185, 129, 0.1);
-  --color-warning: #F59E0B;
-  --color-warning-subtle: rgba(245, 158, 11, 0.1);
-  --color-error: #EF4444;
+  --color-success: #34D399;
+  --color-success-subtle: rgba(52, 211, 153, 0.12);
+  --color-warning: #F3A65A;
+  --color-warning-subtle: rgba(243, 166, 90, 0.12);
+  --color-error: #F87171;
 
   /* Dark Sections & Product Console Tokens */
-  --color-dark: #0B0C0E;
-  --color-dark-surface: #121316;
-  --color-dark-surface-elevated: #17191E;
-  --color-dark-surface-muted: #1C1E25;
+  --color-dark: #090D12;
+  --color-dark-surface: #101720;
+  --color-dark-surface-elevated: #171F2B;
+  --color-dark-surface-muted: #1B2431;
   --color-dark-foreground: #F5F6F8;
   --color-dark-muted: #8B92A0;
   --color-dark-border: rgba(255, 255, 255, 0.09);
@@ -76,7 +76,7 @@
   --shadow-card: 0 4px 16px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
   --shadow-elevated: 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
   --shadow-product: 0 24px 60px -12px rgba(0, 0, 0, 0.22), 0 8px 24px -4px rgba(0, 0, 0, 0.08);
-  --shadow-glow: 0 0 28px -4px rgba(94, 67, 243, 0.28);
+  --shadow-glow: 0 0 24px -6px rgba(124, 138, 249, 0.2);
 }
 
 /* Dark mode mapping placeholder (for full site dark toggle) */

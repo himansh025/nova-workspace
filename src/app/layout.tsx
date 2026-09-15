@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "NOVA Workspace — AI Workspace for Modern Product & Engineering Teams",
@@ -43,7 +44,7 @@ export default function RootLayout({
         className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)] flex flex-col"
         suppressHydrationWarning
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
