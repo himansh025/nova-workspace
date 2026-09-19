@@ -11,7 +11,7 @@ import {
   Edit2,
   GripVertical
 } from "lucide-react";
-import { Task, TaskPriority, TaskStatus, TeamMember } from "@/server/types";
+import { Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 import TaskModal from "@/components/workspace/TaskModal";
 
 export default function TasksPage() {

@@ -20,7 +20,7 @@ import {
   Layers,
   CheckSquare,
 } from "lucide-react";
-import { ServiceNode } from "@/server/meshData";
+import { ServiceNode } from "@/types";
 import { useToast } from "@/components/workspace/ToastProvider";
 
 export default function ArchitecturePage() {

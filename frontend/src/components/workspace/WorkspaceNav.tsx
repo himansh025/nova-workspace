@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Check
 } from "lucide-react";
-import { Project } from "@/server/types";
+import { Project } from "@/types";
 import { NotificationCenter } from "./NotificationCenter";
 
 interface WorkspaceNavProps {

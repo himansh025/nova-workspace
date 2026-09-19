@@ -4,10 +4,10 @@ import React from "react";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Reveal from "@/components/ui/Reveal";
 import Chart from "@/components/product-ui/Chart";
-import { defaultThemeSchema } from "@/theme.schema";
+import { analyticsMetrics } from "@/data/landing-content";
 
 export const AnalyticsSection: React.FC = () => {
-  const metrics = defaultThemeSchema.analytics.metrics;
+  const metrics = analyticsMetrics;
 
   return (
     <section

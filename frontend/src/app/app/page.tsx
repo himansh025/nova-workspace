@@ -15,7 +15,7 @@ import {
   FileCode2,
   Plus
 } from "lucide-react";
-import { Task, Spec, ActivityItem, Project, Release } from "@/server/types";
+import { Task, Spec, ActivityItem, Project, Release } from "@/types";
 
 export default function OverviewPage() {
   const [project, setProject] = useState<Project | null>(null);

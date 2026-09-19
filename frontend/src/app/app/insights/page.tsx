@@ -11,7 +11,7 @@ import {
   Layers,
   ArrowUpRight
 } from "lucide-react";
-import { AnalyticsData } from "@/server/types";
+import { AnalyticsData } from "@/types";
 
 export default function InsightsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);

@@ -13,7 +13,7 @@ import {
   Server,
   Activity
 } from "lucide-react";
-import { Release, PreflightCheck } from "@/server/types";
+import { Release, PreflightCheck } from "@/types";
 
 export default function ReleasesPage() {
   const [release, setRelease] = useState<Release | null>(null);

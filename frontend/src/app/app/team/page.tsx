@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, X, ArrowUpRight } from "lucide-react";
-import { TeamMember } from "@/server/types";
+import { TeamMember } from "@/types";
 
 export default function TeamPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { FolderKanban, Plus, GitBranch, ArrowUpRight, X, Layers, Clock } from "lucide-react";
-import { Project } from "@/server/types";
+import { Project } from "@/types";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);

@@ -84,9 +84,14 @@ export const authController = {
         try {
           const existing = await UserModel.findOne({ email: normalizedEmail });
           if (existing) {
-            return res.status(400).json({ error: "An account with this email already exists" });
+            return res.status(409).json({ error: "An account with this email already exists" });
           }
         } catch {}
+      }
+
+      const existingStore = findUserByEmail(normalizedEmail);
+      if (existingStore) {
+        return res.status(409).json({ error: "An account with this email already exists" });
       }
 
       const initials = name
@@ -161,6 +166,7 @@ export const authController = {
       return res.status(201).json({
         success: true,
         user: userSafe,
+        token,
         sessionToken: token,
       });
     } catch (error: any) {
@@ -182,9 +188,9 @@ export const authController = {
         const defaultUser = findUserByEmail("elena@nova.dev");
         if (defaultUser) {
           const { passwordHash: _, ...safe } = defaultUser;
-          return res.json({ success: true, user: safe, demoFallback: true });
+          return res.json({ success: true, authenticated: true, user: safe, demoFallback: true });
         }
-        return res.status(401).json({ error: "Not authenticated" });
+        return res.status(401).json({ success: false, authenticated: false, error: "Not authenticated" });
       }
 
       const user = verifySessionToken(token);
@@ -192,13 +198,13 @@ export const authController = {
         const defaultUser = findUserByEmail("elena@nova.dev");
         if (defaultUser) {
           const { passwordHash: _, ...safe } = defaultUser;
-          return res.json({ success: true, user: safe, demoFallback: true });
+          return res.json({ success: true, authenticated: true, user: safe, demoFallback: true });
         }
-        return res.status(401).json({ error: "Session expired or invalid" });
+        return res.status(401).json({ success: false, authenticated: false, error: "Session expired or invalid" });
       }
 
       const { passwordHash: _, ...userSafe } = user;
-      return res.json({ success: true, user: userSafe });
+      return res.json({ success: true, authenticated: true, user: userSafe });
     } catch {
       return res.status(500).json({ error: "Authentication check failed" });
     }

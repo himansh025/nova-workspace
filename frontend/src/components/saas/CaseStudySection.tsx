@@ -4,10 +4,10 @@ import React from "react";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Reveal from "@/components/ui/Reveal";
 import ArrowLink from "@/components/ui/ArrowLink";
-import { defaultThemeSchema } from "@/theme.schema";
+import { caseStudyData } from "@/data/landing-content";
 
 export const CaseStudySection: React.FC = () => {
-  const caseStudy = defaultThemeSchema.caseStudy;
+  const caseStudy = caseStudyData;
 
   return (
     <section

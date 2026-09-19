@@ -121,20 +121,112 @@ export interface AnalyticsData {
   tasksByPriority: Record<TaskPriority, number>;
 }
 
-export interface WorkspaceDB {
-  projects: Project[];
-  tasks: Task[];
-  specs: Spec[];
-  releases: Release[];
-  team: TeamMember[];
-  activities: ActivityItem[];
-  settings: {
-    workspaceName: string;
-    slug: string;
-    defaultBranch: string;
-    githubConnected: boolean;
-    gitlabConnected: boolean;
-    linearSync: boolean;
-    autoAssignReviewers: boolean;
+export interface ServiceNode {
+  id: string;
+  name: string;
+  type: "edge" | "service" | "database" | "cache" | "ai";
+  runtime: string;
+  version: string;
+  region: string;
+  status: "healthy" | "degraded" | "maintenance";
+  p99Latency: string;
+  requestsPerSec: string;
+  errorRate: string;
+  uptime: string;
+  cpuUsage: number;
+  memoryUsage: number;
+  activeConnections: number;
+  dependencies: string[];
+  dependents: string[];
+  linkedTasks: string[];
+  x: number;
+  y: number;
+}
+
+export interface PullRequest {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  author: {
+    name: string;
+    avatar: string;
+    initials: string;
   };
+  branch: string;
+  targetBranch: string;
+  status: "open" | "merged" | "draft";
+  commitsCount: number;
+  filesChangedCount: number;
+  additions: number;
+  deletions: number;
+  createdAt: string;
+  linkedIssueKey?: string;
+  diff: {
+    filename: string;
+    oldPath: string;
+    newPath: string;
+    chunks: {
+      header: string;
+      lines: {
+        type: "add" | "del" | "normal";
+        oldLine?: number;
+        newLine?: number;
+        content: string;
+      }[];
+    }[];
+  }[];
+  aiReview?: {
+    score: number;
+    securityStatus: "PASSED" | "WARNING" | "CRITICAL";
+    performanceImpact: string;
+    summary: string;
+    findings: {
+      id: string;
+      type: "security" | "performance" | "suggestion";
+      filename: string;
+      lineNumber: number;
+      title: string;
+      message: string;
+      suggestion?: string;
+    }[];
+  };
+}
+
+export interface SprintDayBurndown {
+  day: number;
+  date: string;
+  idealRemaining: number;
+  actualRemaining: number | null;
+}
+
+export interface Sprint {
+  id: string;
+  name: string;
+  goal: string;
+  status: "active" | "planned" | "completed";
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  currentDay: number;
+  totalPoints: number;
+  completedPoints: number;
+  remainingPoints: number;
+  taskIds: string[];
+  burndown: SprintDayBurndown[];
+}
+
+export interface VelocityHistory {
+  sprintId: string;
+  sprintName: string;
+  committedPoints: number;
+  completedPoints: number;
+  completionRate: number;
+}
+
+export interface PokerVote {
+  taskId: string;
+  voter: string;
+  points: number;
+  timestamp: string;
 }

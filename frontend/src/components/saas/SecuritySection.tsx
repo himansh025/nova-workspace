@@ -3,14 +3,14 @@
 import React, { useState } from "react";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Reveal from "@/components/ui/Reveal";
-import { defaultThemeSchema } from "@/theme.schema";
+import { securityPillars } from "@/data/landing-content";
 import { developerSectionData } from "@/data/features";
 import { Shield, Key, FileCheck, Lock, Copy, Check } from "lucide-react";
 
 export const SecuritySection: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [copied, setCopied] = useState(false);
-  const pillars = defaultThemeSchema.security.pillars;
+  const pillars = securityPillars;
   const currentCode = developerSectionData.codeTabs[activeTab];
 
   const handleCopy = () => {

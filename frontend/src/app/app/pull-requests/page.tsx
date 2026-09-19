@@ -16,7 +16,7 @@ import {
   Clock,
   Layers,
 } from "lucide-react";
-import { PullRequest } from "@/server/prData";
+import { PullRequest } from "@/types";
 import { useToast } from "@/components/workspace/ToastProvider";
 
 export default function PullRequestsPage() {

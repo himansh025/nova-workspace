@@ -14,7 +14,7 @@ import {
   Code2,
   Play
 } from "lucide-react";
-import { Spec, SpecStatus } from "@/server/types";
+import { Spec, SpecStatus } from "@/types";
 import { CodeSandboxModal } from "@/components/workspace/CodeSandboxModal";
 
 export default function SpecsPage() {

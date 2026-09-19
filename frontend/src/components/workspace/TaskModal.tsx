@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Sparkles } from "lucide-react";
-import { Task, TaskPriority, TaskStatus, TeamMember } from "@/server/types";
+import { Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 
 interface TaskModalProps {
   isOpen: boolean;

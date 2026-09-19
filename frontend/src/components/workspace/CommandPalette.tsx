@@ -14,7 +14,7 @@ import {
   X,
   ArrowRight
 } from "lucide-react";
-import { Task, Spec } from "@/server/types";
+import { Task, Spec } from "@/types";
 
 interface CommandPaletteProps {
   isOpen: boolean;

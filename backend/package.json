@@ -5,8 +5,22 @@
   "description": "Standalone Node.js Express MVC Backend for Nova Workspace",
   "main": "server.ts",
   "scripts": {
-    "dev": "npx tsx server.ts",
-    "start": "npx tsx server.ts",
-    "seed": "npx tsx seed.ts"
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
+    "seed": "tsx seed.ts",
+    "test": "tsx tests/verify-express-api.ts && tsx tests/verify-user-model.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.10.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0"
   }
 }

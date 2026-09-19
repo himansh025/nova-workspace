@@ -1,10 +1,10 @@
 import React from "react";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Reveal from "@/components/ui/Reveal";
-import { defaultThemeSchema } from "@/theme.schema";
+import { workflowSteps } from "@/data/landing-content";
 
 export const WorkflowSection: React.FC = () => {
-  const steps = defaultThemeSchema.workflow.steps;
+  const steps = workflowSteps;
 
   return (
     <section
