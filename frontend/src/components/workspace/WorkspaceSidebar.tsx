@@ -187,14 +187,6 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
       {/* Bottom Profile & Exit to Marketing */}
       <div className="p-3 border-t border-white/10 bg-[#0E1015] space-y-2">
-        <Link
-          href="/"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/5 transition-colors text-[11px]"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Exit to Public Website</span>
-        </Link>
-
         <button
           type="button"
           onClick={() => void logout()}
@@ -207,7 +199,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
         {/* Interactive User Persona Trigger */}
         <button
           onClick={() => setIsProfileModalOpen(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-left transition-colors group cursor-pointer"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-md  hover:bg-white/10  text-left transition-colors group cursor-pointer"
           title="Manage User Profile & Identity"
         >
           <div className="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[11px] font-bold text-indigo-400 shrink-0">
@@ -218,7 +210,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               {user?.name || "Workspace Member"}
             </span>
             <span className="text-[9px] font-mono text-neutral-400 truncate">
-              {(user?.role || "Engineer")} • {user ? "Authenticated" : "Active"}
+              {(user?.role || "Engineer")}
             </span>
           </div>
         </button>
