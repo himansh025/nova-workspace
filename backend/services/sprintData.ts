@@ -47,128 +47,50 @@ export interface SprintsDB {
   pokerVotes: Record<string, PokerVote[]>; // taskId -> votes
 }
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const SPRINTS_FILE = path.join(DATA_DIR, "nova-sprints.json");
+import os from "os";
+
+function resolveDataDir(): string {
+  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join(os.tmpdir(), ".nova-data");
+  }
+  try {
+    const localDir = path.join(process.cwd(), ".data");
+    if (!fs.existsSync(localDir)) {
+      fs.mkdirSync(localDir, { recursive: true });
+    }
+    return localDir;
+  } catch {
+    return path.join(os.tmpdir(), ".nova-data");
+  }
+}
+
+let DATA_DIR = resolveDataDir();
+let SPRINTS_FILE = path.join(DATA_DIR, "nova-sprints.json");
 
 const INITIAL_SPRINTS_DATA: SprintsDB = {
-  sprints: [
-    {
-      id: "sprint-24",
-      name: "Sprint 24: Distributed CRDT & Canary Mesh",
-      goal: "Stabilize CRDT state delta compaction, zero-copy binary parser, and deploy canary traffic to 25%.",
-      status: "active",
-      startDate: "2026-09-08",
-      endDate: "2026-09-22",
-      totalDays: 14,
-      currentDay: 8,
-      totalPoints: 42,
-      completedPoints: 26,
-      remainingPoints: 16,
-      taskIds: [
-        "task-1", // NV-842
-        "task-2", // NV-847
-        "task-3", // NV-851
-        "task-7", // NV-865
-        "task-9", // NV-870
-        "task-10" // NV-873
-      ],
-      burndown: [
-        { day: 1, date: "Sep 08", idealRemaining: 42, actualRemaining: 42 },
-        { day: 2, date: "Sep 09", idealRemaining: 39, actualRemaining: 42 },
-        { day: 3, date: "Sep 10", idealRemaining: 36, actualRemaining: 37 },
-        { day: 4, date: "Sep 11", idealRemaining: 33, actualRemaining: 34 },
-        { day: 5, date: "Sep 12", idealRemaining: 30, actualRemaining: 29 },
-        { day: 6, date: "Sep 13", idealRemaining: 27, actualRemaining: 26 },
-        { day: 7, date: "Sep 14", idealRemaining: 24, actualRemaining: 26 },
-        { day: 8, date: "Sep 15", idealRemaining: 21, actualRemaining: 16 },
-        { day: 9, date: "Sep 16", idealRemaining: 18, actualRemaining: null },
-        { day: 10, date: "Sep 17", idealRemaining: 15, actualRemaining: null },
-        { day: 11, date: "Sep 18", idealRemaining: 12, actualRemaining: null },
-        { day: 12, date: "Sep 19", idealRemaining: 9, actualRemaining: null },
-        { day: 13, date: "Sep 20", idealRemaining: 6, actualRemaining: null },
-        { day: 14, date: "Sep 21", idealRemaining: 0, actualRemaining: null }
-      ]
-    },
-    {
-      id: "sprint-25",
-      name: "Sprint 25: Multi-region Sharding & Auth Guard",
-      goal: "Implement cross-region data replication, session revocation cascade, and edge audit log aggregation.",
-      status: "planned",
-      startDate: "2026-09-23",
-      endDate: "2026-10-07",
-      totalDays: 14,
-      currentDay: 0,
-      totalPoints: 34,
-      completedPoints: 0,
-      remainingPoints: 34,
-      taskIds: [
-        "task-4", // NV-859
-        "task-5", // NV-860
-        "task-6", // NV-862
-        "task-8"  // NV-868
-      ],
-      burndown: [
-        { day: 1, date: "Sep 23", idealRemaining: 34, actualRemaining: 34 },
-        { day: 14, date: "Oct 07", idealRemaining: 0, actualRemaining: null }
-      ]
-    },
-    {
-      id: "sprint-23",
-      name: "Sprint 23: Outgoing Webhooks & Schema Validation",
-      goal: "Finalized HMAC signature verification, dead-letter retry queue, and JSON schema preflight checks.",
-      status: "completed",
-      startDate: "2026-08-25",
-      endDate: "2026-09-07",
-      totalDays: 14,
-      currentDay: 14,
-      totalPoints: 38,
-      completedPoints: 38,
-      remainingPoints: 0,
-      taskIds: [],
-      burndown: []
-    }
-  ],
-  velocityHistory: [
-    {
-      sprintId: "sprint-21",
-      sprintName: "Sprint 21",
-      committedPoints: 35,
-      completedPoints: 33,
-      completionRate: 94.2
-    },
-    {
-      sprintId: "sprint-22",
-      sprintName: "Sprint 22",
-      committedPoints: 40,
-      completedPoints: 38,
-      completionRate: 95.0
-    },
-    {
-      sprintId: "sprint-23",
-      sprintName: "Sprint 23",
-      committedPoints: 38,
-      completedPoints: 38,
-      completionRate: 100
-    }
-  ],
-  pokerVotes: {
-    "task-1": [
-      { taskId: "task-1", voter: "Elena Rostova", points: 8, timestamp: "2026-09-08T10:00:00Z" },
-      { taskId: "task-1", voter: "Marcus Chen", points: 8, timestamp: "2026-09-08T10:01:00Z" },
-      { taskId: "task-1", voter: "Siddharth N.", points: 5, timestamp: "2026-09-08T10:02:00Z" }
-    ],
-    "task-7": [
-      { taskId: "task-7", voter: "Elena Rostova", points: 13, timestamp: "2026-09-08T10:05:00Z" },
-      { taskId: "task-7", voter: "Siddharth N.", points: 13, timestamp: "2026-09-08T10:06:00Z" }
-    ]
-  }
+  sprints: [],
+  velocityHistory: [],
+  pokerVotes: {},
 };
 
 let sprintCache: SprintsDB | null = null;
 
 function ensureDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch {
+    try {
+      DATA_DIR = path.join(os.tmpdir(), ".nova-data");
+      SPRINTS_FILE = path.join(DATA_DIR, "nova-sprints.json");
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+    } catch {
+      // In-memory fallback
+    }
   }
 }
 
@@ -176,32 +98,27 @@ function loadSprintsDB(): SprintsDB {
   if (sprintCache) return sprintCache;
   ensureDir();
 
-  if (!fs.existsSync(SPRINTS_FILE)) {
-    saveSprintsDB(INITIAL_SPRINTS_DATA);
-    sprintCache = JSON.parse(JSON.stringify(INITIAL_SPRINTS_DATA));
-    return sprintCache!;
+  try {
+    if (fs.existsSync(SPRINTS_FILE)) {
+      const raw = fs.readFileSync(SPRINTS_FILE, "utf-8");
+      sprintCache = JSON.parse(raw) as SprintsDB;
+      return sprintCache;
+    }
+  } catch (err) {
+    console.warn("Could not read SPRINTS_FILE, using clean state:", err);
   }
 
-  try {
-    const raw = fs.readFileSync(SPRINTS_FILE, "utf-8");
-    sprintCache = JSON.parse(raw) as SprintsDB;
-    return sprintCache;
-  } catch {
-    sprintCache = JSON.parse(JSON.stringify(INITIAL_SPRINTS_DATA));
-    return sprintCache!;
-  }
+  sprintCache = JSON.parse(JSON.stringify(INITIAL_SPRINTS_DATA));
+  return sprintCache!;
 }
 
 function saveSprintsDB(data: SprintsDB): void {
-  ensureDir();
-  const tmp = `${SPRINTS_FILE}.tmp.${Date.now()}`;
+  sprintCache = data;
   try {
-    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
-    fs.renameSync(tmp, SPRINTS_FILE);
-    sprintCache = data;
+    ensureDir();
+    fs.writeFileSync(SPRINTS_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
-    console.error("Failed to save sprints DB:", err);
-    sprintCache = data;
+    console.warn("Sprints disk write skipped (read-only filesystem):", err);
   }
 }
 

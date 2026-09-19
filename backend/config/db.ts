@@ -17,13 +17,15 @@ export async function connectMongoDB(): Promise<typeof mongoose> {
     return mongoose;
   }
 
+  const sanitizedUri = ENV.MONGODB_URI.replace(/:([^:@]+)@/, ":****@");
+
   try {
     const db = await mongoose.connect(ENV.MONGODB_URI, {
-      serverSelectionTimeoutMS: 4000,
+      serverSelectionTimeoutMS: 5000,
     });
 
     state.isConnected = true;
-    console.log(`[MongoDB] Connected successfully to ${ENV.MONGODB_URI}`);
+    console.log(`[MongoDB] Connected successfully to ${sanitizedUri}`);
 
     mongoose.connection.on("error", (err) => {
       console.error("[MongoDB] Connection error:", err);
@@ -38,7 +40,7 @@ export async function connectMongoDB(): Promise<typeof mongoose> {
     return db;
   } catch (error) {
     state.isConnected = false;
-    console.warn(`[MongoDB] Could not connect to ${ENV.MONGODB_URI}. Operating in resilient fallback mode.`);
+    console.warn(`[MongoDB] Could not connect to ${sanitizedUri}. Operating in resilient fallback mode.`);
     throw error;
   }
 }

@@ -20,7 +20,7 @@ import {
   LogOut
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
-import { UserProfileModal, PERSONAS, Persona } from "./UserProfileModal";
+import { UserProfileModal } from "./UserProfileModal";
 import { useAuth } from "@/context/AuthContext";
 
 interface WorkspaceSidebarProps {
@@ -35,30 +35,11 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [counts, setCounts] = useState<{ tasks: number; specs: number; team: number }>({
-    tasks: 10,
-    specs: 3,
-    team: 5
+    tasks: 0,
+    specs: 0,
+    team: 1,
   });
-  const [activePersona, setActivePersona] = useState<Persona>(PERSONAS[0]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-
-    setActivePersona({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      initials: user.initials,
-      activeTasks: [
-        "NV-842: Zero-copy binary parser",
-        "NV-865: CRDT state delta compaction",
-        "NV-870: Webhook exponential retry"
-      ]
-    });
-  }, [user]);
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -230,14 +211,14 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           title="Manage User Profile & Identity"
         >
           <div className="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[11px] font-bold text-indigo-400 shrink-0">
-            {user?.initials || activePersona.initials}
+            {user?.initials || "U"}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-[11px] font-medium text-white truncate group-hover:text-indigo-400 transition-colors">
-              {user?.name || activePersona.name}
+              {user?.name || "Workspace Member"}
             </span>
             <span className="text-[9px] font-mono text-neutral-400 truncate">
-              {(user?.role || activePersona.role)} • {user ? "Authenticated" : "Active"}
+              {(user?.role || "Engineer")} • {user ? "Authenticated" : "Active"}
             </span>
           </div>
         </button>
@@ -247,8 +228,6 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       <UserProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
-        activePersona={activePersona}
-        onSelectPersona={setActivePersona}
       />
     </aside>
   );

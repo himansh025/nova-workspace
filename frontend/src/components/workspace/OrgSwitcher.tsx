@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useToast } from "./ToastProvider";
 
+import { useAuth } from "@/context/AuthContext";
+
 export interface Organization {
   id: string;
   name: string;
@@ -22,39 +24,30 @@ export interface Organization {
   avatarColor: string;
 }
 
-const DEFAULT_ORGS: Organization[] = [
-  {
-    id: "org-1",
-    name: "Nova Engineering Labs",
-    slug: "nova-core",
-    plan: "Enterprise Scale",
-    projectsCount: 3,
-    membersCount: 5,
-    avatarColor: "bg-indigo-600",
-  },
-  {
-    id: "org-2",
-    name: "Acme Edge Systems",
-    slug: "acme-edge",
-    plan: "Pro Team",
-    projectsCount: 2,
-    membersCount: 4,
-    avatarColor: "bg-emerald-600",
-  },
-  {
-    id: "org-3",
-    name: "Hyperion Cloud Infra",
-    slug: "hyperion-cloud",
-    plan: "Enterprise Scale",
-    projectsCount: 4,
-    membersCount: 8,
-    avatarColor: "bg-purple-600",
-  },
-];
-
 export const OrgSwitcher: React.FC = () => {
-  const [organizations, setOrganizations] = useState<Organization[]>(DEFAULT_ORGS);
-  const [activeOrg, setActiveOrg] = useState<Organization>(DEFAULT_ORGS[0]);
+  const { user } = useAuth();
+  const orgName = user?.organization || "My Workspace";
+
+  const [organizations, setOrganizations] = useState<Organization[]>([
+    {
+      id: "org-1",
+      name: orgName,
+      slug: orgName.toLowerCase().replace(/[^a-z0-9]/gi, "-"),
+      plan: "Pro Team",
+      projectsCount: 0,
+      membersCount: 1,
+      avatarColor: "bg-indigo-600",
+    },
+  ]);
+  const [activeOrg, setActiveOrg] = useState<Organization>({
+    id: "org-1",
+    name: orgName,
+    slug: orgName.toLowerCase().replace(/[^a-z0-9]/gi, "-"),
+    plan: "Pro Team",
+    projectsCount: 0,
+    membersCount: 1,
+    avatarColor: "bg-indigo-600",
+  });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");

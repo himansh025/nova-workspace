@@ -81,7 +81,7 @@ export default function SprintsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           taskId: selectedTaskForPoker.id,
-          voter: user?.name || "Elena Rostova",
+          voter: user?.name || "Team Member",
           points
         })
       });

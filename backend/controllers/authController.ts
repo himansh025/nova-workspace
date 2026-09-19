@@ -149,6 +149,20 @@ export const authController = {
 
       const user = createdUser || storeUser;
 
+      // Add user to workspaceDB team
+      try {
+        workspaceDB.addTeamMember({
+          id: userId,
+          name,
+          email: normalizedEmail,
+          role: role || "Software Engineer",
+          avatar: user.avatar || "",
+          initials,
+          status: "online",
+          activeTasksCount: 0,
+        });
+      } catch {}
+
       res.setHeader(
         "Set-Cookie",
         `nova_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
@@ -185,21 +199,11 @@ export const authController = {
       }
 
       if (!token) {
-        const defaultUser = findUserByEmail("elena@nova.dev");
-        if (defaultUser) {
-          const { passwordHash: _, ...safe } = defaultUser;
-          return res.json({ success: true, authenticated: true, user: safe, demoFallback: true });
-        }
         return res.status(401).json({ success: false, authenticated: false, error: "Not authenticated" });
       }
 
       const user = verifySessionToken(token);
       if (!user) {
-        const defaultUser = findUserByEmail("elena@nova.dev");
-        if (defaultUser) {
-          const { passwordHash: _, ...safe } = defaultUser;
-          return res.json({ success: true, authenticated: true, user: safe, demoFallback: true });
-        }
         return res.status(401).json({ success: false, authenticated: false, error: "Session expired or invalid" });
       }
 

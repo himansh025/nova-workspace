@@ -41,6 +41,22 @@ export function NotificationCenter() {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: NodeJS.Timeout;
 
+    // Fetch initial history immediately via fast JSON endpoint
+    fetch("/api/events?poll=true")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.history)) {
+          setNotifications(
+            data.history.map((n: any) => ({
+              ...n,
+              isRead: false,
+            }))
+          );
+          setUnreadCount(data.history.length);
+        }
+      })
+      .catch(() => {});
+
     function connectSSE() {
       try {
         eventSource = new EventSource("/api/events");

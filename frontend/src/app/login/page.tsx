@@ -6,9 +6,7 @@ import {
   Lock,
   Mail,
   ArrowRight,
-  Sparkles,
   Shield,
-  CheckCircle2,
   AlertCircle,
   Eye,
   EyeOff,
@@ -35,18 +33,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword("password123");
-    setError("");
-    setIsSubmitting(true);
-    login(demoEmail, "password123").then((res) => {
-      if (!res.success) {
-        setError(res.error || "Login failed");
-        setIsSubmitting(false);
-      }
-    });
-  };
 
   return (
     <div className="min-h-screen bg-[#0A0E13] flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-indigo-400/20 font-sans">
@@ -64,14 +50,14 @@ export default function LoginPage() {
             </svg>
           </div>
           <span className="font-bold text-xl tracking-tight text-white font-mono">
-            NOVA<span className="text-indigo-300">_</span>
+            NOVA
           </span>
         </Link>
         <h1 className="text-xl sm:text-2xl font-semibold text-white mt-4 tracking-tight">
           Welcome back to Nova Workspace
         </h1>
         <p className="text-xs text-neutral-400 mt-1 max-w-sm">
-          Enter your engineering credentials or use 1-click demo access to enter your operating environment.
+          Enter your engineering credentials.
         </p>
       </div>
 
@@ -107,7 +93,6 @@ export default function LoginPage() {
               <label className="block text-xs font-medium text-neutral-300">
                 Password
               </label>
-              <span className="text-[11px] text-neutral-500 font-mono">Demo: password123</span>
             </div>
             <div className="relative">
               <Lock className="w-4 h-4 text-neutral-500 absolute left-3 top-2.5 pointer-events-none" />
@@ -135,85 +120,10 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#7C8AF9] hover:bg-[#697BE8] text-white text-xs font-semibold shadow-[0_12px_25px_rgba(124,138,249,0.18)] transition-all disabled:opacity-50 mt-2"
           >
             <span>{isSubmitting ? "Authenticating..." : "Sign In to Workspace"}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </form>
 
-        {/* 1-Click Demo Quick Sign-In Section */}
-        <div className="mt-6 pt-6 border-t border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-indigo-300" />
-              <span>1-Click Demo Sign-In</span>
-            </span>
-            <span className="text-[10px] text-emerald-400 font-mono">Zero Setup</span>
-          </div>
 
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("elena@nova.dev")}
-              className="w-full flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-left transition-colors text-xs text-neutral-200 group"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-[#7C8AF9]/15 border border-[#7C8AF9]/30 flex items-center justify-center text-[10px] font-bold text-indigo-200">
-                  ER
-                </div>
-                <div>
-                  <div className="font-medium text-white group-hover:text-indigo-200 transition-colors">
-                    Elena Rostova
-                  </div>
-                  <div className="text-[10px] text-neutral-500">Lead Architect • elena@nova.dev</div>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono text-neutral-500 group-hover:text-white transition-colors">
-                Sign In →
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("marcus@nova.dev")}
-              className="w-full flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-left transition-colors text-xs text-neutral-200 group"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-[10px] font-bold text-emerald-300">
-                  MC
-                </div>
-                <div>
-                  <div className="font-medium text-white group-hover:text-emerald-300 transition-colors">
-                    Marcus Chen
-                  </div>
-                  <div className="text-[10px] text-neutral-500">Frontend Lead • marcus@nova.dev</div>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono text-neutral-500 group-hover:text-white transition-colors">
-                Sign In →
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("siddharth@nova.dev")}
-              className="w-full flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-left transition-colors text-xs text-neutral-200 group"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-violet-600/30 border border-violet-500/40 flex items-center justify-center text-[10px] font-bold text-violet-300">
-                  SN
-                </div>
-                <div>
-                  <div className="font-medium text-white group-hover:text-violet-300 transition-colors">
-                    Siddharth N.
-                  </div>
-                  <div className="text-[10px] text-neutral-500">Distributed Systems • siddharth@nova.dev</div>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono text-neutral-500 group-hover:text-white transition-colors">
-                Sign In →
-              </span>
-            </button>
-          </div>
-        </div>
 
         {/* Footer */}
         <div className="mt-6 text-center text-xs text-neutral-400">
@@ -224,11 +134,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Security Tag */}
-      <div className="mt-8 flex items-center gap-2 text-[11px] font-mono text-neutral-600 relative z-10">
-        <Shield className="w-3.5 h-3.5 text-emerald-500/60" />
-        <span>TLS 1.3 Encrypted Session • Zero-Trust Access Mesh</span>
-      </div>
+     
     </div>
   );
 }

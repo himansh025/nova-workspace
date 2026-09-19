@@ -34,15 +34,36 @@ async function runExpressAudit() {
       "Node.js Express Modular Backend (200 OK)"
     );
 
-    // 2. Auth Login
+    // 2. Auth Register
+    const testUserEmail = `engineer_${Date.now()}@nova.dev`;
+    const testUserName = "Test Engineer";
+    const regRes = await fetch(`${baseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: testUserName,
+        email: testUserEmail,
+        password: "password123",
+        role: "Staff Backend Engineer",
+        organization: "Nova Labs",
+      }),
+    });
+    const regData = await regRes.json();
+    assert(
+      regRes.status === 201 && regData.success && regData.user.name === testUserName,
+      "Auth Register Endpoint",
+      `User: ${regData.user?.name} created`
+    );
+
+    // 2b. Auth Login
     const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "elena@nova.dev", password: "password123" }),
+      body: JSON.stringify({ email: testUserEmail, password: "password123" }),
     });
     const loginData = await loginRes.json();
     assert(
-      loginRes.status === 200 && loginData.success && loginData.user.name === "Elena Rostova",
+      loginRes.status === 200 && loginData.success && loginData.user.name === testUserName,
       "Auth Login Endpoint",
       `User: ${loginData.user?.name}, Token issued`
     );
@@ -58,7 +79,7 @@ async function runExpressAudit() {
     });
     const meData = await meRes.json();
     assert(
-      meRes.status === 200 && meData.authenticated && meData.user.name === "Elena Rostova",
+      meRes.status === 200 && meData.authenticated && meData.user.name === testUserName,
       "Auth Me Endpoint",
       `Validated: ${meData.user?.name}`
     );
@@ -127,7 +148,7 @@ async function runExpressAudit() {
       body: JSON.stringify({
         taskId: createdId,
         points: 8,
-        voter: "Elena Rostova",
+        voter: testUserName,
       }),
     });
     const pokerData = await pokerRes.json();

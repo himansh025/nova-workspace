@@ -5,7 +5,7 @@ import FinalCTA from "@/components/saas/FinalCTA";
 import SectionLabel from "@/components/ui/SectionLabel";
 
 export const metadata: Metadata = {
-  title: "About NOVA — Turning Ideas into Momentum",
+  title: "About NOVA  Turning Ideas into Momentum",
   description:
     "Learn about NOVA's mission to eliminate engineering friction and build the next generation of contextual product workspaces."
 };

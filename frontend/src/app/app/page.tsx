@@ -16,8 +16,10 @@ import {
   Plus
 } from "lucide-react";
 import { Task, Spec, ActivityItem, Project, Release } from "@/types";
+import { useAuth } from "@/context/AuthContext";
 
 export default function OverviewPage() {
+  const { user } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [specs, setSpecs] = useState<Spec[]>([]);
@@ -73,18 +75,18 @@ export default function OverviewPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-0.5 rounded border border-[var(--color-accent)]/30">
-              ENGINEERING LIFECYCLE V2.4
+              ACTIVE WORKSPACE
             </span>
             <span className="text-neutral-500 font-mono text-xs">•</span>
             <span className="text-xs font-mono text-neutral-400">
-              Sprint 48 Active Cycle
+              {user?.role || "Engineering Team"}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight mt-1.5">
-            {project?.name || "Platform Core 2.0"}
+            {project?.name || (user?.organization ? `${user.organization} Workspace` : "My Workspace")}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-2xl">
-            {project?.description || "High-performance distributed telemetry, state sync, and real-time computation engine."}
+            {project?.description || "Collaborative engineering workspace, tasks, and architecture specifications."}
           </p>
         </div>
 
@@ -114,10 +116,10 @@ export default function OverviewPage() {
             <Clock className="w-4 h-4 text-sky-400" />
           </div>
           <div className="text-2xl font-bold text-white tracking-tight font-mono">
-            {project?.cycleTime || "1.4d"}
+            {project?.cycleTime || (tasks.length > 0 ? "1.4d" : "0.0d")}
           </div>
           <div className="text-[11px] text-emerald-400 font-mono">
-            -42% reduction vs last month
+            {tasks.length > 0 ? "Tracking on schedule" : "Ready for new tasks"}
           </div>
         </div>
 
@@ -127,10 +129,10 @@ export default function OverviewPage() {
             <TrendingUp className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-bold text-white tracking-tight font-mono">
-            {project?.velocity || "+24% vs avg"}
+            {project?.velocity || (tasks.length > 0 ? "+12% vs avg" : "0 pts / sprint")}
           </div>
           <div className="text-[11px] text-emerald-400 font-mono">
-            Tracking ahead of baseline
+            {tasks.length > 0 ? "Tracking ahead of baseline" : "Baseline initializing"}
           </div>
         </div>
 
@@ -208,47 +210,64 @@ export default function OverviewPage() {
             </div>
 
             <div className="space-y-2.5">
-              {tasks.slice(0, 5).map((task) => (
-                <Link
-                  key={task.id}
-                  href="/app/tasks"
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-[#1B1E26] hover:bg-[#202430] border border-white/5 transition-all gap-2"
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <span className="text-[10px] font-mono text-[var(--color-accent)] font-medium shrink-0">
-                      {task.key}
-                    </span>
-                    <span className="text-xs text-neutral-200 truncate">
-                      {task.title}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                    {task.branch && (
-                      <span className="text-[10px] font-mono text-neutral-400 bg-black/30 px-1.5 py-0.5 rounded flex items-center gap-1">
-                        <GitBranch className="w-3 h-3 text-sky-400" />
-                        <span className="truncate max-w-[100px]">{task.branch}</span>
+              {tasks.length === 0 ? (
+                <div className="p-8 rounded-lg bg-[#1B1E26]/50 border border-white/5 text-center flex flex-col items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-neutral-500 mb-2 opacity-60" />
+                  <h4 className="text-xs font-semibold text-white">No active engineering tasks yet</h4>
+                  <p className="text-[11px] text-neutral-400 mt-1 max-w-sm">
+                    Get started by creating your first task or managing backlog items in Kanban.
+                  </p>
+                  <Link
+                    href="/app/tasks"
+                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create Task</span>
+                  </Link>
+                </div>
+              ) : (
+                tasks.slice(0, 5).map((task) => (
+                  <Link
+                    key={task.id}
+                    href="/app/tasks"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-[#1B1E26] hover:bg-[#202430] border border-white/5 transition-all gap-2"
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className="text-[10px] font-mono text-[var(--color-accent)] font-medium shrink-0">
+                        {task.key}
                       </span>
-                    )}
-                    <span
-                      className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded ${
-                        task.status === "done"
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : task.status === "in_progress"
-                          ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                          : task.status === "review"
-                          ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                          : "bg-white/5 text-neutral-400"
-                      }`}
-                    >
-                      {task.status.replace("_", " ")}
-                    </span>
-                    <div className="w-5 h-5 rounded-full bg-neutral-700 flex items-center justify-center text-[9px] font-bold text-white">
-                      {task.assignee.initials}
+                      <span className="text-xs text-neutral-200 truncate">
+                        {task.title}
+                      </span>
                     </div>
-                  </div>
-                </Link>
-              ))}
+
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                      {task.branch && (
+                        <span className="text-[10px] font-mono text-neutral-400 bg-black/30 px-1.5 py-0.5 rounded flex items-center gap-1">
+                          <GitBranch className="w-3 h-3 text-sky-400" />
+                          <span className="truncate max-w-[100px]">{task.branch}</span>
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded ${
+                          task.status === "done"
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : task.status === "in_progress"
+                            ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                            : task.status === "review"
+                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                            : "bg-white/5 text-neutral-400"
+                        }`}
+                      >
+                        {task.status.replace("_", " ")}
+                      </span>
+                      <div className="w-5 h-5 rounded-full bg-neutral-700 flex items-center justify-center text-[9px] font-bold text-white">
+                        {task.assignee.initials}
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
@@ -269,38 +288,55 @@ export default function OverviewPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {specs.map((spec) => (
-                <Link
-                  key={spec.id}
-                  href="/app/specs"
-                  className="p-3.5 rounded-lg bg-[#1B1E26] hover:bg-[#202430] border border-white/5 flex flex-col justify-between transition-all"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-mono text-sky-400">{spec.key}</span>
-                      <span
-                        className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded ${
-                          spec.status === "approved"
-                            ? "text-emerald-400 bg-emerald-500/10"
-                            : "text-amber-400 bg-amber-500/10"
-                        }`}
-                      >
-                        {spec.status}
-                      </span>
+              {specs.length === 0 ? (
+                <div className="col-span-full p-8 rounded-lg bg-[#1B1E26]/50 border border-white/5 text-center flex flex-col items-center justify-center">
+                  <FileCode2 className="w-8 h-8 text-neutral-500 mb-2 opacity-60" />
+                  <h4 className="text-xs font-semibold text-white">No architecture specifications drafted</h4>
+                  <p className="text-[11px] text-neutral-400 mt-1 max-w-sm">
+                    Draft technical specs, RFCs, and system architecture plans with AI co-drafting.
+                  </p>
+                  <Link
+                    href="/app/specs"
+                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Draft First Spec</span>
+                  </Link>
+                </div>
+              ) : (
+                specs.map((spec) => (
+                  <Link
+                    key={spec.id}
+                    href="/app/specs"
+                    className="p-3.5 rounded-lg bg-[#1B1E26] hover:bg-[#202430] border border-white/5 flex flex-col justify-between transition-all"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-mono text-sky-400">{spec.key}</span>
+                        <span
+                          className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded ${
+                            spec.status === "approved"
+                              ? "text-emerald-400 bg-emerald-500/10"
+                              : "text-amber-400 bg-amber-500/10"
+                          }`}
+                        >
+                          {spec.status}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-medium text-white line-clamp-1 mb-1">
+                        {spec.title}
+                      </h4>
+                      <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
+                        {spec.summary}
+                      </p>
                     </div>
-                    <h4 className="text-xs font-medium text-white line-clamp-1 mb-1">
-                      {spec.title}
-                    </h4>
-                    <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
-                      {spec.summary}
-                    </p>
-                  </div>
-                  <div className="mt-3 text-[10px] font-mono text-neutral-500 pt-2 border-t border-white/5 flex items-center justify-between">
-                    <span>Author: {spec.author.name.split(" ")[0]}</span>
-                    <span>Spec Engine</span>
-                  </div>
-                </Link>
-              ))}
+                    <div className="mt-3 text-[10px] font-mono text-neutral-500 pt-2 border-t border-white/5 flex items-center justify-between">
+                      <span>Author: {spec.author.name.split(" ")[0]}</span>
+                      <span>Spec Engine</span>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -315,7 +351,7 @@ export default function OverviewPage() {
                 <h3 className="text-sm font-semibold text-white">Canary Release</h3>
               </div>
               <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                {release?.version || "v2.4.0"}
+                {release?.version || "v1.0.0"}
               </span>
             </div>
 
@@ -323,18 +359,18 @@ export default function OverviewPage() {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-neutral-400">Canary Traffic</span>
                 <span className="font-mono text-white font-semibold">
-                  {release?.canaryPercentage || 25}%
+                  {release ? `${release.canaryPercentage}%` : "Ready"}
                 </span>
               </div>
               <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                  style={{ width: `${release?.canaryPercentage || 25}%` }}
+                  style={{ width: `${release?.canaryPercentage || 0}%` }}
                 />
               </div>
               <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500 pt-1">
-                <span>Checks: {release?.checksPassed || 5}/{release?.totalChecks || 5} passed</span>
-                <span className="text-emerald-400">Healthy</span>
+                <span>Checks: {release?.checksPassed || 0}/{release?.totalChecks || 0} passed</span>
+                <span className="text-emerald-400">Pipeline Ready</span>
               </div>
             </div>
 
@@ -355,21 +391,27 @@ export default function OverviewPage() {
             </div>
 
             <div className="space-y-3">
-              {activities.slice(0, 6).map((act) => (
-                <div key={act.id} className="flex items-start gap-2.5 text-xs">
-                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-bold text-neutral-300 shrink-0 mt-0.5">
-                    {act.actor.initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-neutral-300 leading-snug">
-                      <span className="font-medium text-white">{act.actor.name}</span>{" "}
-                      <span className="text-neutral-400">{act.action}</span>{" "}
-                      <span className="font-medium text-[var(--color-accent)]">{act.target}</span>
-                    </p>
-                    <span className="text-[10px] font-mono text-neutral-500">{act.timestamp}</span>
-                  </div>
+              {activities.length === 0 ? (
+                <div className="p-6 rounded-lg bg-black/20 border border-white/5 text-center">
+                  <p className="text-xs text-neutral-400">No activity yet. Actions and updates will stream here in real-time.</p>
                 </div>
-              ))}
+              ) : (
+                activities.slice(0, 6).map((act) => (
+                  <div key={act.id} className="flex items-start gap-2.5 text-xs">
+                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-bold text-neutral-300 shrink-0 mt-0.5">
+                      {act.actor.initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-neutral-300 leading-snug">
+                        <span className="font-medium text-white">{act.actor.name}</span>{" "}
+                        <span className="text-neutral-400">{act.action}</span>{" "}
+                        <span className="font-medium text-[var(--color-accent)]">{act.target}</span>
+                      </p>
+                      <span className="text-[10px] font-mono text-neutral-500">{act.timestamp}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

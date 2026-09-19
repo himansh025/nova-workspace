@@ -8,79 +8,32 @@ import {
   Copy,
   Check,
   X,
-  ExternalLink,
-  CheckSquare,
-  Sparkles,
+  Building,
+  Mail,
+  Briefcase,
+  LogOut,
 } from "lucide-react";
 import { useToast } from "./ToastProvider";
-
-export interface Persona {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatar: string;
-  initials: string;
-  activeTasks: string[];
-}
-
-export const PERSONAS: Persona[] = [
-  {
-    id: "usr-1",
-    name: "Elena Rostova",
-    email: "elena@nova.dev",
-    role: "Lead Architect",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    initials: "ER",
-    activeTasks: ["NV-842: Zero-copy binary parser", "NV-865: CRDT state delta compaction"],
-  },
-  {
-    id: "usr-2",
-    name: "Marcus Chen",
-    email: "marcus@nova.dev",
-    role: "Staff Frontend Engineer",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-    initials: "MC",
-    activeTasks: ["NV-847: Optimistic offline mutations", "NV-868: Virtualized tree renderer"],
-  },
-  {
-    id: "usr-3",
-    name: "Siddharth N.",
-    email: "siddharth@nova.dev",
-    role: "Distributed Systems Lead",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-    initials: "SN",
-    activeTasks: ["NV-860: Connection pool exhaustion mitigation", "NV-870: Webhook exponential retry"],
-  },
-  {
-    id: "usr-5",
-    name: "Aaliyah Patel",
-    email: "aaliyah@nova.dev",
-    role: "Security & Compliance Lead",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
-    initials: "AP",
-    activeTasks: ["NV-862: Strict CSP & SRI policies", "NV-873: Multi-tenant token isolation"],
-  },
-];
+import { useAuth } from "@/context/AuthContext";
 
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  activePersona: Persona;
-  onSelectPersona: (p: Persona) => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   isOpen,
   onClose,
-  activePersona,
-  onSelectPersona,
 }) => {
+  const { user, logout } = useAuth();
   const [copiedToken, setCopiedToken] = useState(false);
   const { addToast } = useToast();
-  const sessionToken = `nova_sec_${activePersona.id}_${Buffer.from(activePersona.email).toString("base64").slice(0, 16)}`;
 
   if (!isOpen) return null;
+
+  const sessionToken = user
+    ? `nova_sec_${user.id}_${Buffer.from(user.email).toString("base64").slice(0, 16)}`
+    : "nova_sec_unauthenticated";
 
   const handleCopyToken = () => {
     navigator.clipboard.writeText(sessionToken);
@@ -93,28 +46,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     setTimeout(() => setCopiedToken(false), 2000);
   };
 
-  const handleSwitch = (p: Persona) => {
-    onSelectPersona(p);
-    addToast({
-      title: "Active Persona Switched",
-      message: `Logged in as ${p.name} (${p.role})`,
-      type: "success",
-    });
+  const handleLogout = async () => {
+    onClose();
+    await logout();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-xl bg-[#14161D] border border-white/15 rounded-2xl shadow-2xl overflow-hidden z-10 text-xs text-neutral-200 animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-lg bg-[#14161D] border border-white/15 rounded-2xl shadow-2xl overflow-hidden z-10 text-xs text-neutral-200 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#171922]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-              {activePersona.initials}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+              {user?.initials || "U"}
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">{activePersona.name}</h3>
-              <p className="text-[11px] text-neutral-400">{activePersona.role} • {activePersona.email}</p>
+              <h3 className="text-sm font-semibold text-white">{user?.name || "Workspace Member"}</h3>
+              <p className="text-[11px] text-neutral-400">{user?.role || "Engineer"} • {user?.organization || "Workspace"}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 text-neutral-400 hover:text-white rounded">
@@ -123,67 +72,46 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          {/* Persona Switcher */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">
-                Switch Active Persona
-              </label>
-              <span className="text-[10px] text-neutral-500">RBAC Identity Mesh</span>
+        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          {/* Account Details Card */}
+          <div className="rounded-xl bg-[#0E1015] border border-white/5 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">Account Details</span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Active Session</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {PERSONAS.map((p) => {
-                const isCurrent = p.id === activePersona.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => handleSwitch(p)}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-colors ${
-                      isCurrent
-                        ? "bg-indigo-600/20 border-indigo-500/50 text-white"
-                        : "bg-[#0E1015] border-white/5 hover:border-white/10 text-neutral-300 hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                        {p.initials}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-medium text-xs truncate">{p.name}</div>
-                        <div className="text-[10px] text-neutral-500 truncate">{p.role}</div>
-                      </div>
-                    </div>
-                    {isCurrent && <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Active Workload */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">
-                Assigned Issues ({activePersona.activeTasks.length})
-              </label>
-              <span className="text-[10px] text-neutral-500">Sprint 48 Backlog</span>
-            </div>
-            <div className="space-y-1.5">
-              {activePersona.activeTasks.map((task, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1015] border border-white/5 text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <CheckSquare className="w-3.5 h-3.5 text-indigo-400" />
-                    <span className="text-neutral-200">{task}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    Active SLA
-                  </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="flex items-start gap-2">
+                <Mail className="w-4 h-4 text-neutral-400 mt-0.5" />
+                <div>
+                  <div className="text-[10px] text-neutral-400">Email Address</div>
+                  <div className="font-medium text-white text-xs">{user?.email || "—"}</div>
                 </div>
-              ))}
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Briefcase className="w-4 h-4 text-neutral-400 mt-0.5" />
+                <div>
+                  <div className="text-[10px] text-neutral-400">Role / Title</div>
+                  <div className="font-medium text-white text-xs">{user?.role || "Software Engineer"}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Building className="w-4 h-4 text-neutral-400 mt-0.5" />
+                <div>
+                  <div className="text-[10px] text-neutral-400">Organization</div>
+                  <div className="font-medium text-white text-xs">{user?.organization || "Nova Workspace"}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <User className="w-4 h-4 text-neutral-400 mt-0.5" />
+                <div>
+                  <div className="text-[10px] text-neutral-400">User Identifier</div>
+                  <div className="font-mono text-neutral-300 text-[11px]">{user?.id || "—"}</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -212,13 +140,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Actions */}
+          <div className="pt-2">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 text-xs font-medium transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out of Workspace</span>
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-white/10 bg-[#121316] flex justify-between items-center text-[10px] text-neutral-400">
           <div className="flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Zero-Trust Identity Mesh • Session Encrypted</span>
+            <span>Zero-Trust Identity • Session Encrypted</span>
           </div>
           <button
             onClick={onClose}

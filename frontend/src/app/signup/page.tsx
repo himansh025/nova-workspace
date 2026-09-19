@@ -61,7 +61,7 @@ export default function SignupPage() {
             </svg>
           </div>
           <span className="font-bold text-xl tracking-tight text-white font-mono">
-            NOVA<span className="text-indigo-300">_</span>
+            NOVA
           </span>
         </Link>
         <h1 className="text-xl sm:text-2xl font-semibold text-white mt-4 tracking-tight">
@@ -197,12 +197,6 @@ export default function SignupPage() {
             Sign in
           </Link>
         </div>
-      </div>
-
-      {/* Security Tag */}
-      <div className="mt-6 flex items-center gap-2 text-[11px] font-mono text-neutral-600 relative z-10">
-        <Shield className="w-3.5 h-3.5 text-emerald-500/60" />
-        <span>Enterprise Data Protection • Private Isolated Tenancy</span>
       </div>
     </div>
   );

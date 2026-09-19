@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import {
   WorkspaceDB,
   Project,
@@ -14,14 +15,45 @@ import {
 } from "./types";
 import { initialWorkspaceDB } from "./seed";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const DB_FILE = path.join(DATA_DIR, "nova-db.json");
+function resolveDataDir(): string {
+  if (process.env.DATA_DIR) {
+    return process.env.DATA_DIR;
+  }
+  // Serverless detection (Vercel, AWS Lambda, or container with read-only root)
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join(os.tmpdir(), ".nova-data");
+  }
+  try {
+    const localDir = path.join(process.cwd(), ".data");
+    if (!fs.existsSync(localDir)) {
+      fs.mkdirSync(localDir, { recursive: true });
+    }
+    return localDir;
+  } catch {
+    return path.join(os.tmpdir(), ".nova-data");
+  }
+}
+
+let DATA_DIR = resolveDataDir();
+let DB_FILE = path.join(DATA_DIR, "nova-db.json");
 
 let memoryCache: WorkspaceDB | null = null;
 
 function ensureDataDirectory(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch {
+    try {
+      DATA_DIR = path.join(os.tmpdir(), ".nova-data");
+      DB_FILE = path.join(DATA_DIR, "nova-db.json");
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+    } catch {
+      // In-memory fallback
+    }
   }
 }
 
@@ -32,34 +64,29 @@ function loadDB(): WorkspaceDB {
 
   ensureDataDirectory();
 
-  if (!fs.existsSync(DB_FILE)) {
-    saveDB(initialWorkspaceDB);
-    memoryCache = JSON.parse(JSON.stringify(initialWorkspaceDB));
-    return memoryCache!;
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, "utf-8");
+      memoryCache = JSON.parse(raw) as WorkspaceDB;
+      return memoryCache;
+    }
+  } catch (error) {
+    console.warn("Could not read DB_FILE, fallback to in-memory clean seed:", error);
   }
 
-  try {
-    const raw = fs.readFileSync(DB_FILE, "utf-8");
-    memoryCache = JSON.parse(raw) as WorkspaceDB;
-    return memoryCache;
-  } catch (error) {
-    console.error("Error loading Nova DB, reverting to initial seed:", error);
-    saveDB(initialWorkspaceDB);
-    memoryCache = JSON.parse(JSON.stringify(initialWorkspaceDB));
-    return memoryCache!;
-  }
+  memoryCache = JSON.parse(JSON.stringify(initialWorkspaceDB));
+  saveDB(memoryCache);
+  return memoryCache!;
 }
 
 function saveDB(data: WorkspaceDB): void {
-  ensureDataDirectory();
-  const tmpFile = `${DB_FILE}.tmp.${Date.now()}`;
+  memoryCache = data;
   try {
-    fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), "utf-8");
-    fs.renameSync(tmpFile, DB_FILE);
-    memoryCache = data;
-  } catch {
+    ensureDataDirectory();
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
-    memoryCache = data;
+  } catch (err) {
+    // In serverless environments, file writing may be restricted; memoryCache holds the active state
+    console.warn("Disk write skipped (read-only filesystem):", err);
   }
 }
 
@@ -170,12 +197,19 @@ export const db = {
     const nextKeyNum = existingKeys.length > 0 ? Math.max(...existingKeys) + 1 : 881;
     const taskKey = `NV-${nextKeyNum}`;
 
-    let assignee = {
-      id: "usr-1",
-      name: "Elena Rostova",
-      avatar: "",
-      initials: "ER"
-    };
+    let assignee = data.team.length > 0
+      ? {
+          id: data.team[0].id,
+          name: data.team[0].name,
+          avatar: data.team[0].avatar || "",
+          initials: data.team[0].initials || data.team[0].name.slice(0, 2).toUpperCase()
+        }
+      : {
+          id: "unassigned",
+          name: "Unassigned",
+          avatar: "",
+          initials: "--"
+        };
 
     if (input.assigneeId) {
       const found = data.team.find((u) => u.id === input.assigneeId);
@@ -304,11 +338,17 @@ export const db = {
     const nextKeyNum = existingKeys.length > 0 ? Math.max(...existingKeys) + 1 : 107;
     const specKey = `SPEC-${nextKeyNum}`;
 
-    let author = {
-      id: "usr-1",
-      name: "Elena Rostova",
-      initials: "ER"
-    };
+    let author = data.team.length > 0
+      ? {
+          id: data.team[0].id,
+          name: data.team[0].name,
+          initials: data.team[0].initials || data.team[0].name.slice(0, 2).toUpperCase()
+        }
+      : {
+          id: "member-1",
+          name: "Workspace Member",
+          initials: "WM"
+        };
 
     if (input.authorId) {
       const found = data.team.find((u) => u.id === input.authorId);
@@ -364,10 +404,14 @@ export const db = {
     data.specs[index] = updatedSpec;
 
     if (updates.status === "approved" && prevSpec.status !== "approved") {
+      const approver = data.team.length > 0
+        ? { name: data.team[0].name, initials: data.team[0].initials }
+        : { name: "Workspace Member", initials: "WM" };
+
       data.activities.unshift({
         id: `act-${Date.now()}`,
         type: "spec_approved",
-        actor: { name: "Elena Rostova", initials: "ER" },
+        actor: approver,
         action: "approved specification",
         target: `${updatedSpec.key} (${updatedSpec.title})`,
         timestamp: "Just now"

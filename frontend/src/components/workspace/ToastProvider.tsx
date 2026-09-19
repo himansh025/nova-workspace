@@ -46,41 +46,6 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Periodic background simulation of live team activity (every 25 seconds)
-  useEffect(() => {
-    const simulatedEvents = [
-      {
-        title: "Git Commit Pushed",
-        message: "Marcus Chen pushed 7b23f1e to fix/offline-sync",
-        type: "commit" as const
-      },
-      {
-        title: "PR Review Approved",
-        message: "Elena Rostova approved PR #184 (CRDT State Sync)",
-        type: "success" as const
-      },
-      {
-        title: "Canary Health Check",
-        message: "Canary traffic 25% passing p99 latency (14ms)",
-        type: "release" as const
-      },
-      {
-        title: "AI Context Engine",
-        message: "Re-indexed 42 commits and 14 issues across Platform Core",
-        type: "accent" as const
-      }
-    ];
-
-    let index = 0;
-    const interval = setInterval(() => {
-      const event = simulatedEvents[index % simulatedEvents.length];
-      addToast(event);
-      index++;
-    }, 28000);
-
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
