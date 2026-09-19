@@ -1,12 +1,14 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import { broadcastEvent } from "../services/events";
 import { OutgoingWebhook } from "../services/types";
+import { ENV } from "../config/env";
 
 declare global {
   var __novaOutgoingWebhooks: OutgoingWebhook[] | undefined;
 }
 
-const defaultWebhooks = [
+const defaultWebhooks: OutgoingWebhook[] = [
   {
     id: "wh-1",
     name: "Slack #dev-deployments Channel",
@@ -46,7 +48,7 @@ if (process.env.NODE_ENV !== "production") {
 
 export const webhookController = {
   getOutgoingWebhooks(_req: Request, res: Response) {
-    res.json({ success: true, webhooks: outgoingWebhooks });
+    return res.json({ success: true, webhooks: outgoingWebhooks });
   },
 
   testOutgoingWebhook(req: Request, res: Response) {
@@ -65,7 +67,7 @@ export const webhookController = {
           type: "system",
           category: "system",
           title: `Webhook Test Dispatched: ${webhook.name}`,
-          message: `Successfully sent test HMAC event to ${webhook.target.toUpperCase()} endpoint (${webhook.url})`,
+          message: `Successfully dispatched HMAC test payload to ${webhook.target.toUpperCase()} endpoint (${webhook.url})`,
           link: "/app/settings",
         });
 
@@ -78,26 +80,47 @@ export const webhookController = {
 
       return res.json({ success: true, webhook });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   },
 
   handleGithubWebhook(req: Request, res: Response) {
     try {
+      // Signature verification if GITHUB_WEBHOOK_SECRET is configured
+      if (ENV.GITHUB_WEBHOOK_SECRET) {
+        const signature = req.headers["x-hub-signature-256"] as string;
+        if (!signature) {
+          return res.status(401).json({ success: false, error: "Missing webhook signature." });
+        }
+
+        const rawBody = JSON.stringify(req.body);
+        const expectedSig = `sha256=${crypto
+          .createHmac("sha256", ENV.GITHUB_WEBHOOK_SECRET)
+          .update(rawBody)
+          .digest("hex")}`;
+
+        if (
+          signature.length !== expectedSig.length ||
+          !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))
+        ) {
+          return res.status(401).json({ success: false, error: "Invalid webhook signature." });
+        }
+      }
+
       const { event, branch, author } = req.body;
       const commitAuthor = author || "Marcus Vance";
 
       broadcastEvent({
         type: "git_webhook",
         category: "git",
-        title: `GitHub Webhook: ${event}`,
-        message: `${commitAuthor} triggered ${event} on ${branch || "main"}`,
+        title: `GitHub Webhook: ${event || "push"}`,
+        message: `${commitAuthor} triggered ${event || "push"} on ${branch || "main"}`,
         link: "/app/tasks",
       });
 
-      res.json({ success: true, message: `Handled ${event} event successfully.` });
+      return res.json({ success: true, message: `Handled ${event || "push"} event successfully.` });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
     }
   },
 };

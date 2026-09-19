@@ -13,8 +13,16 @@ if (process.env.NODE_ENV !== "production") {
 
 export const meshController = {
   getTopology(_req: Request, res: Response) {
-    res.json({
+    const isOtelConnected = Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT);
+    return res.json({
       success: true,
+      telemetry: {
+        mode: isOtelConnected ? "live" : "demo",
+        provider: isOtelConnected ? "OpenTelemetry Collector" : "Simulated Mesh Topology",
+        message: isOtelConnected
+          ? "Connected to live OpenTelemetry metrics stream."
+          : "Operating in architecture simulation mode. Set OTEL_EXPORTER_OTLP_ENDPOINT to ingest live telemetry.",
+      },
       nodes: serviceNodes,
       stats: {
         totalServices: serviceNodes.length,
@@ -56,7 +64,7 @@ export const meshController = {
 
       return res.json({ success: true, node });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   },
 };

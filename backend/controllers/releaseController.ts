@@ -1,39 +1,40 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
-import { ReleaseModel } from "../models";
-import { db as workspaceDB } from "../services/db";
+import { releaseService } from "../services/releaseService";
 
 export const releaseController = {
-  async getReleases(_req: Request, res: Response) {
+  async getReleases(req: Request, res: Response) {
     try {
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const releases = await ReleaseModel.find().sort({ createdAt: -1 });
-          return res.json({ success: true, releases, release: releases[0] || null });
-        } catch (dbErr) {
-          console.warn("[ReleaseModel] Mongo query fallback:", dbErr);
-        }
-      }
+      const orgId = (req as any).organizationId || "org-default";
+      const { projectId } = req.query;
 
-      const releases = workspaceDB.getReleases();
-      res.json({ success: true, releases, release: releases[0] || null });
+      const releases = await releaseService.getReleases(orgId, projectId as string);
+      return res.json({
+        success: true,
+        count: releases.length,
+        releases,
+        release: releases[0] || null,
+      });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
     }
   },
 
-  updateRelease(req: Request, res: Response) {
+  async updateRelease(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
+      const user = (req as any).user || { name: "Deployment Engine", initials: "DE" };
       const { canaryPercentage, status, action, id } = req.body;
-      const releases = workspaceDB.getReleases();
-      const release = id ? workspaceDB.getReleaseById(id) : releases[0];
 
-      if (!release) {
-        return res.status(404).json({ success: false, error: "No active release found" });
+      const releases = await releaseService.getReleases(orgId);
+      const targetId = id || releases[0]?.id;
+
+      if (!targetId) {
+        return res.status(404).json({ success: false, error: "No active release found in organization." });
       }
 
       if (action === "rerun_preflight") {
-        workspaceDB.runPreflightChecks(release.id);
+        const checked = await releaseService.runPreflightChecks(orgId, targetId);
+        return res.json({ success: true, release: checked });
       }
 
       const updates: any = {};
@@ -44,10 +45,10 @@ export const releaseController = {
       }
       if (status) updates.status = status;
 
-      const updated = workspaceDB.updateRelease(release.id, updates);
-      res.json({ success: true, release: updated });
+      const updated = await releaseService.updateRelease(orgId, targetId, updates, user.name, user.initials);
+      return res.json({ success: true, release: updated });
     } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 };

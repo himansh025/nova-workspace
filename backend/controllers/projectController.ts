@@ -1,45 +1,45 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
-import { ProjectModel } from "../models";
-import { db as workspaceDB } from "../services/db";
+import { ProjectModel } from "../models/Project";
 
 export const projectController = {
-  async getProjects(_req: Request, res: Response) {
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const projects = await ProjectModel.find().sort({ createdAt: -1 });
-        return res.json({ success: true, projects });
-      } catch (dbErr) {
-        console.warn("[ProjectModel] Mongo query fallback:", dbErr);
-      }
+  async getProjects(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId || "org-default";
+      const projects = await ProjectModel.find({ organizationId: orgId }).sort({ createdAt: -1 });
+      return res.json({ success: true, count: projects.length, projects });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error.message });
     }
-
-    const projects = workspaceDB.getProjects();
-    res.json({ success: true, projects });
   },
 
   async createProject(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
       const { name, slug, description, repository } = req.body;
-      const created = workspaceDB.createProject({
+
+      if (!name) {
+        return res.status(400).json({ success: false, error: "Project name is required." });
+      }
+
+      const project = await ProjectModel.create({
+        id: `prj-${Date.now().toString(36)}`,
+        organizationId: orgId,
         name,
         slug: slug || name.toLowerCase().replace(/\s+/g, "-"),
         description: description || "",
-        sprint: "Sprint 24",
+        sprint: "Sprint 1",
         progressPercent: 0,
         cycleTime: "1.4d",
-        velocity: "38 pts",
+        velocity: "24 pts",
         activeBranch: "main",
-        repository: repository || "github.com/nova-corp/core",
+        repository: repository || "github.com/organization/main",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
 
-      try {
-        await ProjectModel.create(created);
-      } catch {}
-
-      res.status(201).json({ success: true, project: created });
+      return res.status(201).json({ success: true, project });
     } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 };

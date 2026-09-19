@@ -16,6 +16,7 @@ export interface IPokerVote {
 
 export interface ISprint {
   id: string;
+  organizationId: string;
   name: string;
   goal: string;
   status: "active" | "planned" | "completed";
@@ -38,6 +39,7 @@ export interface ISprintDocument extends Omit<ISprint, "id">, Document {
 const SprintSchema = new Schema<ISprintDocument>(
   {
     id: { type: String, required: true, unique: true, index: true },
+    organizationId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     goal: { type: String, default: "" },
     status: {
@@ -73,6 +75,8 @@ const SprintSchema = new Schema<ISprintDocument>(
   },
   { timestamps: true }
 );
+
+SprintSchema.index({ organizationId: 1, status: 1 });
 
 export const SprintModel: Model<ISprintDocument> =
   mongoose.models.Sprint || mongoose.model<ISprintDocument>("Sprint", SprintSchema);

@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 import { useToast } from "@/components/workspace/ToastProvider";
+import AISettingsPanel from "@/components/workspace/AISettingsPanel";
+import ThirdPartyCredentialsPanel from "@/components/workspace/ThirdPartyCredentialsPanel";
 
 export default function SettingsPage() {
   const { addToast } = useToast();
@@ -188,6 +190,12 @@ export default function SettingsPage() {
           </button>
         </div>
       </form>
+
+      {/* AI Copilot & Custom LLM Provider Configuration */}
+      <AISettingsPanel />
+
+      {/* Third-Party Service Credentials (SMTP Email & GitHub OAuth/Webhooks) */}
+      <ThirdPartyCredentialsPanel />
 
       {/* Git & Tool Integrations */}
       <div className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-5">

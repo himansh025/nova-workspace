@@ -1,4 +1,10 @@
 export * from "./User";
+export * from "./Organization";
+export * from "./OrganizationMember";
+export * from "./Session";
+export * from "./Notification";
+export * from "./AISettings";
+export * from "./AuthTokens";
 export * from "./Sprint";
 export * from "./Task";
 export * from "./Spec";
@@ -6,3 +12,4 @@ export * from "./Project";
 export * from "./Release";
 export * from "./TeamMember";
 export * from "./Activity";
+export * from "./IntegrationSettings";

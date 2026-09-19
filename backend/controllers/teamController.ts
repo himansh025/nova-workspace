@@ -1,46 +1,41 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
-import { TeamMemberModel } from "../models";
-import { db as workspaceDB } from "../services/db";
+import { TeamMemberModel } from "../models/TeamMember";
 
 export const teamController = {
-  async getTeam(_req: Request, res: Response) {
+  async getTeam(req: Request, res: Response) {
     try {
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const team = await TeamMemberModel.find().sort({ createdAt: 1 });
-          return res.json({ success: true, team });
-        } catch (dbErr) {
-          console.warn("[TeamMemberModel] Mongo query fallback:", dbErr);
-        }
-      }
-
-      const team = workspaceDB.getTeam();
-      res.json({ success: true, team });
+      const orgId = (req as any).organizationId || "org-default";
+      const team = await TeamMemberModel.find({ organizationId: orgId }).sort({ createdAt: 1 });
+      return res.json({ success: true, count: team.length, team });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
     }
   },
 
   async addMember(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
       const { name, email, role, avatar, initials } = req.body;
-      const member = workspaceDB.addTeamMember({
+
+      if (!name || !email) {
+        return res.status(400).json({ success: false, error: "Name and email are required." });
+      }
+
+      const member = await TeamMemberModel.create({
+        id: `usr-${Date.now().toString(36)}`,
+        organizationId: orgId,
         name,
-        email,
+        email: email.toLowerCase().trim(),
         role: role || "Software Engineer",
         avatar: avatar || "",
-        initials: initials || name.split(" ").map((n: string) => n[0]).join("").toUpperCase(),
+        initials: initials || name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
         status: "online",
+        activeTasksCount: 0,
       });
 
-      try {
-        await TeamMemberModel.create(member);
-      } catch {}
-
-      res.status(201).json({ success: true, member });
+      return res.status(201).json({ success: true, member });
     } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 };

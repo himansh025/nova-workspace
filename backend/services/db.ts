@@ -75,7 +75,7 @@ function loadDB(): WorkspaceDB {
   }
 
   memoryCache = JSON.parse(JSON.stringify(initialWorkspaceDB));
-  saveDB(memoryCache);
+  saveDB(memoryCache!);
   return memoryCache!;
 }
 

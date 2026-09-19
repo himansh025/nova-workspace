@@ -1,36 +1,37 @@
-import app from "../app";
-import { UserModel, SprintModel, TeamMemberModel } from "../models";
-
-const TEST_PORT = 5088;
+import { startServer } from "../server";
+import { UserModel, TeamMemberModel } from "../models";
 
 async function runUserModelAudit() {
-  console.log("🧪 =========================================================");
-  console.log("   USER MODEL & MVC REGISTRATION INTEGRATION AUDIT (:5088)  ");
+  console.log("\n=========================================================");
+  console.log("NOVA BACKEND — PRODUCTION USER MODEL & AUTH AUDIT");
   console.log("=========================================================\n");
 
-  const server = app.listen(TEST_PORT);
-  const baseUrl = `http://127.0.0.1:${TEST_PORT}`;
+  const server = await startServer();
+  const address = server.address() as any;
+  const port = address?.port || 5000;
+  const baseUrl = `http://127.0.0.1:${port}`;
 
   let passed = 0;
   let total = 0;
 
-  function assert(condition: boolean, testName: string, detail?: string) {
+  function assert(condition: boolean, name: string, detail: string) {
     total++;
     if (condition) {
-      console.log(`✅ [PASS] ${testName}${detail ? ` -> ${detail}` : ""}`);
       passed++;
+      console.log(`[PASS] ${name}: ${detail}`);
     } else {
-      console.error(`❌ [FAIL] ${testName}${detail ? ` -> ${detail}` : ""}`);
+      console.error(`[FAIL] ${name}: ${detail}`);
     }
   }
 
   try {
-    // 1. UserModel Schema & Mongoose Export
-    assert(UserModel !== undefined && typeof UserModel.find === "function", "UserModel Definition", "Mongoose UserModel is loaded");
-    assert(SprintModel !== undefined && typeof SprintModel.find === "function", "SprintModel Definition", "Mongoose SprintModel is loaded");
+    // 1. Health Verification
+    const healthRes = await fetch(`${baseUrl}/health`);
+    const healthData = (await healthRes.json()) as any;
+    assert(healthRes.status === 200 && healthData.status === "online", "Health Check", "Express online");
 
     // 2. Real User Registration (/signup)
-    const uniqueEmail = `dev_${Date.now()}@nova.dev`;
+    const uniqueEmail = `audit-dev-${Date.now()}@nova-mesh.io`;
     const signupRes = await fetch(`${baseUrl}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,13 +43,13 @@ async function runUserModelAudit() {
         organization: "Nova Distributed Systems",
       }),
     });
-    const signupData = await signupRes.json();
+    const signupData = (await signupRes.json()) as any;
     assert(
-      signupRes.status === 201 && signupData.success && signupData.user.email === uniqueEmail,
+      signupRes.status === 201 && signupData.success && signupData.user?.email === uniqueEmail,
       "User Registration (/signup)",
       `Registered: ${signupData.user?.name} (${signupData.user?.email})`
     );
-    assert(Boolean(signupData.token), "Session Token Issuance", "Issued secure session token");
+    assert(Boolean(signupData.token || signupData.sessionToken), "Session Token Issuance", "Issued secure session token");
 
     const cookieHeader = signupRes.headers.get("set-cookie") || "";
     assert(cookieHeader.includes("nova_session="), "HTTP Session Cookie", "Set-Cookie header present");
@@ -58,7 +59,7 @@ async function runUserModelAudit() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: "Devon Vance Duplicate",
+        name: "Devon Vance",
         email: uniqueEmail,
         password: "securePassword123!",
       }),
@@ -74,9 +75,9 @@ async function runUserModelAudit() {
         password: "securePassword123!",
       }),
     });
-    const loginData = await loginRes.json();
+    const loginData = (await loginRes.json()) as any;
     assert(
-      loginRes.status === 200 && loginData.success && loginData.user.email === uniqueEmail,
+      loginRes.status === 200 && loginData.success && loginData.user?.email === uniqueEmail,
       "User Login (/login)",
       `Logged in user: ${loginData.user?.name}`
     );
@@ -97,9 +98,9 @@ async function runUserModelAudit() {
     const meRes = await fetch(`${baseUrl}/api/auth/me`, {
       headers: { Cookie: sessionCookie },
     });
-    const meData = await meRes.json();
+    const meData = (await meRes.json()) as any;
     assert(
-      meRes.status === 200 && meData.authenticated && meData.user.email === uniqueEmail,
+      meRes.status === 200 && meData.authenticated && meData.user?.email === uniqueEmail,
       "Session Me Guard (/me)",
       `Verified active session for ${meData.user?.name}`
     );

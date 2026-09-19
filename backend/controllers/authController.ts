@@ -1,54 +1,48 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
-import { UserModel, TeamMemberModel } from "../models";
 import {
-  findUserByEmail,
-  createSessionToken,
+  authenticateUser,
+  registerUserAccount,
+  revokeSessionToken,
   verifySessionToken,
-  removeSessionToken,
-  registerUser,
+  verifyEmailWithToken,
+  requestPasswordReset,
+  resetPasswordWithToken,
 } from "../services/auth";
+import { getUserOrganizations, getOrganizationMembership } from "../services/organizationService";
 import { broadcastEvent } from "../services/events";
 import { parseCookies } from "../middlewares/auth";
+import { ENV } from "../config/env";
+
+function setSessionCookie(res: Response, token: string): void {
+  const maxAge = ENV.SESSION_EXPIRY_DAYS * 24 * 60 * 60;
+  const secureFlag = ENV.IS_PRODUCTION ? "; Secure" : "";
+  res.setHeader(
+    "Set-Cookie",
+    `nova_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secureFlag}`
+  );
+}
+
+function clearSessionCookie(res: Response): void {
+  res.setHeader(
+    "Set-Cookie",
+    "nova_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+  );
+}
 
 export const authController = {
   async login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+        return res.status(400).json({ success: false, error: "Email and password are required." });
       }
 
-      const normalizedEmail = email.toLowerCase().trim();
+      const userAgent = req.headers["user-agent"] as string;
+      const ipAddress = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress;
 
-      // 1. Query real MongoDB UserModel if connected
-      let user: any = null;
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const dbUser = await UserModel.findOne({ email: normalizedEmail });
-          if (dbUser && dbUser.comparePassword(password)) {
-            user = dbUser.toObject();
-          }
-        } catch {}
-      }
+      const { user, sessionToken } = await authenticateUser(email, password, userAgent, ipAddress);
 
-      // 2. Fallback to auth store if Mongo is offline or user was seeded in store
-      if (!user) {
-        const storeUser = findUserByEmail(normalizedEmail);
-        if (storeUser && (storeUser.passwordHash === password || password === "password123")) {
-          user = storeUser;
-        }
-      }
-
-      if (!user) {
-        return res.status(401).json({ error: "Invalid email or password" });
-      }
-
-      const sessionToken = createSessionToken(user.id);
-      res.setHeader(
-        "Set-Cookie",
-        `nova_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
-      );
+      setSessionCookie(res, sessionToken);
 
       broadcastEvent({
         type: "system",
@@ -58,15 +52,15 @@ export const authController = {
         link: "/app",
       });
 
-      const { passwordHash: _, ...userSafe } = user;
       return res.json({
         success: true,
-        user: userSafe,
-        sessionToken,
+        user,
+        sessionToken, // for backwards-compatibility
       });
     } catch (error: any) {
-      console.error("Login error:", error);
-      return res.status(500).json({ error: "Internal server error" });
+      const isAuthFail = error.message?.includes("Invalid email or password") || error.message?.includes("temporarily locked");
+      const statusCode = isAuthFail ? 401 : 500;
+      return res.status(statusCode).json({ success: false, error: error.message || "Login failed." });
     }
   },
 
@@ -74,99 +68,22 @@ export const authController = {
     try {
       const { name, email, password, role, organization } = req.body;
       if (!name || !email || !password) {
-        return res.status(400).json({ error: "Name, email, and password are required" });
+        return res.status(400).json({ success: false, error: "Name, email, and password are required." });
       }
 
-      const normalizedEmail = email.toLowerCase().trim();
-
-      // 1. Check existing user in MongoDB if connected
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const existing = await UserModel.findOne({ email: normalizedEmail });
-          if (existing) {
-            return res.status(409).json({ error: "An account with this email already exists" });
-          }
-        } catch {}
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, error: "Password must be at least 8 characters." });
       }
 
-      const existingStore = findUserByEmail(normalizedEmail);
-      if (existingStore) {
-        return res.status(409).json({ error: "An account with this email already exists" });
-      }
-
-      const initials = name
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2) || "DEV";
-
-      const userId = `usr-${Date.now()}`;
-      const now = new Date().toISOString();
-
-      // 2. Insert into real MongoDB UserModel if connected
-      let createdUser: any = null;
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const doc = await UserModel.create({
-            id: userId,
-            name,
-            email: normalizedEmail,
-            passwordHash: password,
-            role: role || "Software Engineer",
-            organization: organization || "Nova Engineering Labs",
-            avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80`,
-            initials,
-            createdAt: now,
-            updatedAt: now,
-          });
-          createdUser = doc.toObject();
-
-          // Also create matching squad TeamMember document
-          await TeamMemberModel.create({
-            id: userId,
-            name,
-            email: normalizedEmail,
-            role: role || "Software Engineer",
-            avatar: createdUser.avatar,
-            initials,
-            status: "online",
-            activeTasksCount: 0,
-          });
-        } catch (dbErr) {
-          console.warn("[UserModel] Direct Mongo insert skipped/fallback:", dbErr);
-        }
-      }
-
-      // 3. Sync with in-memory auth store for instant session validation
-      const { user: storeUser, token } = registerUser({
+      const { user, sessionToken } = await registerUserAccount({
         name,
-        email: normalizedEmail,
+        email,
         password,
-        role: role || "Software Engineer",
-        organization: organization || "Nova Engineering Labs",
+        role,
+        organizationName: organization,
       });
 
-      const user = createdUser || storeUser;
-
-      // Add user to workspaceDB team
-      try {
-        workspaceDB.addTeamMember({
-          id: userId,
-          name,
-          email: normalizedEmail,
-          role: role || "Software Engineer",
-          avatar: user.avatar || "",
-          initials,
-          status: "online",
-          activeTasksCount: 0,
-        });
-      } catch {}
-
-      res.setHeader(
-        "Set-Cookie",
-        `nova_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
-      );
+      setSessionCookie(res, sessionToken);
 
       broadcastEvent({
         type: "system",
@@ -176,15 +93,16 @@ export const authController = {
         link: "/app/team",
       });
 
-      const { passwordHash: _, ...userSafe } = user;
       return res.status(201).json({
         success: true,
-        user: userSafe,
-        token,
-        sessionToken: token,
+        user,
+        token: sessionToken,
+        sessionToken,
       });
     } catch (error: any) {
-      return res.status(400).json({ error: error.message || "Failed to create account" });
+      const isConflict = error.message?.includes("already exists");
+      const statusCode = isConflict ? 409 : 400;
+      return res.status(statusCode).json({ success: false, error: error.message || "Failed to create account." });
     }
   },
 
@@ -202,30 +120,111 @@ export const authController = {
         return res.status(401).json({ success: false, authenticated: false, error: "Not authenticated" });
       }
 
-      const user = await verifySessionToken(token);
-      if (!user) {
+      const sessionData = await verifySessionToken(token);
+      if (!sessionData) {
+        clearSessionCookie(res);
         return res.status(401).json({ success: false, authenticated: false, error: "Session expired or invalid" });
       }
 
-      const { passwordHash: _, ...userSafe } = user;
-      return res.json({ success: true, authenticated: true, user: userSafe });
-    } catch {
-      return res.status(500).json({ error: "Authentication check failed" });
+      // Fetch all organizations the user is a member of
+      const userOrgs = await getUserOrganizations(sessionData.user.id);
+      const activeOrgId = sessionData.organizationId;
+      const activeRole = activeOrgId ? await getOrganizationMembership(activeOrgId, sessionData.user.id) : null;
+
+      return res.json({
+        success: true,
+        authenticated: true,
+        user: sessionData.user,
+        organizationId: activeOrgId,
+        role: activeRole,
+        organizations: userOrgs.map((o) => ({
+          id: o.organization.id,
+          name: o.organization.name,
+          slug: o.organization.slug,
+          role: o.role,
+        })),
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: "Authentication check failed." });
     }
   },
 
-  logout(req: Request, res: Response) {
+  async logout(req: Request, res: Response) {
     try {
       const cookies = parseCookies(req);
-      const token = cookies["nova_session"];
-      if (token) {
-        removeSessionToken(token);
+      const authHeader = req.headers.authorization;
+      let token = cookies["nova_session"];
+
+      if (!token && authHeader?.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
       }
 
-      res.setHeader("Set-Cookie", "nova_session=; Path=/; HttpOnly; Max-Age=0");
-      return res.json({ success: true, message: "Logged out successfully" });
+      if (token) {
+        await revokeSessionToken(token);
+      }
+
+      clearSessionCookie(res);
+      return res.json({ success: true, message: "Logged out successfully." });
     } catch {
-      return res.status(500).json({ error: "Logout failed" });
+      clearSessionCookie(res);
+      return res.json({ success: true, message: "Logged out." });
+    }
+  },
+
+  async verifyEmail(req: Request, res: Response) {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ success: false, error: "Verification token is required." });
+      }
+
+      const verified = await verifyEmailWithToken(token);
+      if (!verified) {
+        return res.status(400).json({ success: false, error: "Invalid or expired verification link." });
+      }
+
+      return res.json({ success: true, message: "Email address verified successfully!" });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Failed to verify email." });
+    }
+  },
+
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, error: "Email is required." });
+      }
+
+      await requestPasswordReset(email);
+      return res.json({
+        success: true,
+        message: "If an account exists with this email, a password reset link has been dispatched.",
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Failed to process password reset." });
+    }
+  },
+
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) {
+        return res.status(400).json({ success: false, error: "Token and new password are required." });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, error: "Password must be at least 8 characters." });
+      }
+
+      const success = await resetPasswordWithToken(token, password);
+      if (!success) {
+        return res.status(400).json({ success: false, error: "Invalid or expired reset token." });
+      }
+
+      return res.json({ success: true, message: "Password updated successfully. Please log in with your new password." });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Failed to reset password." });
     }
   },
 };

@@ -1,101 +1,103 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
-import { TaskModel } from "../models";
-import { db as workspaceDB } from "../services/db";
+import { taskService } from "../services/taskService";
+import { TaskStatus, TaskPriority } from "../services/types";
 
 export const taskController = {
   async getTasks(req: Request, res: Response) {
     try {
-      const { status, priority, search } = req.query;
+      const orgId = (req as any).organizationId || "org-default";
+      const { status, priority, search, page, limit, projectId } = req.query;
 
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const filter: any = {};
-          if (status && typeof status === "string") filter.status = status;
-          if (priority && typeof priority === "string") filter.priority = priority;
-          if (search && typeof search === "string") {
-            filter.$or = [
-              { title: { $regex: search, $options: "i" } },
-              { description: { $regex: search, $options: "i" } },
-              { key: { $regex: search, $options: "i" } },
-            ];
-          }
-
-          const tasks = await TaskModel.find(filter).sort({ updatedAt: -1 });
-          return res.json({ success: true, count: tasks.length, tasks });
-        } catch (dbErr) {
-          console.warn("[TaskModel] Mongo query fallback:", dbErr);
-        }
-      }
-
-      const tasks = workspaceDB.getTasks({
-        status: status as any,
-        priority: priority as any,
+      const result = await taskService.getTasks({
+        organizationId: orgId,
+        projectId: projectId as string,
+        status: status as TaskStatus,
+        priority: priority as TaskPriority,
         search: search as string,
+        page: page ? parseInt(page as string, 10) : 1,
+        limit: limit ? parseInt(limit as string, 10) : 50,
       });
-      res.json({ success: true, count: tasks.length, tasks });
+
+      return res.json({
+        success: true,
+        count: result.tasks.length,
+        tasks: result.tasks,
+        pagination: result.pagination,
+      });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
     }
   },
 
   async createTask(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
+      const user = (req as any).user || { name: "Engineering Team", initials: "ET" };
       const body = req.body;
-      const task = workspaceDB.createTask({
+
+      if (!body.title || typeof body.title !== "string") {
+        return res.status(400).json({ success: false, error: "Task title is required." });
+      }
+
+      const task = await taskService.createTask({
+        organizationId: orgId,
+        projectId: body.projectId,
         title: body.title,
-        description: body.description || "",
-        priority: body.priority || "medium",
-        status: body.status || "backlog",
-        projectId: body.projectId || "prj-1",
-        assigneeId: body.assignee?.id || "usr-1",
-        tags: body.tags || ["General"],
+        description: body.description,
+        priority: body.priority,
+        status: body.status,
+        assigneeId: body.assignee?.id || body.assigneeId,
+        tags: body.tags,
         branch: body.branch,
-        estimate: body.estimate || "3 pts",
+        estimate: body.estimate,
+        creatorName: user.name,
+        creatorInitials: user.initials,
       });
 
-      try {
-        await TaskModel.create(task);
-      } catch {}
-
-      res.status(201).json({ success: true, task });
+      return res.status(201).json({ success: true, task });
     } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 
   async updateTask(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
+      const user = (req as any).user || { name: "Engineering Team", initials: "ET" };
       const id = req.params.id as string;
       const updates = req.body;
 
-      const task = workspaceDB.updateTask(id, updates);
+      const task = await taskService.updateTask(
+        orgId,
+        id,
+        updates,
+        user.name,
+        user.initials
+      );
+
       if (!task) {
-        return res.status(404).json({ success: false, error: "Task not found" });
+        return res.status(404).json({ success: false, error: "Task not found." });
       }
 
-      try {
-        await TaskModel.findOneAndUpdate({ $or: [{ id }, { key: id }] }, updates, { returnDocument: "after" });
-      } catch {}
-
-      res.json({ success: true, task });
+      return res.json({ success: true, task });
     } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 
   async deleteTask(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
       const id = req.params.id as string;
-      const deleted = workspaceDB.deleteTask(id);
-      try {
-        await TaskModel.findOneAndDelete({ $or: [{ id }, { key: id }] });
-      } catch {}
 
-      if (!deleted) return res.status(404).json({ success: false, error: "Task not found" });
-      res.json({ success: true, deletedId: id });
+      const deleted = await taskService.deleteTask(orgId, id);
+      if (!deleted) {
+        return res.status(404).json({ success: false, error: "Task not found." });
+      }
+
+      return res.json({ success: true, deletedId: id });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
     }
   },
 };

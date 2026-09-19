@@ -3,13 +3,15 @@ import { Project } from "../services/types";
 
 export interface IProjectDocument extends Omit<Project, "id">, Document {
   id: string;
+  organizationId: string;
 }
 
 const ProjectSchema = new Schema<IProjectDocument>(
   {
     id: { type: String, required: true, unique: true, index: true },
+    organizationId: { type: String, required: true, index: true },
     name: { type: String, required: true },
-    slug: { type: String, required: true, unique: true, index: true },
+    slug: { type: String, required: true, index: true },
     description: { type: String, default: "" },
     sprint: { type: String, default: "Sprint 24" },
     progressPercent: { type: Number, default: 0 },
@@ -22,6 +24,8 @@ const ProjectSchema = new Schema<IProjectDocument>(
   },
   { timestamps: true }
 );
+
+ProjectSchema.index({ organizationId: 1, slug: 1 }, { unique: true });
 
 export const ProjectModel: Model<IProjectDocument> =
   mongoose.models.Project || mongoose.model<IProjectDocument>("Project", ProjectSchema);

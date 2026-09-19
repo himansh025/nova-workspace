@@ -3,6 +3,7 @@ import { Release, PreflightCheck } from "../services/types";
 
 export interface IReleaseDocument extends Omit<Release, "id">, Document {
   id: string;
+  organizationId: string;
 }
 
 const PreflightCheckSchema = new Schema<PreflightCheck>(
@@ -28,6 +29,7 @@ const PreflightCheckSchema = new Schema<PreflightCheck>(
 const ReleaseSchema = new Schema<IReleaseDocument>(
   {
     id: { type: String, required: true, unique: true, index: true },
+    organizationId: { type: String, required: true, index: true },
     version: { type: String, required: true },
     projectId: { type: String, required: true, index: true },
     status: {
@@ -46,6 +48,8 @@ const ReleaseSchema = new Schema<IReleaseDocument>(
   },
   { timestamps: true }
 );
+
+ReleaseSchema.index({ organizationId: 1, projectId: 1, createdAt: -1 });
 
 export const ReleaseModel: Model<IReleaseDocument> =
   mongoose.models.Release || mongoose.model<IReleaseDocument>("Release", ReleaseSchema);

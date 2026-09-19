@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
 import { INITIAL_PULL_REQUESTS, PullRequest } from "../services/prData";
-import { db as workspaceDB } from "../services/db";
+import { TaskModel } from "../models/Task";
+import { ActivityItemModel } from "../models/Activity";
 import { broadcastEvent } from "../services/events";
+import { ENV } from "../config/env";
 
 declare global {
   var __novaPullRequests: PullRequest[] | undefined;
@@ -14,13 +16,27 @@ if (process.env.NODE_ENV !== "production") {
 
 export const prController = {
   getPullRequests(_req: Request, res: Response) {
-    res.json({ success: true, pullRequests });
+    const isConfigured = Boolean(ENV.GITHUB_CLIENT_ID && ENV.GITHUB_CLIENT_SECRET);
+    return res.json({
+      success: true,
+      integration: {
+        provider: "github",
+        configured: isConfigured,
+        mode: isConfigured ? "production" : "demo",
+        message: isConfigured
+          ? "Connected to GitHub App integration."
+          : "Operating in demo repository simulation. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable live synchronization.",
+      },
+      pullRequests,
+    });
   },
 
-  patchPullRequest(req: Request, res: Response) {
+  async patchPullRequest(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
       const { id, action } = req.body;
       const prIndex = pullRequests.findIndex((p) => p.id === id || p.number === Number(id));
+
       if (prIndex === -1) {
         return res.status(404).json({ error: "Pull request not found" });
       }
@@ -28,11 +44,23 @@ export const prController = {
       const pr = pullRequests[prIndex];
       if (action === "merge") {
         pr.status = "merged";
+
+        // If linked task exists in this organization, automatically update status
         if (pr.linkedIssueKey) {
-          const matchingTask = workspaceDB.getTaskById(pr.linkedIssueKey);
-          if (matchingTask) {
-            workspaceDB.updateTask(matchingTask.id, { status: "done" });
-          }
+          await TaskModel.updateOne(
+            { organizationId: orgId, $or: [{ id: pr.linkedIssueKey }, { key: pr.linkedIssueKey }] },
+            { $set: { status: "done", updatedAt: new Date().toISOString() } }
+          );
+
+          await ActivityItemModel.create({
+            id: `act-${Date.now()}`,
+            organizationId: orgId,
+            type: "task_status",
+            actor: { name: pr.author.name, initials: pr.author.initials },
+            action: `merged PR #${pr.number} and moved task to DONE`,
+            target: pr.linkedIssueKey,
+            timestamp: "Just now",
+          });
         }
 
         broadcastEvent({
@@ -41,7 +69,7 @@ export const prController = {
           title: `PR #${pr.number} Merged`,
           message: `${pr.author.name} merged PR #${pr.number} (${pr.title}) into ${pr.targetBranch}`,
           link: "/app/pull-requests",
-          meta: { prId: pr.id, prNumber: pr.number },
+          meta: { prId: pr.id, prNumber: pr.number, organizationId: orgId },
         });
 
         return res.json({ success: true, pullRequest: pr });
@@ -49,12 +77,13 @@ export const prController = {
 
       return res.json({ success: true, pullRequest: pr });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   },
 
   reviewPullRequest(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
       const { prId } = req.body;
       const pr = pullRequests.find((p) => p.id === prId || p.number === Number(prId));
       if (!pr) {
@@ -95,16 +124,16 @@ export const prController = {
         title: `AI Review Completed for PR #${pr.number}`,
         message: `Nova AI Copilot reviewed PR #${pr.number} (Score: ${simulatedReview.score}/100 - Security: ${simulatedReview.securityStatus})`,
         link: "/app/pull-requests",
-        meta: { prId: pr.id, prNumber: pr.number, score: simulatedReview.score },
+        meta: { prId: pr.id, prNumber: pr.number, score: simulatedReview.score, organizationId: orgId },
       });
 
-      res.json({
+      return res.json({
         success: true,
         review: simulatedReview,
         pullRequest: pr,
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   },
 };

@@ -1,141 +1,126 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
-import { TaskModel } from "../models";
-import {
-  getSprints,
-  getActiveSprint,
-  getSprintById,
-  getVelocityHistory,
-  getPokerVotes,
-  castPokerVote,
-  assignTaskToSprint,
-  completeSprint,
-  startSprint,
-} from "../services/sprintData";
-import { db as workspaceDB } from "../services/db";
+import { sprintService } from "../services/sprintService";
+import { TaskModel } from "../models/Task";
 
 export const sprintController = {
-  async getSprints(_req: Request, res: Response) {
+  async getSprints(req: Request, res: Response) {
     try {
-      const sprints = getSprints();
-      const activeSprint = getActiveSprint();
-      const velocityHistory = getVelocityHistory();
-
-      let allTasks: any[] = [];
-      if (mongoose.connection.readyState === 1) {
-        try {
-          allTasks = await TaskModel.find().sort({ updatedAt: -1 });
-        } catch {
-          allTasks = workspaceDB.getTasks();
-        }
-      } else {
-        allTasks = workspaceDB.getTasks();
-      }
+      const orgId = (req as any).organizationId || "org-default";
+      const [sprints, activeSprint, allTasks] = await Promise.all([
+        sprintService.getSprints(orgId),
+        sprintService.getActiveSprint(orgId),
+        TaskModel.find({ organizationId: orgId }).sort({ updatedAt: -1 }),
+      ]);
 
       const activeTaskIds = new Set(activeSprint?.taskIds || []);
       const sprintTasks = allTasks.filter((t) => activeTaskIds.has(t.id));
       const backlogTasks = allTasks.filter((t) => !activeTaskIds.has(t.id));
 
+      const completedSprints = sprints.filter((s) => s.status === "completed");
       const avgVelocity =
-        velocityHistory.length > 0
+        completedSprints.length > 0
           ? Math.round(
-              velocityHistory.reduce((acc, curr) => acc + curr.completedPoints, 0) /
-                velocityHistory.length
+              completedSprints.reduce((acc, curr) => acc + curr.completedPoints, 0) /
+                completedSprints.length
             )
-          : 0;
+          : 24;
 
-      res.json({
+      return res.json({
         success: true,
         sprints,
         activeSprint,
-        velocityHistory,
+        velocityHistory: completedSprints.map((s) => ({
+          sprintId: s.id,
+          sprintName: s.name,
+          committedPoints: s.totalPoints,
+          completedPoints: s.completedPoints,
+          completionRate: s.totalPoints ? Math.round((s.completedPoints / s.totalPoints) * 100) : 100,
+        })),
         avgVelocity,
         sprintTasks,
         backlogTasks,
         allTasks,
       });
     } catch (error: any) {
-      res.status(500).json({ error: "Failed to fetch sprints: " + error.message });
+      return res.status(500).json({ error: "Failed to fetch sprints: " + error.message });
     }
   },
 
-  postAction(req: Request, res: Response) {
+  async createSprint(req: Request, res: Response) {
     try {
-      const { action, sprintId } = req.body;
-      if (action === "start" && sprintId) {
-        const started = startSprint(sprintId);
-        return res.json({ success: true, sprint: started });
-      }
-      return res.status(400).json({ error: "Invalid action" });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  },
+      const orgId = (req as any).organizationId || "org-default";
+      const { name, goal, startDate, endDate, totalDays } = req.body;
 
-  getSprint(req: Request, res: Response) {
-    try {
-      const id = req.params.id as string;
-      const sprint = getSprintById(id);
-      if (!sprint) return res.status(404).json({ error: "Sprint not found" });
-      res.json({ success: true, sprint });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  },
-
-  patchSprint(req: Request, res: Response) {
-    try {
-      const id = req.params.id as string;
-      const { taskId, action } = req.body;
-
-      if (action === "assign" && taskId) {
-        const updatedSprint = assignTaskToSprint(taskId, id);
-        return res.json({ success: true, sprint: updatedSprint });
+      if (!name) {
+        return res.status(400).json({ success: false, error: "Sprint name is required." });
       }
 
-      if (action === "unassign" && taskId) {
-        const updatedSprint = assignTaskToSprint(taskId, null);
-        return res.json({ success: true, sprint: updatedSprint });
-      }
+      const sprint = await sprintService.createSprint({
+        organizationId: orgId,
+        name,
+        goal,
+        startDate: startDate || new Date().toISOString().split("T")[0],
+        endDate: endDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        totalDays,
+      });
 
-      return res.status(400).json({ error: "Invalid action or parameters" });
+      return res.status(201).json({ success: true, sprint });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 
-  completeSprint(req: Request, res: Response) {
+  async startSprint(req: Request, res: Response) {
     try {
-      const id = req.params.id as string;
+      const orgId = (req as any).organizationId || "org-default";
+      const { id } = req.params;
+      const sprint = await sprintService.startSprint(orgId, id as string);
+      return res.json({ success: true, sprint });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
+  async completeSprint(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId || "org-default";
+      const { id } = req.params;
       const { rolloverTargetId } = req.body;
-      const result = completeSprint(id, rolloverTargetId);
-      res.json({ success: true, ...result });
+
+      const result = await sprintService.completeSprint(orgId, id as string, rolloverTargetId);
+      return res.json({ success: true, ...result });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || "Failed to complete sprint" });
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 
-  getPoker(req: Request, res: Response) {
+  async castVote(req: Request, res: Response) {
     try {
-      const taskId = req.query.taskId as string;
-      if (!taskId) return res.status(400).json({ error: "Missing taskId" });
-      const votes = getPokerVotes(taskId);
-      res.json({ success: true, votes });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  },
-
-  castPoker(req: Request, res: Response) {
-    try {
+      const orgId = (req as any).organizationId || "org-default";
       const { taskId, voter, points } = req.body;
       if (!taskId || !voter || points === undefined) {
-        return res.status(400).json({ error: "Missing required fields" });
+        return res.status(400).json({ success: false, error: "taskId, voter, and points are required." });
       }
-      const result = castPokerVote(taskId, voter, points);
-      res.json({ success: true, ...result });
+
+      const result = await sprintService.castPokerVote(orgId, taskId, voter, Number(points));
+      return res.json({ success: true, result });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
+  async assignTask(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId || "org-default";
+      const { taskId, sprintId } = req.body;
+      if (!taskId) {
+        return res.status(400).json({ success: false, error: "taskId is required." });
+      }
+
+      const activeSprint = await sprintService.assignTaskToSprint(orgId, taskId, sprintId || null);
+      return res.json({ success: true, activeSprint });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
     }
   },
 };

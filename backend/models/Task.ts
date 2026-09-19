@@ -3,12 +3,14 @@ import { Task } from "../services/types";
 
 export interface ITaskDocument extends Omit<Task, "id">, Document {
   id: string;
+  organizationId: string;
 }
 
 const TaskSchema = new Schema<ITaskDocument>(
   {
     id: { type: String, required: true, unique: true, index: true },
     key: { type: String, required: true, unique: true, index: true },
+    organizationId: { type: String, required: true, index: true },
     projectId: { type: String, required: true, index: true },
     title: { type: String, required: true },
     description: { type: String, default: "" },
@@ -38,6 +40,10 @@ const TaskSchema = new Schema<ITaskDocument>(
   },
   { timestamps: true }
 );
+
+// Compound index for org-scoped queries
+TaskSchema.index({ organizationId: 1, projectId: 1, status: 1 });
+TaskSchema.index({ organizationId: 1, updatedAt: -1 });
 
 export const TaskModel: Model<ITaskDocument> =
   mongoose.models.Task || mongoose.model<ITaskDocument>("Task", TaskSchema);
