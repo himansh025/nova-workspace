@@ -221,6 +221,62 @@
         "points": 5,
         "timestamp": "2026-09-15T15:03:55.266Z"
       }
+    ],
+    "tsk-mu77rgc1": [
+      {
+        "taskId": "tsk-mu77rgc1",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-18T17:10:21.658Z"
+      }
+    ],
+    "tsk-mu786fkd": [
+      {
+        "taskId": "tsk-mu786fkd",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-18T17:21:40.502Z"
+      }
+    ],
+    "tsk-mu78d2aq": [
+      {
+        "taskId": "tsk-mu78d2aq",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-18T17:26:49.888Z"
+      }
+    ],
+    "tsk-mu79clou": [
+      {
+        "taskId": "tsk-mu79clou",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-18T17:54:27.978Z"
+      }
+    ],
+    "tsk-mu79fk77": [
+      {
+        "taskId": "tsk-mu79fk77",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-18T17:56:46.017Z"
+      }
+    ],
+    "tsk-mu79lpuy": [
+      {
+        "taskId": "tsk-mu79lpuy",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-18T18:01:33.289Z"
+      }
+    ],
+    "tsk-mu79piwi": [
+      {
+        "taskId": "tsk-mu79piwi",
+        "voter": "Elena Rostova",
+        "points": 8,
+        "timestamp": "2026-09-18T18:04:30.907Z"
+      }
     ]
   }
 }

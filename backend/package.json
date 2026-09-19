@@ -1,0 +1,12 @@
+{
+  "name": "nova-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone Node.js Express MVC Backend for Nova Workspace",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "npx tsx server.ts",
+    "start": "npx tsx server.ts",
+    "seed": "npx tsx seed.ts"
+  }
+}

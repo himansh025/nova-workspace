@@ -52,7 +52,7 @@
       "avatar": "",
       "initials": "ER",
       "status": "online",
-      "activeTasksCount": 3
+      "activeTasksCount": 10
     },
     {
       "id": "usr-2",
@@ -103,9 +103,206 @@
       "status": "online",
       "id": "usr-mu2sakyw",
       "activeTasksCount": 0
+    },
+    {
+      "name": "Devon Vance",
+      "email": "dev_1789753625556@nova.dev",
+      "role": "Staff Reliability Engineer",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      "initials": "DV",
+      "status": "online",
+      "id": "usr-mu793z98",
+      "activeTasksCount": 0
+    },
+    {
+      "name": "Devon Vance",
+      "email": "dev_1789753895460@nova.dev",
+      "role": "Staff Reliability Engineer",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      "initials": "DV",
+      "status": "online",
+      "id": "usr-mu799c2b",
+      "activeTasksCount": 0
+    },
+    {
+      "name": "Devon Vance",
+      "email": "dev_1789754173888@nova.dev",
+      "role": "Staff Reliability Engineer",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      "initials": "DV",
+      "status": "online",
+      "id": "usr-mu79fawf",
+      "activeTasksCount": 0
+    },
+    {
+      "name": "Devon Vance",
+      "email": "dev_1789754505590@nova.dev",
+      "role": "Staff Reliability Engineer",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      "initials": "DV",
+      "status": "online",
+      "id": "usr-mu79meuc",
+      "activeTasksCount": 0
+    },
+    {
+      "name": "Devon Vance",
+      "email": "dev_1789754684954@nova.dev",
+      "role": "Staff Reliability Engineer",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
+      "initials": "DV",
+      "status": "online",
+      "id": "usr-mu79q996",
+      "activeTasksCount": 0
     }
   ],
   "tasks": [
+    {
+      "id": "tsk-mu79piwi",
+      "key": "NV-880",
+      "projectId": "prj-1",
+      "title": "Express Backend Standalone Decoupling Task",
+      "description": "",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "General"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-18T18:04:10.866Z",
+      "updatedAt": "2026-09-18T18:04:30.907Z"
+    },
+    {
+      "id": "tsk-mu79lpuy",
+      "key": "NV-879",
+      "projectId": "prj-1",
+      "title": "Express Backend Standalone Decoupling Task",
+      "description": "",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "General"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-18T18:01:13.258Z",
+      "updatedAt": "2026-09-18T18:01:33.289Z"
+    },
+    {
+      "id": "tsk-mu79fk77",
+      "key": "NV-878",
+      "projectId": "prj-1",
+      "title": "Express Backend Standalone Decoupling Task",
+      "description": "",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "General"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-18T17:56:25.987Z",
+      "updatedAt": "2026-09-18T17:56:46.017Z"
+    },
+    {
+      "id": "tsk-mu79clou",
+      "key": "NV-877",
+      "projectId": "prj-1",
+      "title": "Express Backend Standalone Decoupling Task",
+      "description": "",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "General"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-18T17:54:07.950Z",
+      "updatedAt": "2026-09-18T17:54:27.978Z"
+    },
+    {
+      "id": "tsk-mu78d2aq",
+      "key": "NV-876",
+      "projectId": "prj-1",
+      "title": "Express Backend Standalone Decoupling Task",
+      "description": "",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "General"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-18T17:26:29.858Z",
+      "updatedAt": "2026-09-18T17:26:49.888Z"
+    },
+    {
+      "id": "tsk-mu786fkd",
+      "key": "NV-875",
+      "projectId": "prj-1",
+      "title": "Express Backend Standalone Decoupling Task",
+      "description": "",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "General"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-18T17:21:20.461Z",
+      "updatedAt": "2026-09-18T17:21:40.502Z"
+    },
+    {
+      "id": "tsk-mu77rgc1",
+      "key": "NV-874",
+      "projectId": "prj-1",
+      "title": "Express Backend Standalone Decoupling Task",
+      "description": "",
+      "status": "done",
+      "priority": "high",
+      "assignee": {
+        "id": "usr-1",
+        "name": "Elena Rostova",
+        "avatar": "",
+        "initials": "ER"
+      },
+      "tags": [
+        "General"
+      ],
+      "estimate": "8 pts",
+      "createdAt": "2026-09-18T17:09:41.617Z",
+      "updatedAt": "2026-09-18T17:10:21.658Z"
+    },
     {
       "id": "tsk-1",
       "key": "NV-842",
@@ -464,6 +661,215 @@
     }
   ],
   "activities": [
+    {
+      "id": "act-1789754685018",
+      "type": "member_joined",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "joined workspace squad",
+      "target": "Staff Reliability Engineer",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754660888",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "moved to DONE",
+      "target": "NV-880",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754650866",
+      "type": "task_created",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "created issue",
+      "target": "NV-880 (Express Backend Standalone Decoupling Task)",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754505636",
+      "type": "member_joined",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "joined workspace squad",
+      "target": "Staff Reliability Engineer",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754483273",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "moved to DONE",
+      "target": "NV-879",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754473258",
+      "type": "task_created",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "created issue",
+      "target": "NV-879 (Express Backend Standalone Decoupling Task)",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754196004",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "moved to DONE",
+      "target": "NV-878",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754185988",
+      "type": "task_created",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "created issue",
+      "target": "NV-878 (Express Backend Standalone Decoupling Task)",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754173935",
+      "type": "member_joined",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "joined workspace squad",
+      "target": "Staff Reliability Engineer",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754057965",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "moved to DONE",
+      "target": "NV-877",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789754047950",
+      "type": "task_created",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "created issue",
+      "target": "NV-877 (Express Backend Standalone Decoupling Task)",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789753895507",
+      "type": "member_joined",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "joined workspace squad",
+      "target": "Staff Reliability Engineer",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789753645628",
+      "type": "member_joined",
+      "actor": {
+        "name": "Devon Vance",
+        "initials": "DV"
+      },
+      "action": "joined workspace squad",
+      "target": "Staff Reliability Engineer",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789752399877",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "moved to DONE",
+      "target": "NV-876",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789752389858",
+      "type": "task_created",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "created issue",
+      "target": "NV-876 (Express Backend Standalone Decoupling Task)",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789752090481",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "moved to DONE",
+      "target": "NV-875",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789752080461",
+      "type": "task_created",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "created issue",
+      "target": "NV-875 (Express Backend Standalone Decoupling Task)",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789751401635",
+      "type": "task_status",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "moved to DONE",
+      "target": "NV-874",
+      "timestamp": "Just now"
+    },
+    {
+      "id": "act-1789751381617",
+      "type": "task_created",
+      "actor": {
+        "name": "Elena Rostova",
+        "initials": "ER"
+      },
+      "action": "created issue",
+      "target": "NV-874 (Express Backend Standalone Decoupling Task)",
+      "timestamp": "Just now"
+    },
     {
       "id": "act-1789483535528",
       "type": "member_joined",
