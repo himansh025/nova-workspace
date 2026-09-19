@@ -2,14 +2,25 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import apiRouter from "./routes";
+import { connectMongoDB } from "./config/db";
 import { requestLogger } from "./middlewares/logger";
 import { errorHandler } from "./middlewares/errorHandler";
 import { systemController } from "./controllers/systemController";
 import { ENV } from "./config/env";
 
 const app = express();
+
+// ─── 0. Ensure MongoDB Connection (Serverless Resilient) ──────────────────────
+app.use(async (_req, _res, next) => {
+  try {
+    await connectMongoDB();
+  } catch (err: any) {
+    console.error("[MongoDB Serverless Connection Warning]:", err.message);
+  }
+  next();
+});
 
 // ─── 1. Security Headers (Helmet) ─────────────────────────────────────────────
 app.use(
@@ -21,7 +32,11 @@ app.use(
 
 // ─── 2. Request Correlation ID ────────────────────────────────────────────────
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const reqId = (req.headers["x-request-id"] as string) || uuidv4();
+  const reqId =
+    (req.headers["x-request-id"] as string) ||
+    (typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : crypto.randomBytes(16).toString("hex"));
   (req as any).id = reqId;
   res.setHeader("X-Request-ID", reqId);
   next();
