@@ -202,7 +202,7 @@ export const authController = {
         return res.status(401).json({ success: false, authenticated: false, error: "Not authenticated" });
       }
 
-      const user = verifySessionToken(token);
+      const user = await verifySessionToken(token);
       if (!user) {
         return res.status(401).json({ success: false, authenticated: false, error: "Session expired or invalid" });
       }

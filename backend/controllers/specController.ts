@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
 import { SpecModel } from "../models";
 import { db as workspaceDB } from "../services/db";
@@ -6,12 +7,17 @@ export const specController = {
   async getSpecs(req: Request, res: Response) {
     try {
       const { status } = req.query;
-      try {
-        const filter: any = {};
-        if (status && typeof status === "string") filter.status = status;
-        const specs = await SpecModel.find(filter).sort({ updatedAt: -1 });
-        if (specs.length > 0) return res.json({ success: true, specs });
-      } catch {}
+
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const filter: any = {};
+          if (status && typeof status === "string") filter.status = status;
+          const specs = await SpecModel.find(filter).sort({ updatedAt: -1 });
+          return res.json({ success: true, specs });
+        } catch (dbErr) {
+          console.warn("[SpecModel] Mongo query fallback:", dbErr);
+        }
+      }
 
       const specs = workspaceDB.getSpecs(status as any);
       res.json({ success: true, specs });

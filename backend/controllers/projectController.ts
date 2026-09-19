@@ -1,15 +1,18 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
 import { ProjectModel } from "../models";
 import { db as workspaceDB } from "../services/db";
 
 export const projectController = {
   async getProjects(_req: Request, res: Response) {
-    try {
-      const projects = await ProjectModel.find().sort({ createdAt: -1 });
-      if (projects.length > 0) {
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const projects = await ProjectModel.find().sort({ createdAt: -1 });
         return res.json({ success: true, projects });
+      } catch (dbErr) {
+        console.warn("[ProjectModel] Mongo query fallback:", dbErr);
       }
-    } catch {}
+    }
 
     const projects = workspaceDB.getProjects();
     res.json({ success: true, projects });

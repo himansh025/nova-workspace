@@ -111,6 +111,12 @@ async function runUserModelAudit() {
     });
     assert(logoutRes.status === 200, "User Logout (/logout)", "Cleared session");
 
+    // Clean up test user records
+    try {
+      await UserModel.deleteOne({ email: uniqueEmail });
+      await TeamMemberModel.deleteOne({ email: uniqueEmail });
+    } catch {}
+
     console.log("\n---------------------------------------------------------");
     console.log(`Results: ${passed}/${total} User Model & Auth tests passed (${Math.round((passed / total) * 100)}%)`);
     console.log("UserModel, TeamMemberModel sync, and MVC architecture verified!");

@@ -1,10 +1,20 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
 import { TeamMemberModel } from "../models";
 import { db as workspaceDB } from "../services/db";
 
 export const teamController = {
-  getTeam(_req: Request, res: Response) {
+  async getTeam(_req: Request, res: Response) {
     try {
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const team = await TeamMemberModel.find().sort({ createdAt: 1 });
+          return res.json({ success: true, team });
+        } catch (dbErr) {
+          console.warn("[TeamMemberModel] Mongo query fallback:", dbErr);
+        }
+      }
+
       const team = workspaceDB.getTeam();
       res.json({ success: true, team });
     } catch (error: any) {

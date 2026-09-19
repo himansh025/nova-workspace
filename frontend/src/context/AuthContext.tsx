@@ -41,26 +41,58 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("nova_user");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const handleSetUser = (u: User | null) => {
+    setUser(u);
+    if (typeof window !== "undefined") {
+      if (u) {
+        localStorage.setItem("nova_user", JSON.stringify(u));
+      } else {
+        localStorage.removeItem("nova_user");
+        localStorage.removeItem("nova_token");
+      }
+    }
+  };
+
   // Inspect session on mount
   useEffect(() => {
-    fetch("/api/auth/me")
+    const token = typeof window !== "undefined" ? localStorage.getItem("nova_token") : null;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    fetch("/api/auth/me", {
+      credentials: "include",
+      headers,
+    })
       .then((res) => {
         if (res.ok) return res.json();
         return null;
       })
       .then((data) => {
         if (data && data.authenticated && data.user) {
-          setUser(data.user);
+          handleSetUser(data.user);
         } else {
-          setUser(null);
+          // If server explicitly rejects session, clear
+          if (!data || data.authenticated === false) {
+            handleSetUser(null);
+          }
         }
       })
       .catch(() => {
-        setUser(null);
+        // Network offline - retain local user session
       })
       .finally(() => {
         setIsLoading(false);
@@ -71,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
@@ -78,7 +111,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok || !data.success) {
         return { success: false, error: data.error || "Login failed" };
       }
-      setUser(data.user);
+      if (typeof window !== "undefined") {
+        if (data.sessionToken || data.token) {
+          localStorage.setItem("nova_token", data.sessionToken || data.token);
+        }
+      }
+      handleSetUser(data.user);
       router.push("/app");
       return { success: true };
     } catch (err: any) {
@@ -96,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
@@ -103,7 +142,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok || !data.success) {
         return { success: false, error: data.error || "Signup failed" };
       }
-      setUser(data.user);
+      if (typeof window !== "undefined") {
+        if (data.sessionToken || data.token) {
+          localStorage.setItem("nova_token", data.sessionToken || data.token);
+        }
+      }
+      handleSetUser(data.user);
       router.push("/app");
       return { success: true };
     } catch (err: any) {
@@ -113,14 +157,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const token = typeof window !== "undefined" ? localStorage.getItem("nova_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        headers,
+      });
     } catch {}
-    setUser(null);
+    handleSetUser(null);
     router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, setUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, setUser: handleSetUser }}>
       {children}
     </AuthContext.Provider>
   );

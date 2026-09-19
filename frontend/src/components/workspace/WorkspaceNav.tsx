@@ -12,6 +12,7 @@ import {
   Check
 } from "lucide-react";
 import { Project } from "@/types";
+import { useAuth } from "@/context/AuthContext";
 import { NotificationCenter } from "./NotificationCenter";
 
 interface WorkspaceNavProps {
@@ -25,6 +26,7 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
   onOpenNewTaskModal,
   onToggleMobileSidebar
 }) => {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -61,11 +63,13 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
           >
             <div className="w-2 h-2 rounded-full bg-[var(--color-accent)]" />
             <span className="font-medium truncate max-w-[150px] sm:max-w-[200px]">
-              {activeProject?.name || "Platform Core 2.0"}
+              {activeProject?.name || (user?.organization ? `${user.organization}` : "Workspace")}
             </span>
-            <span className="text-[10px] font-mono text-neutral-500 bg-white/5 px-1.5 py-0.2 rounded hidden sm:inline">
-              {activeProject?.sprint || "Sprint 48"}
-            </span>
+            {activeProject?.sprint && (
+              <span className="text-[10px] font-mono text-neutral-500 bg-white/5 px-1.5 py-0.2 rounded hidden sm:inline">
+                {activeProject.sprint}
+              </span>
+            )}
             <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
           </button>
 
@@ -107,7 +111,7 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
         {/* Branch indicator */}
         <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded bg-black/30 border border-white/5 text-[10px] font-mono text-neutral-400">
           <GitBranch className="w-3 h-3 text-sky-400" />
-          <span>{activeProject?.activeBranch || "main@4f81c9a"}</span>
+          <span>{activeProject?.activeBranch || "main"}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-1" title="Synced" />
         </div>
       </div>

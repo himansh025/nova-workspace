@@ -160,7 +160,7 @@ export default function ReleasesPage() {
                 </span>
               </div>
               <p className="text-xs text-neutral-400 mt-0.5">
-                Target: Platform Core 2.0 • SHA: sha256:4f81c9a • Deployed to 24 edge regions
+                Target: {release?.version || "Active Canary"} • Global Edge Mesh Deployment
               </p>
             </div>
           </div>

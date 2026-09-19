@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
+import { TaskModel } from "../models";
 import {
   getSprints,
   getActiveSprint,
@@ -13,12 +15,22 @@ import {
 import { db as workspaceDB } from "../services/db";
 
 export const sprintController = {
-  getSprints(_req: Request, res: Response) {
+  async getSprints(_req: Request, res: Response) {
     try {
       const sprints = getSprints();
       const activeSprint = getActiveSprint();
       const velocityHistory = getVelocityHistory();
-      const allTasks = workspaceDB.getTasks();
+
+      let allTasks: any[] = [];
+      if (mongoose.connection.readyState === 1) {
+        try {
+          allTasks = await TaskModel.find().sort({ updatedAt: -1 });
+        } catch {
+          allTasks = workspaceDB.getTasks();
+        }
+      } else {
+        allTasks = workspaceDB.getTasks();
+      }
 
       const activeTaskIds = new Set(activeSprint?.taskIds || []);
       const sprintTasks = allTasks.filter((t) => activeTaskIds.has(t.id));
@@ -30,7 +42,7 @@ export const sprintController = {
               velocityHistory.reduce((acc, curr) => acc + curr.completedPoints, 0) /
                 velocityHistory.length
             )
-          : 38;
+          : 0;
 
       res.json({
         success: true,

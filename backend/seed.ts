@@ -12,41 +12,7 @@ import {
 import { initialWorkspaceDB } from "./services/seed";
 import { getSprints } from "./services/sprintData";
 
-const DEFAULT_SEED_USERS = [
-  {
-    id: "usr-1",
-    name: "Elena Rostova",
-    email: "elena@nova.dev",
-    passwordHash: "password123",
-    role: "Lead Architect",
-    organization: "Nova Engineering Labs",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    initials: "ER",
-    createdAt: "2026-08-01T10:00:00Z",
-  },
-  {
-    id: "usr-2",
-    name: "Marcus Chen",
-    email: "marcus@nova.dev",
-    passwordHash: "password123",
-    role: "Staff Frontend Engineer",
-    organization: "Nova Engineering Labs",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-    initials: "MC",
-    createdAt: "2026-08-10T10:00:00Z",
-  },
-  {
-    id: "usr-3",
-    name: "Siddharth N.",
-    email: "siddharth@nova.dev",
-    passwordHash: "password123",
-    role: "Distributed Systems Lead",
-    organization: "Nova Engineering Labs",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-    initials: "SN",
-    createdAt: "2026-08-15T10:00:00Z",
-  },
-];
+const DEFAULT_SEED_USERS: any[] = [];
 
 export async function seedMongoDB(force: boolean = false) {
   try {

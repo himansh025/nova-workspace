@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
 import { TaskModel } from "../models";
 import { db as workspaceDB } from "../services/db";
@@ -6,23 +7,26 @@ export const taskController = {
   async getTasks(req: Request, res: Response) {
     try {
       const { status, priority, search } = req.query;
-      try {
-        const filter: any = {};
-        if (status && typeof status === "string") filter.status = status;
-        if (priority && typeof priority === "string") filter.priority = priority;
-        if (search && typeof search === "string") {
-          filter.$or = [
-            { title: { $regex: search, $options: "i" } },
-            { description: { $regex: search, $options: "i" } },
-            { key: { $regex: search, $options: "i" } },
-          ];
-        }
 
-        const tasks = await TaskModel.find(filter).sort({ updatedAt: -1 });
-        if (tasks.length > 0) {
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const filter: any = {};
+          if (status && typeof status === "string") filter.status = status;
+          if (priority && typeof priority === "string") filter.priority = priority;
+          if (search && typeof search === "string") {
+            filter.$or = [
+              { title: { $regex: search, $options: "i" } },
+              { description: { $regex: search, $options: "i" } },
+              { key: { $regex: search, $options: "i" } },
+            ];
+          }
+
+          const tasks = await TaskModel.find(filter).sort({ updatedAt: -1 });
           return res.json({ success: true, count: tasks.length, tasks });
+        } catch (dbErr) {
+          console.warn("[TaskModel] Mongo query fallback:", dbErr);
         }
-      } catch {}
+      }
 
       const tasks = workspaceDB.getTasks({
         status: status as any,

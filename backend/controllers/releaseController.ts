@@ -1,9 +1,20 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
+import { ReleaseModel } from "../models";
 import { db as workspaceDB } from "../services/db";
 
 export const releaseController = {
-  getReleases(_req: Request, res: Response) {
+  async getReleases(_req: Request, res: Response) {
     try {
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const releases = await ReleaseModel.find().sort({ createdAt: -1 });
+          return res.json({ success: true, releases, release: releases[0] || null });
+        } catch (dbErr) {
+          console.warn("[ReleaseModel] Mongo query fallback:", dbErr);
+        }
+      }
+
       const releases = workspaceDB.getReleases();
       res.json({ success: true, releases, release: releases[0] || null });
     } catch (error: any) {

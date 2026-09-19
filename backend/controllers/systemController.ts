@@ -1,5 +1,6 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
-import { TaskModel, SpecModel, ProjectModel, ReleaseModel } from "../models";
+import { TaskModel, SpecModel, ProjectModel, ReleaseModel, ActivityItemModel } from "../models";
 import { getMongoState } from "../config/db";
 import { seedMongoDB } from "../seed";
 import { db as workspaceDB } from "../services/db";
@@ -40,8 +41,17 @@ export const systemController = {
     }
   },
 
-  getActivity(_req: Request, res: Response) {
+  async getActivity(_req: Request, res: Response) {
     try {
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const activities = await ActivityItemModel.find().sort({ timestamp: -1 }).limit(20);
+          return res.json({ success: true, activities });
+        } catch (dbErr) {
+          console.warn("[ActivityItemModel] Mongo query fallback:", dbErr);
+        }
+      }
+
       const activities = workspaceDB.getActivities();
       res.json({ success: true, activities });
     } catch (error: any) {

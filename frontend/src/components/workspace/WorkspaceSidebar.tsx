@@ -61,7 +61,16 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       .catch(() => {});
   }, [pathname]);
 
-  const navLinks = [
+  interface NavItem {
+    label: string;
+    href: string;
+    icon: React.ReactNode;
+    exact?: boolean;
+    count?: number;
+    badge?: string;
+  }
+
+  const navLinks: NavItem[] = [
     {
       label: "Overview",
       href: "/app",
@@ -77,14 +86,12 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
     {
       label: "Sprint Planning",
       href: "/app/sprints",
-      icon: <Zap className="w-4 h-4 text-amber-400" />,
-      badge: "Sprint 24"
+      icon: <Zap className="w-4 h-4 text-amber-400" />
     },
     {
       label: "Pull Requests",
       href: "/app/pull-requests",
-      icon: <GitPullRequest className="w-4 h-4 text-purple-400" />,
-      badge: "3 Open"
+      icon: <GitPullRequest className="w-4 h-4 text-purple-400" />
     },
     {
       label: "Architecture Specs",
@@ -95,14 +102,12 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
     {
       label: "Service Mesh",
       href: "/app/architecture",
-      icon: <Network className="w-4 h-4 text-emerald-400" />,
-      badge: "6 Nodes"
+      icon: <Network className="w-4 h-4 text-emerald-400" />
     },
     {
       label: "AI Copilot",
       href: "/app/ai",
-      icon: <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />,
-      badge: "Context Live"
+      icon: <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
     },
     {
       label: "Telemetry & Signals",
@@ -112,8 +117,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
     {
       label: "Releases & Canary",
       href: "/app/releases",
-      icon: <Rocket className="w-4 h-4 text-emerald-400" />,
-      badge: "v2.4.0"
+      icon: <Rocket className="w-4 h-4 text-emerald-400" />
     },
     {
       label: "Team Directory",

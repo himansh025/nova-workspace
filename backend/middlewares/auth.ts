@@ -15,7 +15,7 @@ export function parseCookies(req: Request): Record<string, string> {
   return list;
 }
 
-export function authGuard(req: Request, res: Response, next: NextFunction) {
+export async function authGuard(req: Request, res: Response, next: NextFunction) {
   const cookies = parseCookies(req);
   const authHeader = req.headers.authorization;
   let token = cookies["nova_session"];
@@ -28,7 +28,7 @@ export function authGuard(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  const user = verifySessionToken(token);
+  const user = await verifySessionToken(token);
   if (!user) {
     return res.status(401).json({ error: "Invalid or expired session token" });
   }

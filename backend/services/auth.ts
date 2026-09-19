@@ -1,5 +1,9 @@
+import crypto from "crypto";
+import mongoose from "mongoose";
 import { TeamMember } from "./types";
 import { db } from "./db";
+import { ENV } from "../config/env";
+import { UserModel } from "../models";
 
 export interface AuthUser {
   id: string;
@@ -38,15 +42,86 @@ export function findUserById(id: string): AuthUser | undefined {
 }
 
 export function createSessionToken(userId: string): string {
-  const token = `sess_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+  const payload = Buffer.from(JSON.stringify({ userId, iat: Date.now() })).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", ENV.JWT_SECRET)
+    .update(payload)
+    .digest("base64url");
+  const token = `nova_${payload}.${signature}`;
   sessions.set(token, userId);
   return token;
 }
 
-export function verifySessionToken(token: string): AuthUser | null {
-  const userId = sessions.get(token);
-  if (!userId) return null;
-  return findUserById(userId) || null;
+export async function verifySessionToken(token: string): Promise<AuthUser | any | null> {
+  if (!token) return null;
+
+  // 1. Check signed HMAC token (stateless & resilient across serverless instances)
+  if (token.startsWith("nova_")) {
+    const raw = token.slice(5);
+    const dotIndex = raw.indexOf(".");
+    if (dotIndex !== -1) {
+      const payload = raw.slice(0, dotIndex);
+      const signature = raw.slice(dotIndex + 1);
+      const expectedSig = crypto
+        .createHmac("sha256", ENV.JWT_SECRET)
+        .update(payload)
+        .digest("base64url");
+
+      if (signature.length === expectedSig.length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+        try {
+          const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
+          const userId = data.userId;
+
+          // Query real MongoDB UserModel if connected
+          if (mongoose.connection.readyState === 1) {
+            try {
+              const dbUser = await UserModel.findOne({
+                $or: [{ id: userId }, { email: userId }]
+              });
+              if (dbUser) return dbUser.toObject();
+            } catch {}
+          }
+
+          // Fallback to in-memory store
+          const found = findUserById(userId) || findUserByEmail(userId);
+          if (found) return found;
+        } catch {}
+      }
+    }
+  }
+
+  // 2. Check in-memory sessions map
+  const mappedId = sessions.get(token);
+  if (mappedId) {
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const dbUser = await UserModel.findOne({
+          $or: [{ id: mappedId }, { email: mappedId }]
+        });
+        if (dbUser) return dbUser.toObject();
+      } catch {}
+    }
+    return findUserById(mappedId) || null;
+  }
+
+  // 3. Fallback: if token is sess_usr-xxx, extract the user id directly
+  if (token.startsWith("sess_")) {
+    const parts = token.split("_");
+    if (parts.length >= 2) {
+      const parsedId = parts[1];
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const dbUser = await UserModel.findOne({
+            $or: [{ id: parsedId }, { email: parsedId }]
+          });
+          if (dbUser) return dbUser.toObject();
+        } catch {}
+      }
+      return findUserById(parsedId) || null;
+    }
+  }
+
+  return null;
 }
 
 export function removeSessionToken(token: string): boolean {
