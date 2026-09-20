@@ -1,4 +1,5 @@
 import app from "../app";
+import mongoose from "mongoose";
 import { connectMongoDB } from "../config/db";
 import { UserModel, TaskModel, OrganizationModel, OrganizationMemberModel, SessionModel } from "../models";
 import { registerUserAccount, authenticateUser } from "../services/auth";
@@ -186,6 +187,8 @@ async function runSecurityAudit() {
     process.exit(1);
   } finally {
     server.close();
+    await mongoose.disconnect();
+    process.exit(passed === total ? 0 : 1);
   }
 }
 

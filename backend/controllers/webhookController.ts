@@ -1,14 +1,13 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
 import { broadcastEvent } from "../services/events";
-import { OutgoingWebhook } from "../services/types";
+import { OutgoingWebhookModel } from "../models/OutgoingWebhook";
+import { PullRequestModel } from "../models/PullRequest";
+import { TaskModel } from "../models/Task";
+import { ActivityItemModel } from "../models/Activity";
 import { ENV } from "../config/env";
 
-declare global {
-  var __novaOutgoingWebhooks: OutgoingWebhook[] | undefined;
-}
-
-const defaultWebhooks: OutgoingWebhook[] = [
+const defaultWebhooks = [
   {
     id: "wh-1",
     name: "Slack #dev-deployments Channel",
@@ -41,27 +40,47 @@ const defaultWebhooks: OutgoingWebhook[] = [
   },
 ];
 
-const outgoingWebhooks: any[] = global.__novaOutgoingWebhooks || [...defaultWebhooks];
-if (process.env.NODE_ENV !== "production") {
-  global.__novaOutgoingWebhooks = outgoingWebhooks;
-}
-
 export const webhookController = {
-  getOutgoingWebhooks(_req: Request, res: Response) {
-    return res.json({ success: true, webhooks: outgoingWebhooks });
+  async getOutgoingWebhooks(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId || (req.query.orgId as string) || "org-default";
+      let count = await OutgoingWebhookModel.countDocuments({ organizationId: orgId });
+
+      if (count === 0) {
+        const initial = defaultWebhooks.map((w) => ({
+          ...w,
+          organizationId: orgId,
+        }));
+        await OutgoingWebhookModel.insertMany(initial);
+      }
+
+      const webhooks = await OutgoingWebhookModel.find({ organizationId: orgId });
+      return res.json({ success: true, webhooks });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
   },
 
-  testOutgoingWebhook(req: Request, res: Response) {
+  async testOutgoingWebhook(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
       const { action, id } = req.body;
-      const webhook = outgoingWebhooks.find((w) => w.id === id);
+
+      const webhook = await OutgoingWebhookModel.findOne({
+        $or: [
+          { organizationId: orgId, id },
+          { id },
+        ],
+      });
+
       if (!webhook) {
-        return res.status(404).json({ error: "Webhook not found" });
+        return res.status(404).json({ error: "Webhook not found in database" });
       }
 
       if (action === "test") {
         webhook.lastDelivery = "Just now (200 OK)";
         webhook.deliverySuccessRate = 100;
+        await webhook.save();
 
         broadcastEvent({
           type: "system",
@@ -84,8 +103,10 @@ export const webhookController = {
     }
   },
 
-  handleGithubWebhook(req: Request, res: Response) {
+  async handleGithubWebhook(req: Request, res: Response) {
     try {
+      const orgId = (req as any).organizationId || "org-default";
+
       // Signature verification if GITHUB_WEBHOOK_SECRET is configured
       if (ENV.GITHUB_WEBHOOK_SECRET) {
         const signature = req.headers["x-hub-signature-256"] as string;
@@ -107,18 +128,101 @@ export const webhookController = {
         }
       }
 
-      const { event, branch, author } = req.body;
-      const commitAuthor = author || "Marcus Vance";
+      const ghEvent = (req.headers["x-github-event"] as string) || req.body.event || "push";
+
+      // Handle live GitHub Pull Request events
+      if (ghEvent === "pull_request" && req.body.pull_request) {
+        const ghPR = req.body.pull_request;
+        const prAction = req.body.action; // opened, closed, reopened, synchronize
+        const prId = `pr-gh-${ghPR.id}`;
+        const authorName = ghPR.user?.login || "GitHub User";
+        const authorInitials = authorName.slice(0, 2).toUpperCase();
+
+        const status = ghPR.merged
+          ? "merged"
+          : ghPR.state === "closed"
+          ? "closed"
+          : "open";
+
+        const linkedIssueMatch = (ghPR.title + " " + (ghPR.body || "")).match(/\b(NV-\d+)\b/i);
+        const linkedIssueKey = linkedIssueMatch ? linkedIssueMatch[1].toUpperCase() : undefined;
+
+        await PullRequestModel.findOneAndUpdate(
+          { organizationId: orgId, $or: [{ id: prId }, { number: ghPR.number }] },
+          {
+            $set: {
+              id: prId,
+              organizationId: orgId,
+              number: ghPR.number,
+              title: ghPR.title,
+              description: ghPR.body || "",
+              author: {
+                name: authorName,
+                avatar: ghPR.user?.avatar_url || "",
+                initials: authorInitials,
+              },
+              branch: ghPR.head?.ref || "feature",
+              targetBranch: ghPR.base?.ref || "main",
+              status,
+              commitsCount: ghPR.commits || 1,
+              filesChangedCount: ghPR.changed_files || 1,
+              additions: ghPR.additions || 0,
+              deletions: ghPR.deletions || 0,
+              updatedAt: new Date().toISOString(),
+              linkedIssueKey,
+              githubPrId: ghPR.id,
+              githubUrl: ghPR.html_url,
+            },
+          },
+          { upsert: true, new: true }
+        );
+
+        if (status === "merged" && linkedIssueKey) {
+          await TaskModel.updateOne(
+            { organizationId: orgId, $or: [{ id: linkedIssueKey }, { key: linkedIssueKey }] },
+            { $set: { status: "done", updatedAt: new Date().toISOString() } }
+          );
+
+          await ActivityItemModel.create({
+            id: `act-${Date.now()}`,
+            organizationId: orgId,
+            type: "task_status",
+            actor: { name: authorName, initials: authorInitials },
+            action: `merged GitHub PR #${ghPR.number} and moved task to DONE`,
+            target: linkedIssueKey,
+            timestamp: "Just now",
+          });
+        }
+
+        broadcastEvent({
+          type: "git_webhook",
+          category: "git",
+          title: `GitHub PR #${ghPR.number} ${prAction}`,
+          message: `${authorName} ${prAction} pull request #${ghPR.number}: "${ghPR.title}"`,
+          link: "/app/pull-requests",
+          meta: { prNumber: ghPR.number, action: prAction, organizationId: orgId },
+        });
+
+        return res.json({
+          success: true,
+          message: `Processed pull_request (${prAction}) event successfully.`,
+        });
+      }
+
+      // Handle Push / other events
+      const { branch, author } = req.body;
+      const commitAuthor = author || req.body.pusher?.name || "Marcus Vance";
 
       broadcastEvent({
         type: "git_webhook",
         category: "git",
-        title: `GitHub Webhook: ${event || "push"}`,
-        message: `${commitAuthor} triggered ${event || "push"} on ${branch || "main"}`,
+        title: `GitHub Webhook: ${ghEvent}`,
+        message: `${commitAuthor} triggered ${ghEvent} on ${branch || req.body.ref || "main"}`,
         link: "/app/tasks",
+        meta: { organizationId: orgId },
       });
 
-      return res.json({ success: true, message: `Handled ${event || "push"} event successfully.` });
+      return res.json({ success: true, message: `Handled ${ghEvent} event successfully.` });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error.message });
     }

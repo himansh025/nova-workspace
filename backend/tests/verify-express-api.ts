@@ -1,4 +1,5 @@
 import app from "../app";
+import mongoose from "mongoose";
 import { connectMongoDB } from "../config/db";
 import { UserModel, TeamMemberModel } from "../models";
 
@@ -270,6 +271,8 @@ async function runExpressAudit() {
     process.exit(1);
   } finally {
     server.close();
+    await mongoose.disconnect();
+    process.exit(passed === total ? 0 : 1);
   }
 }
 

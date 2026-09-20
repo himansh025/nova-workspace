@@ -15,17 +15,22 @@ import {
   Check,
   Clock,
   Layers,
+  RefreshCw,
+  Github,
 } from "lucide-react";
 import { PullRequest } from "@/types";
 import { useToast } from "@/components/workspace/ToastProvider";
 import { PullRequestsSkeleton } from "@/components/workspace/Skeletons";
+import Link from "next/link";
 
 export default function PullRequestsPage() {
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null);
+  const [integration, setIntegration] = useState<any>(null);
   const [filter, setFilter] = useState<"all" | "open" | "merged">("open");
   const [isReviewing, setIsReviewing] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
 
@@ -35,6 +40,7 @@ export default function PullRequestsPage() {
       const data = await res.json();
       if (data.pullRequests) {
         setPullRequests(data.pullRequests);
+        setIntegration(data.integration);
         if (!selectedPR && data.pullRequests.length > 0) {
           setSelectedPR(data.pullRequests[0]);
         } else if (selectedPR) {
@@ -49,11 +55,38 @@ export default function PullRequestsPage() {
     }
   };
 
+  const handleSyncGitHub = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/pull-requests/sync", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setPullRequests(data.pullRequests);
+        addToast({
+          title: "GitHub Synchronized",
+          message: data.message,
+          type: "success",
+        });
+      } else {
+        addToast({
+          title: "Sync Failed",
+          message: data.message || "Failed to sync with GitHub",
+          type: "warning",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to sync PRs", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
     fetchPRs();
     window.addEventListener("nova:realtime_sync", fetchPRs);
     return () => window.removeEventListener("nova:realtime_sync", fetchPRs);
   }, []);
+
 
   const handleRunAIReview = async () => {
     if (!selectedPR) return;
@@ -123,7 +156,7 @@ export default function PullRequestsPage() {
   return (
     <div className="flex flex-col h-full bg-[#111216] text-neutral-200">
       {/* Top Header */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl font-semibold text-white">Pull Requests & AI Review</h1>
@@ -131,45 +164,93 @@ export default function PullRequestsPage() {
               <Sparkles className="w-3 h-3" />
               AI AUDIT ENGINE
             </span>
+            {integration?.configured && (
+              <span className="text-xs font-mono text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1.5 ml-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {integration.repository}
+              </span>
+            )}
           </div>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Continuous static analysis, cryptographic validation checks, and unified git diff review
+          <p className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
+            Continuous static analysis, cryptographic validation checks, and unified git diff review.
           </p>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex bg-[#161820] border border-white/10 rounded-lg p-0.5 text-xs">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              filter === "all" ? "bg-white/10 text-white font-medium" : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            All ({pullRequests.length})
-          </button>
-          <button
-            onClick={() => setFilter("open")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              filter === "open" ? "bg-indigo-600 text-white font-medium shadow-sm" : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            Open ({pullRequests.filter((p) => p.status === "open").length})
-          </button>
-          <button
-            onClick={() => setFilter("merged")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              filter === "merged" ? "bg-purple-600 text-white font-medium shadow-sm" : "text-neutral-400 hover:text-white"
-            }`}
-          >
-            Merged ({pullRequests.filter((p) => p.status === "merged").length})
-          </button>
+        <div className="flex items-center gap-3">
+          {/* GitHub Sync Button */}
+          {integration?.configured && (
+            <button
+              onClick={handleSyncGitHub}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#161820] border border-white/10 text-neutral-300 text-xs font-medium hover:bg-white/5 hover:text-white transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-400" : ""}`} />
+              <span>{isSyncing ? "Syncing..." : "Sync GitHub PRs"}</span>
+            </button>
+          )}
+
+          {/* Filter Pills */}
+          <div className="flex bg-[#161820] border border-white/10 rounded-lg p-0.5 text-xs">
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                filter === "all" ? "bg-white/10 text-white font-medium" : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              All ({pullRequests.length})
+            </button>
+            <button
+              onClick={() => setFilter("open")}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                filter === "open" ? "bg-indigo-600 text-white font-medium shadow-sm" : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              Open ({pullRequests.filter((p) => p.status === "open").length})
+            </button>
+            <button
+              onClick={() => setFilter("merged")}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                filter === "merged" ? "bg-purple-600 text-white font-medium shadow-sm" : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              Merged ({pullRequests.filter((p) => p.status === "merged").length})
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Split Body */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-white/10">
-        {/* Left: PR Directory List */}
-        <div className="w-full lg:w-96 flex flex-col shrink-0 bg-[#0B0C0E] overflow-y-auto no-scrollbar">
+
+      {pullRequests.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0A0B0D]">
+          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10">
+            <Github className="w-8 h-8 text-neutral-400" />
+          </div>
+          <h2 className="text-lg font-semibold text-white mb-2">No Pull Requests Found</h2>
+          <p className="text-sm text-neutral-400 max-w-sm text-center mb-6 leading-relaxed">
+            Connect your GitHub repository to synchronize live pull requests, run AI audits, and auto-update tasks on merge.
+          </p>
+          {!integration?.configured ? (
+            <Link
+              href="/app/settings"
+              className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+            >
+              Configure GitHub Integration
+            </Link>
+          ) : (
+            <button
+              onClick={handleSyncGitHub}
+              disabled={isSyncing}
+              className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
+              <span>{isSyncing ? "Synchronizing..." : "Sync Repository"}</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+          {/* Left: PR Directory List */}
+          <div className="w-full lg:w-96 flex flex-col shrink-0 bg-[#0B0C0E] overflow-y-auto no-scrollbar">
           <div className="p-3 border-b border-white/5 bg-black/20 text-[11px] font-mono text-neutral-400 uppercase tracking-wider">
             Active Pull Requests ({filtered.length})
           </div>
@@ -432,6 +513,7 @@ export default function PullRequestsPage() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

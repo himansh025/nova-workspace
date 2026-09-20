@@ -1,15 +1,18 @@
-import { startServer } from "../server";
+import mongoose from "mongoose";
+import app from "../app";
+import { connectMongoDB } from "../config/db";
 import { UserModel, TeamMemberModel } from "../models";
+
+const TEST_PORT = 5097;
 
 async function runUserModelAudit() {
   console.log("\n=========================================================");
   console.log("NOVA BACKEND — PRODUCTION USER MODEL & AUTH AUDIT");
   console.log("=========================================================\n");
 
-  const server = await startServer();
-  const address = server.address() as any;
-  const port = address?.port || 5000;
-  const baseUrl = `http://127.0.0.1:${port}`;
+  await connectMongoDB();
+  const server = app.listen(TEST_PORT);
+  const baseUrl = `http://127.0.0.1:${TEST_PORT}`;
 
   let passed = 0;
   let total = 0;
@@ -131,6 +134,8 @@ async function runUserModelAudit() {
     process.exit(1);
   } finally {
     server.close();
+    await mongoose.disconnect();
+    process.exit(passed === total ? 0 : 1);
   }
 }
 

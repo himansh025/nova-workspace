@@ -35,16 +35,17 @@ export default function ArchitecturePage() {
 
   const fetchTopology = async () => {
     try {
-      const res = await fetch("/api/architecture");
+      const res = await fetch(`/api/architecture?env=${activeEnv}`);
       const data = await res.json();
       if (data.nodes) {
         setNodes(data.nodes);
         setStats(data.stats);
-        if (!selectedNode && data.nodes.length > 0) {
-          setSelectedNode(data.nodes[0]);
-        } else if (selectedNode) {
-          const updated = data.nodes.find((n: ServiceNode) => n.id === selectedNode.id);
-          if (updated) setSelectedNode(updated);
+        if (data.nodes.length > 0) {
+          // Keep selection if it exists in the new env, otherwise select first
+          const updated = selectedNode ? data.nodes.find((n: ServiceNode) => n.id === selectedNode.id) : null;
+          setSelectedNode(updated || data.nodes[0]);
+        } else {
+          setSelectedNode(null);
         }
       }
     } catch (err) {
@@ -58,7 +59,7 @@ export default function ArchitecturePage() {
     fetchTopology();
     window.addEventListener("nova:realtime_sync", fetchTopology);
     return () => window.removeEventListener("nova:realtime_sync", fetchTopology);
-  }, []);
+  }, [activeEnv]);
 
   const handleRunDiagnostic = async () => {
     if (!selectedNode) return;

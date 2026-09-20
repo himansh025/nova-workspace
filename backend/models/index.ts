@@ -13,3 +13,6 @@ export * from "./Release";
 export * from "./TeamMember";
 export * from "./Activity";
 export * from "./IntegrationSettings";
+export * from "./PullRequest";
+export * from "./ServiceNode";
+export * from "./OutgoingWebhook";
