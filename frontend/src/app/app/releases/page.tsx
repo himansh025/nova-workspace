@@ -14,12 +14,14 @@ import {
   Activity
 } from "lucide-react";
 import { Release, PreflightCheck } from "@/types";
+import { ReleasesSkeleton } from "@/components/workspace/Skeletons";
 
 export default function ReleasesPage() {
   const [release, setRelease] = useState<Release | null>(null);
   const [canaryPercentage, setCanaryPercentage] = useState<number>(25);
   const [isRunningChecks, setIsRunningChecks] = useState(false);
   const [isPromoting, setIsPromoting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchRelease = async () => {
     try {
@@ -31,6 +33,8 @@ export default function ReleasesPage() {
       }
     } catch (err) {
       console.error("Error loading release", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,6 +103,10 @@ export default function ReleasesPage() {
       setIsPromoting(false);
     }
   };
+
+  if (loading) {
+    return <ReleasesSkeleton />;
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200">

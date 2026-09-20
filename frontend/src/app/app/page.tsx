@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Task, Spec, ActivityItem, Project, Release } from "@/types";
 import { useAuth } from "@/context/AuthContext";
+import { OverviewSkeleton } from "@/components/workspace/Skeletons";
 
 export default function OverviewPage() {
   const { user } = useAuth();
@@ -62,6 +63,10 @@ export default function OverviewPage() {
     window.addEventListener("task-saved", fetchData);
     return () => window.removeEventListener("task-saved", fetchData);
   }, []);
+
+  if (loading) {
+    return <OverviewSkeleton />;
+  }
 
   const urgentTasks = tasks.filter((t) => t.priority === "urgent" && t.status !== "done");
   const inProgressTasks = tasks.filter((t) => t.status === "in_progress");

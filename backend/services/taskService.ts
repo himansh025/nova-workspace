@@ -74,18 +74,22 @@ export const taskService = {
     creatorName: string;
     creatorInitials: string;
   }): Promise<ITaskDocument> {
-    // Generate next task key sequence for this organization
-    const latestTask = await TaskModel.findOne({ organizationId: input.organizationId })
+    // Generate next task key sequence globally to respect unique index
+    const latestTask = await TaskModel.findOne({})
       .sort({ createdAt: -1 })
       .select("key");
 
     let nextNum = 881;
     if (latestTask && latestTask.key?.startsWith("NV-")) {
       const parsed = parseInt(latestTask.key.replace("NV-", ""), 10);
-      if (!isNaN(parsed)) nextNum = parsed + 1;
+      if (!isNaN(parsed)) nextNum = Math.max(nextNum, parsed + 1);
     }
 
-    const taskKey = `NV-${nextNum}`;
+    let taskKey = `NV-${nextNum}`;
+    while (await TaskModel.exists({ key: taskKey })) {
+      nextNum++;
+      taskKey = `NV-${nextNum}`;
+    }
 
     let assignee = {
       id: "unassigned",

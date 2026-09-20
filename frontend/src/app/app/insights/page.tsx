@@ -12,12 +12,14 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import { AnalyticsData } from "@/types";
+import { InsightsSkeleton } from "@/components/workspace/Skeletons";
 
 export default function InsightsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [metricKey, setMetricKey] = useState<"completed" | "velocity" | "throughput">("completed");
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("7d");
   const [activePoint, setActivePoint] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/analytics")
@@ -25,7 +27,8 @@ export default function InsightsPage() {
       .then((resData) => {
         if (resData.analytics) setData(resData.analytics);
       })
-      .catch((err) => console.error("Error loading analytics", err));
+      .catch((err) => console.error("Error loading analytics", err))
+      .finally(() => setLoading(false));
   }, []);
 
   const chartPoints = data?.chartPoints || [
@@ -39,6 +42,10 @@ export default function InsightsPage() {
   ];
 
   const maxVal = Math.max(...chartPoints.map((p) => p[metricKey]), 80);
+
+  if (loading) {
+    return <InsightsSkeleton />;
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200">

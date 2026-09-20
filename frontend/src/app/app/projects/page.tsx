@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { FolderKanban, Plus, GitBranch, ArrowUpRight, X, Layers, Clock } from "lucide-react";
 import { Project } from "@/types";
+import { ProjectsSkeleton } from "@/components/workspace/Skeletons";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -20,6 +22,8 @@ export default function ProjectsPage() {
       if (data.projects) setProjects(data.projects);
     } catch (err) {
       console.error("Failed to load projects", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,6 +54,10 @@ export default function ProjectsPage() {
       console.error("Failed to create project", err);
     }
   };
+
+  if (loading) {
+    return <ProjectsSkeleton />;
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200">

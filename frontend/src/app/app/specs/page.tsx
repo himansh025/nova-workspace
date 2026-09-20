@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Spec, SpecStatus } from "@/types";
 import { CodeSandboxModal } from "@/components/workspace/CodeSandboxModal";
+import { SpecsSkeleton } from "@/components/workspace/Skeletons";
 
 export default function SpecsPage() {
   const [specs, setSpecs] = useState<Spec[]>([]);
@@ -29,6 +30,7 @@ export default function SpecsPage() {
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [isSandboxOpen, setIsSandboxOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // New spec form
   const [newTitle, setNewTitle] = useState("");
@@ -49,6 +51,8 @@ export default function SpecsPage() {
       }
     } catch (err) {
       console.error("Error fetching specs", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,6 +179,10 @@ export default function SpecsPage() {
   const filteredSpecs = specs.filter(
     (s) => filterStatus === "all" || s.status === filterStatus
   );
+
+  if (loading) {
+    return <SpecsSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#111216] text-neutral-200">

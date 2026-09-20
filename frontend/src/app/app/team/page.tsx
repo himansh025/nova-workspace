@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, X, ArrowUpRight } from "lucide-react";
 import { TeamMember } from "@/types";
+import { TeamSkeleton } from "@/components/workspace/Skeletons";
 
 export default function TeamPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -19,6 +21,8 @@ export default function TeamPage() {
       if (data.team) setTeam(data.team);
     } catch (err) {
       console.error("Failed to load team", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +52,10 @@ export default function TeamPage() {
       console.error("Failed to add member", err);
     }
   };
+
+  if (loading) {
+    return <TeamSkeleton />;
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200">

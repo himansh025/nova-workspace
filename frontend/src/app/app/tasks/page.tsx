@@ -13,10 +13,12 @@ import {
 } from "lucide-react";
 import { Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 import TaskModal from "@/components/workspace/TaskModal";
+import { KanbanSkeleton } from "@/components/workspace/Skeletons";
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<string>("all");
   const [selectedAssignee, setSelectedAssignee] = useState<string>("all");
@@ -34,6 +36,8 @@ export default function TasksPage() {
       if (data.tasks) setTasks(data.tasks);
     } catch (err) {
       console.error("Error fetching tasks", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -128,6 +132,10 @@ export default function TasksPage() {
         return <span className="text-neutral-400 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[9px] font-mono">P3 Low</span>;
     }
   };
+
+  if (isLoading) {
+    return <KanbanSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#111216] text-neutral-200">

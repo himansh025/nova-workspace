@@ -10,6 +10,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import Link from "next/link";
+import { Skeleton } from "@/components/workspace/Skeletons";
 
 interface ChatMessage {
   id: string;
@@ -27,6 +28,10 @@ export default function AIPage() {
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasInitialized = useRef(false);
+
+  const generateId = (prefix: "usr" | "ai") =>
+    `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
   const initialPrompts = [
     { id: "summarize", label: "Summarize project status & velocity" },
@@ -37,7 +42,7 @@ export default function AIPage() {
 
   const handlePresetQuery = async (presetId: string, label: string) => {
     const userMsg: ChatMessage = {
-      id: `usr-${Date.now()}`,
+      id: generateId("usr"),
       sender: "user",
       promptLabel: label,
       timestamp: "Just now"
@@ -55,7 +60,7 @@ export default function AIPage() {
       const data = await res.json();
 
       const aiMsg: ChatMessage = {
-        id: data.id || `ai-${Date.now()}`,
+        id: data.id || generateId("ai"),
         sender: "ai",
         summary: data.summary,
         bullets: data.bullets,
@@ -73,7 +78,8 @@ export default function AIPage() {
   };
 
   useEffect(() => {
-    // Initial greeting / analysis
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
     handlePresetQuery("summarize", "Summarize project status & velocity");
   }, []);
 
@@ -89,7 +95,7 @@ export default function AIPage() {
     setInputValue("");
 
     const userMsg: ChatMessage = {
-      id: `usr-${Date.now()}`,
+      id: generateId("usr"),
       sender: "user",
       promptLabel: query,
       timestamp: "Just now"
@@ -107,7 +113,7 @@ export default function AIPage() {
       const data = await res.json();
 
       const aiMsg: ChatMessage = {
-        id: data.id || `ai-${Date.now()}`,
+        id: data.id || generateId("ai"),
         sender: "ai",
         summary: data.summary,
         bullets: data.bullets,
@@ -148,8 +154,8 @@ export default function AIPage() {
 
       {/* Main Conversation Stream */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-4xl mx-auto w-full no-scrollbar">
-        {messages.map((msg) => (
-          <div key={msg.id} className="space-y-2">
+        {messages.map((msg, idx) => (
+          <div key={`${msg.id}-${idx}`} className="space-y-2">
             {msg.sender === "user" ? (
               /* User Bubble */
               <div className="flex items-start justify-end gap-2.5">
@@ -224,13 +230,24 @@ export default function AIPage() {
 
         {/* Thinking Indicator */}
         {isThinking && (
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 animate-fadeIn">
             <div className="w-7 h-7 rounded-lg bg-[var(--color-accent)]/20 border border-[var(--color-accent)]/40 flex items-center justify-center text-[var(--color-accent)] shrink-0 mt-1">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--color-accent)]" />
             </div>
-            <div className="bg-[#161822] border border-white/10 rounded-xl p-4 text-xs font-mono text-neutral-400 flex items-center gap-2">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-[var(--color-accent)]" />
-              <span>Synthesizing repository graph, open issues, and pull requests...</span>
+            <div className="flex-1 bg-[#161822] border border-white/10 rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
+              <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-accent)]">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Synthesizing repository graph, open issues, and pull requests...</span>
+              </div>
+              <div className="space-y-2 pt-1">
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-3/5" />
+              </div>
+              <div className="pt-2 border-t border-white/5 flex gap-2">
+                <Skeleton className="h-5 w-20 rounded" />
+                <Skeleton className="h-5 w-24 rounded" />
+              </div>
             </div>
           </div>
         )}

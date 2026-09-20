@@ -55,10 +55,12 @@ export default function ThirdPartyCredentialsPanel() {
           setSmtpTestStatus(smtp.testStatus || null);
         }
         if (github) {
-          setGithubConfigured(github.configured);
-          setGithubEnabled(github.enabled);
-          setGithubClientId(github.clientId || "");
-          setGithubRepo(github.repository || "");
+          const hasRealId = Boolean(github.clientId && !github.clientId.startsWith("xxxx"));
+          const isReal = Boolean(hasRealId && github.configured);
+          setGithubConfigured(isReal);
+          setGithubEnabled(Boolean(github.enabled && hasRealId));
+          setGithubClientId(hasRealId ? github.clientId : "");
+          setGithubRepo(github.repository && github.repository !== "organization/repo" ? github.repository : "");
           setGithubTestStatus(github.testStatus || null);
         }
       }
@@ -364,17 +366,50 @@ export default function ThirdPartyCredentialsPanel() {
           </div>
 
           <span
-            className={`text-[10px] font-mono px-2.5 py-1 rounded-full border ${
-              githubConfigured
+            className={`text-[10px] font-mono px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${
+              githubConfigured && githubTestStatus === "passed"
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                : githubConfigured && githubTestStatus === "failed"
+                ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                : githubConfigured
+                ? "bg-sky-500/10 text-sky-400 border-sky-500/30"
+                : "bg-white/5 text-neutral-400 border-white/10"
             }`}
           >
-            {githubConfigured ? "● GITHUB CONNECTED" : "○ DEMO REPO SIMULATION"}
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                githubConfigured && githubTestStatus === "passed"
+                  ? "bg-emerald-400 animate-pulse"
+                  : githubConfigured && githubTestStatus === "failed"
+                  ? "bg-rose-400"
+                  : githubConfigured
+                  ? "bg-sky-400"
+                  : "bg-neutral-500"
+              }`}
+            />
+            {githubConfigured && githubTestStatus === "passed"
+              ? "GITHUB CONNECTED & VERIFIED"
+              : githubConfigured && githubTestStatus === "failed"
+              ? "PROBE FAILED"
+              : githubConfigured
+              ? "CREDENTIALS CONFIGURED"
+              : "GITHUB DISCONNECTED"}
           </span>
         </div>
 
         <form onSubmit={handleSaveGithub} className="space-y-4">
+          <div className="flex items-center justify-between pb-1">
+            <label className="flex items-center gap-2 text-xs text-neutral-300 font-mono cursor-pointer">
+              <input
+                type="checkbox"
+                checked={githubEnabled}
+                onChange={(e) => setGithubEnabled(e.target.checked)}
+                className="rounded border-white/20 bg-[#1B1E28] text-indigo-600 focus:ring-0"
+              />
+              <span>Enable Real GitHub Webhooks & Sync</span>
+            </label>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-neutral-400 text-[11px] mb-1 font-medium">GitHub Client ID</label>
@@ -413,7 +448,7 @@ export default function ThirdPartyCredentialsPanel() {
               <label className="block text-neutral-400 text-[11px] mb-1 font-medium">Target Repository</label>
               <input
                 type="text"
-                placeholder="organization/repository-name"
+                placeholder="e.g. owner/repo-name"
                 value={githubRepo}
                 onChange={(e) => setGithubRepo(e.target.value)}
                 className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)]"

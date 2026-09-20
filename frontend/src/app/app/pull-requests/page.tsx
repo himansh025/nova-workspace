@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { PullRequest } from "@/types";
 import { useToast } from "@/components/workspace/ToastProvider";
+import { PullRequestsSkeleton } from "@/components/workspace/Skeletons";
 
 export default function PullRequestsPage() {
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
@@ -25,6 +26,7 @@ export default function PullRequestsPage() {
   const [filter, setFilter] = useState<"all" | "open" | "merged">("open");
   const [isReviewing, setIsReviewing] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
 
   const fetchPRs = async () => {
@@ -42,6 +44,8 @@ export default function PullRequestsPage() {
       }
     } catch (err) {
       console.error("Failed to fetch pull requests", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,6 +115,10 @@ export default function PullRequestsPage() {
     if (filter === "all") return true;
     return pr.status === filter;
   });
+
+  if (loading) {
+    return <PullRequestsSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#111216] text-neutral-200">

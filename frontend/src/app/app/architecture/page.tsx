@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { ServiceNode } from "@/types";
 import { useToast } from "@/components/workspace/ToastProvider";
+import { MeshSkeleton } from "@/components/workspace/Skeletons";
 
 export default function ArchitecturePage() {
   const [nodes, setNodes] = useState<ServiceNode[]>([]);
@@ -29,6 +30,7 @@ export default function ArchitecturePage() {
   const [stats, setStats] = useState<any>(null);
   const [activeEnv, setActiveEnv] = useState<string>("prod");
   const [isProbing, setIsProbing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
 
   const fetchTopology = async () => {
@@ -47,6 +49,8 @@ export default function ArchitecturePage() {
       }
     } catch (err) {
       console.error("Failed to fetch service topology", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,6 +102,10 @@ export default function ArchitecturePage() {
         return <Cpu className="w-4 h-4 text-indigo-400" />;
     }
   };
+
+  if (loading) {
+    return <MeshSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#0A0B0D] text-neutral-200">

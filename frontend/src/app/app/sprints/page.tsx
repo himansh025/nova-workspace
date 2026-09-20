@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { Sprint, VelocityHistory } from "@/types";
 import { Task } from "@/types";
+import { SprintSkeleton } from "@/components/workspace/Skeletons";
 
 export default function SprintsPage() {
   const { user } = useAuth();
@@ -174,14 +175,7 @@ export default function SprintsPage() {
   const fibonacciDeck = [1, 2, 3, 5, 8, 13, 21];
 
   if (loading) {
-    return (
-      <div className="flex-1 p-8 bg-[#0B0C0E] text-white flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-400 font-mono text-sm">
-          <div className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-          Loading sprint workspace & burndown models...
-        </div>
-      </div>
-    );
+    return <SprintSkeleton />;
   }
 
   // Burndown SVG Calculations

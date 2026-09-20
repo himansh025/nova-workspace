@@ -25,9 +25,9 @@ export default function SettingsPage() {
   const [workspaceName, setWorkspaceName] = useState("Nova Engineering Labs");
   const [slug, setSlug] = useState("nova-core");
   const [defaultBranch, setDefaultBranch] = useState("main");
-  const [githubSync, setGithubSync] = useState(true);
+  const [githubSync, setGithubSync] = useState(false);
   const [gitlabSync, setGitlabSync] = useState(false);
-  const [linearSync, setLinearSync] = useState(true);
+  const [linearSync, setLinearSync] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -45,6 +45,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchOutgoingWebhooks();
+    fetch("/api/integrations")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.settings?.github) {
+          setGithubSync(Boolean(data.settings.github.configured && data.settings.github.enabled));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleTestOutgoingWebhook = async (id: string) => {
@@ -214,9 +222,19 @@ export default function SettingsPage() {
             </div>
             <button
               type="button"
-              onClick={() => setGithubSync(!githubSync)}
-              className={`px-3 py-1 rounded text-xs font-mono ${
-                githubSync ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-neutral-400"
+              onClick={() => {
+                if (!githubSync) {
+                  addToast({
+                    title: "GitHub Credentials Required",
+                    message: "Configure your GitHub Client ID & Secret in the panel below to activate live sync.",
+                    type: "warning",
+                  });
+                } else {
+                  setGithubSync(false);
+                }
+              }}
+              className={`px-3 py-1 rounded text-xs font-mono transition-colors ${
+                githubSync ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-neutral-400 border border-white/10"
               }`}
             >
               {githubSync ? "Connected" : "Disconnected"}
