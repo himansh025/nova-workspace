@@ -29,11 +29,39 @@ const getPlanBadgeClass = (plan: Organization["plan"]) => {
   return "bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] border border-[var(--nova-border)]";
 };
 
+let cachedOrgs: Organization[] | null = null;
+
+export const prefetchOrgs = () => {
+  if (typeof window === "undefined") return;
+  fetch("/api/org/list")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.success && data.organizations && data.organizations.length > 0) {
+        const formattedOrgs = data.organizations.map((o: any) => ({
+          id: o.id,
+          name: o.name,
+          slug: o.slug,
+          plan: o.plan || "Pro Team",
+          projectsCount: o.projectsCount || 0,
+          membersCount: o.membersCount || 1,
+          avatarColor: "bg-indigo-600",
+        }));
+        cachedOrgs = formattedOrgs;
+        
+        let savedOrgId = localStorage.getItem("nova_active_org_id");
+        cachedActiveOrg = formattedOrgs.find((o: any) => o.id === savedOrgId) || formattedOrgs[0];
+        if (cachedActiveOrg) localStorage.setItem("nova_active_org_id", cachedActiveOrg.id);
+      }
+    });
+};
+
+let cachedActiveOrg: Organization | null = null;
+
 export const OrgSwitcher: React.FC<{ asMenuItem?: boolean }> = ({ asMenuItem }) => {
   const { user } = useAuth();
 
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>(cachedOrgs || []);
+  const [activeOrg, setActiveOrg] = useState<Organization | null>(cachedActiveOrg);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
@@ -56,6 +84,7 @@ export const OrgSwitcher: React.FC<{ asMenuItem?: boolean }> = ({ asMenuItem }) 
             avatarColor: "bg-indigo-600",
           }));
           setOrganizations(formattedOrgs);
+          cachedOrgs = formattedOrgs;
 
           let savedOrgId = null;
           if (typeof window !== "undefined") {
@@ -66,6 +95,7 @@ export const OrgSwitcher: React.FC<{ asMenuItem?: boolean }> = ({ asMenuItem }) 
             formattedOrgs.find((o: any) => o.id === savedOrgId) ||
             formattedOrgs[0];
           setActiveOrg(targetOrg);
+          cachedActiveOrg = targetOrg;
           if (typeof window !== "undefined") {
             localStorage.setItem("nova_active_org_id", targetOrg.id);
           }

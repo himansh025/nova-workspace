@@ -10,6 +10,7 @@ import TourGuide from "@/components/workspace/TourGuide";
 import { ToastProvider } from "@/components/workspace/ToastProvider";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { prefetchOrgs } from "@/components/workspace/OrgSwitcher";
 
 function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
 
   useEffect(() => {
+    prefetchOrgs();
     if (!isLoading && !user) {
       router.replace("/login");
     }

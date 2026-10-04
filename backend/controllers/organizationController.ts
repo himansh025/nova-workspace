@@ -9,6 +9,7 @@ import { OrganizationModel } from "../models/Organization";
 import { OrganizationMemberModel, OrgRole } from "../models/OrganizationMember";
 import { UserModel } from "../models/User";
 import { TeamMemberModel } from "../models/TeamMember";
+import { ProjectModel } from "../models/Project";
 
 export const organizationController = {
   async getActive(req: Request, res: Response) {
@@ -41,15 +42,26 @@ export const organizationController = {
     try {
       const user = (req as any).user;
       const orgs = await getUserOrganizations(user.id);
+      
+      const organizationsWithCounts = await Promise.all(
+        orgs.map(async (o) => {
+          const projectsCount = await ProjectModel.countDocuments({ organizationId: o.organization.id });
+          const membersCount = await OrganizationMemberModel.countDocuments({ organizationId: o.organization.id, deletedAt: null });
+          return {
+            id: o.organization.id,
+            name: o.organization.name,
+            slug: o.organization.slug,
+            plan: o.organization.plan,
+            role: o.role,
+            projectsCount,
+            membersCount
+          };
+        })
+      );
+
       return res.json({
         success: true,
-        organizations: orgs.map((o) => ({
-          id: o.organization.id,
-          name: o.organization.name,
-          slug: o.organization.slug,
-          plan: o.organization.plan,
-          role: o.role,
-        })),
+        organizations: organizationsWithCounts,
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
