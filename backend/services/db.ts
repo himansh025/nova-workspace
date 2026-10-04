@@ -280,7 +280,7 @@ export const db = {
         id: `act-${Date.now()}`,
         type: "task_status",
         actor: { name: updatedTask.assignee.name, initials: updatedTask.assignee.initials },
-        action: `moved to ${updates.status.replace("_", " ").toUpperCase()}`,
+        action: `updated status to ${updates.status.replace("_", " ").toUpperCase()} for`,
         target: updatedTask.key,
         timestamp: "Just now"
       });

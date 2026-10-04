@@ -9,13 +9,15 @@ interface TaskModalProps {
   onClose: () => void;
   onTaskSaved: () => void;
   taskToEdit?: Task | null;
+  projectId?: string;
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
   onClose,
   onTaskSaved,
-  taskToEdit
+  taskToEdit,
+  projectId
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -109,7 +111,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             assigneeId,
             branch: branch || undefined,
             estimate,
-            tags
+            tags,
+            projectId: projectId || undefined
           })
         });
       }

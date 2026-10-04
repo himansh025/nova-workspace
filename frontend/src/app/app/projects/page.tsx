@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { FolderKanban, Plus, GitBranch, ArrowUpRight, X, Layers, Clock } from "lucide-react";
+import { FolderKanban, Plus, GitBranch, ArrowUpRight, X, Layers, Clock, LayoutGrid, List, Trash2, Edit2 } from "lucide-react";
 import { Project } from "@/types";
 import { ProjectsSkeleton } from "@/components/workspace/Skeletons";
 
@@ -10,10 +10,31 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [sprint, setSprint] = useState("Sprint 1");
   const [repository, setRepository] = useState("");
+  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+
+  const toggleAll = () => {
+    if (selectedRows.size === projects.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(projects.map(p => p.id)));
+    }
+  };
+
+  const toggleRow = (id: string) => {
+    const newSet = new Set(selectedRows);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedRows(newSet);
+  };
 
   const fetchProjects = async () => {
     try {
@@ -31,27 +52,63 @@ export default function ProjectsPage() {
     fetchProjects();
   }, []);
 
+  const openCreateModal = () => {
+    setProjectToEdit(null);
+    setName("");
+    setDescription("");
+    setSprint("Sprint 1");
+    setRepository("");
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (p: Project) => {
+    setProjectToEdit(p);
+    setName(p.name);
+    setDescription(p.description);
+    setSprint(p.sprint);
+    setRepository(p.repository);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this project?")) return;
+    try {
+      await fetch(`/api/projects/${id}`, { method: "DELETE" });
+      setProjects(projects.filter(p => p.id !== id));
+    } catch (err) {
+      console.error("Failed to delete project", err);
+    }
+  };
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description, sprint, repository })
-      });
-      const data = await res.json();
-      if (data.project) {
-        setProjects([...projects, data.project]);
-        setIsModalOpen(false);
-        setName("");
-        setDescription("");
-        setSprint("Sprint 1");
-        setRepository("");
+      if (projectToEdit) {
+        const res = await fetch(`/api/projects/${projectToEdit.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, description, sprint, repository })
+        });
+        const data = await res.json();
+        if (data.project) {
+          setProjects(projects.map(p => p.id === projectToEdit.id ? data.project : p));
+        }
+      } else {
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, description, sprint, repository })
+        });
+        const data = await res.json();
+        if (data.project) {
+          setProjects([data.project, ...projects]);
+        }
       }
+      setIsModalOpen(false);
     } catch (err) {
-      console.error("Failed to create project", err);
+      console.error("Failed to save project", err);
     }
   };
 
@@ -77,72 +134,216 @@ export default function ProjectsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-xs font-medium shadow-xs transition-colors duration-150 self-start sm:self-auto"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Project</span>
-        </button>
-      </div>
-
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {projects.map((p) => (
-          <div
-            key={p.id}
-            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 flex flex-col justify-between space-y-4 hover:border-[var(--nova-border-strong)] transition-all shadow-xs"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono text-[var(--nova-accent)] uppercase px-2 py-0.5 rounded bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] font-medium">
-                  {p.sprint}
-                </span>
-                <span className="text-[10px] font-mono text-[var(--nova-success-text)] font-semibold">
-                  {p.velocity}
-                </span>
-              </div>
-              <h3 className="text-base font-semibold text-[var(--nova-text-primary)] mb-1.5">{p.name}</h3>
-              <p className="text-xs text-[var(--nova-text-secondary)] leading-relaxed line-clamp-2">
-                {p.description}
-              </p>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <div className="p-3 rounded-lg bg-[var(--nova-deep)] border border-[var(--nova-border)] space-y-2 text-xs">
-                <div className="flex items-center justify-between text-[var(--nova-text-secondary)]">
-                  <span className="flex items-center gap-1.5 font-mono text-[11px]">
-                    <GitBranch className="w-3.5 h-3.5 text-[var(--nova-info)]" />
-                    <span>{p.activeBranch}</span>
-                  </span>
-                  <span className="font-mono text-[var(--nova-text-secondary)] text-[11px]">{p.cycleTime} cycle</span>
-                </div>
-
-                <div className="space-y-1 pt-1">
-                  <div className="flex justify-between text-[10px] font-mono text-[var(--nova-text-muted)]">
-                    <span>Progress</span>
-                    <span>{p.progressPercent}%</span>
-                  </div>
-                  <div className="w-full bg-[var(--nova-surface)] border border-[var(--nova-border-muted)] rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-[var(--nova-accent)] h-full rounded-full"
-                      style={{ width: `${p.progressPercent}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Link
-                href={`/app/tasks?projectId=${p.id}`}
-                className="flex items-center justify-center gap-1.5 py-2 rounded-md bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] text-xs font-medium transition-colors duration-150"
-              >
-                <span>Enter Project Workspace</span>
-                <ArrowUpRight className="w-3.5 h-3.5 text-[var(--nova-text-secondary)]" />
-              </Link>
-            </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* View mode toggle */}
+          <div className="flex items-center bg-[var(--nova-deep)] p-0.5 rounded border border-[var(--nova-border)]">
+            <button
+              onClick={() => setViewMode("card")}
+              className={`p-1 rounded transition-colors ${viewMode === "card" ? "bg-[var(--nova-surface)] shadow-xs text-[var(--nova-text-primary)]" : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-secondary)]"}`}
+              title="Card View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1 rounded transition-colors ${viewMode === "table" ? "bg-[var(--nova-surface)] shadow-xs text-[var(--nova-text-primary)]" : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-secondary)]"}`}
+              title="Table View"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
           </div>
-        ))}
+
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-xs font-medium shadow-xs transition-colors duration-150"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Project</span>
+          </button>
+        </div>
       </div>
+
+      {/* Main Content */}
+      {viewMode === "card" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {projects.map((p) => (
+            <div
+              key={p.id}
+              className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 flex flex-col justify-between space-y-4 hover:border-[var(--nova-border-strong)] transition-all shadow-xs"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-mono text-[var(--nova-accent)] uppercase px-2 py-0.5 rounded bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] font-medium">
+                    {p.sprint}
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--nova-success-text)] font-semibold">
+                    {p.velocity}
+                  </span>
+                </div>
+                <h3 className="text-base font-semibold text-[var(--nova-text-primary)] mb-1.5">{p.name}</h3>
+                <p className="text-xs text-[var(--nova-text-secondary)] leading-relaxed line-clamp-2">
+                  {p.description}
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="p-3 rounded-lg bg-[var(--nova-deep)] border border-[var(--nova-border)] space-y-2 text-xs">
+                  <div className="flex items-center justify-between text-[var(--nova-text-secondary)]">
+                    <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                      <GitBranch className="w-3.5 h-3.5 text-[var(--nova-info)]" />
+                      <span>{p.activeBranch}</span>
+                    </span>
+                    <span className="font-mono text-[var(--nova-text-secondary)] text-[11px]">{p.cycleTime} cycle</span>
+                  </div>
+
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between text-[10px] font-mono text-[var(--nova-text-muted)]">
+                      <span>Progress</span>
+                      <span>{p.progressPercent}%</span>
+                    </div>
+                    <div className="w-full bg-[var(--nova-surface)] border border-[var(--nova-border-muted)] rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-[var(--nova-accent)] h-full rounded-full"
+                        style={{ width: `${p.progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/app/tasks?projectId=${p.id}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] text-xs font-medium transition-colors duration-150"
+                  >
+                    <span>Enter Project Workspace</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[var(--nova-text-secondary)]" />
+                  </Link>
+                  <button
+                    onClick={() => openEditModal(p)}
+                    className="p-2 border border-[var(--nova-border)] text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded-md transition-colors"
+                    title="Edit Project"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProject(p.id)}
+                    className="p-2 border border-[var(--nova-border)] text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded-md transition-colors"
+                    title="Delete Project"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg overflow-x-auto shadow-xs">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+              <tr className="border-b border-[var(--nova-border)] bg-[var(--nova-deep)] text-[11px] uppercase tracking-wider text-[var(--nova-text-muted)]">
+                <th className="py-3 px-4 w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.size > 0 && selectedRows.size === projects.length}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = selectedRows.size > 0 && selectedRows.size < projects.length;
+                      }
+                    }}
+                    onChange={toggleAll}
+                    className="rounded border-[var(--nova-border)] bg-[var(--nova-surface)] checked:bg-[var(--nova-accent)] focus:ring-[var(--nova-accent)]"
+                  />
+                </th>
+                <th className="py-3 px-4 font-medium">Project Name</th>
+                <th className="py-3 px-4 font-medium">Sprint</th>
+                <th className="py-3 px-4 font-medium">Progress</th>
+                <th className="py-3 px-4 font-medium">Active Branch</th>
+                <th className="py-3 px-4 font-medium">Velocity</th>
+                <th className="py-3 px-4 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs divide-y divide-[var(--nova-border)]">
+              {projects.map((p) => {
+                const isSelected = selectedRows.has(p.id);
+                return (
+                  <tr
+                    key={p.id}
+                    className={`hover:bg-[var(--nova-deep)] transition-colors ${isSelected ? "bg-[var(--nova-accent-subtle)]/50" : ""}`}
+                  >
+                    <td className="py-3 px-4">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleRow(p.id)}
+                        className="rounded border-[var(--nova-border)] bg-[var(--nova-surface)] checked:bg-[var(--nova-accent)] focus:ring-[var(--nova-accent)]"
+                      />
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-[var(--nova-text-primary)]">{p.name}</span>
+                        <span className="text-[10px] text-[var(--nova-text-muted)] truncate max-w-[200px]">{p.description}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-[10px] font-mono text-[var(--nova-accent)] px-2 py-0.5 rounded bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)]">
+                        {p.sprint}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 bg-[var(--nova-surface)] border border-[var(--nova-border-muted)] rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-[var(--nova-accent)] h-full rounded-full"
+                            style={{ width: `${p.progressPercent}%` }}
+                          />
+                        </div>
+                        <span className="font-mono text-[10px] text-[var(--nova-text-muted)]">{p.progressPercent}%</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--nova-text-secondary)]">
+                        <GitBranch className="w-3.5 h-3.5 text-[var(--nova-info)]" />
+                        <span>{p.activeBranch}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-[11px] text-[var(--nova-success-text)] font-semibold">
+                        {p.velocity}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/app/tasks?projectId=${p.id}`}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] text-xs font-medium transition-colors duration-150"
+                        >
+                          <span>Workspace</span>
+                          <ArrowUpRight className="w-3 h-3 text-[var(--nova-text-secondary)]" />
+                        </Link>
+                        <button
+                          onClick={() => openEditModal(p)}
+                          className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded transition-colors"
+                          title="Edit Project"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProject(p.id)}
+                          className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded transition-colors"
+                          title="Delete Project"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* New Project Modal */}
       {isModalOpen && (
@@ -150,7 +351,7 @@ export default function ProjectsPage() {
           <div className="fixed inset-0" onClick={() => setIsModalOpen(false)} />
           <div className="relative w-full max-w-md bg-[var(--nova-surface)] border border-[var(--nova-border-strong)] rounded-xl shadow-2xl p-5 z-10 text-xs text-[var(--nova-text-primary)]">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--nova-border)] mb-4">
-              <span className="text-sm font-semibold text-[var(--nova-text-primary)]">Create Project Workspace</span>
+              <span className="text-sm font-semibold text-[var(--nova-text-primary)]">{projectToEdit ? "Edit Project Workspace" : "Create Project Workspace"}</span>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] rounded transition-colors"

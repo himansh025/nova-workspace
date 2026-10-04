@@ -29,7 +29,7 @@ const getPlanBadgeClass = (plan: Organization["plan"]) => {
   return "bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] border border-[var(--nova-border)]";
 };
 
-export const OrgSwitcher: React.FC = () => {
+export const OrgSwitcher: React.FC<{ asMenuItem?: boolean }> = ({ asMenuItem }) => {
   const { user } = useAuth();
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -156,56 +156,68 @@ export const OrgSwitcher: React.FC = () => {
   if (!activeOrg) return null;
 
   return (
-    <div className="relative mb-3">
+    <div className={asMenuItem ? "relative" : "relative mb-3"}>
       {/* ── Trigger Button ── */}
-      <button
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[var(--nova-deep)] hover:bg-[var(--nova-border-muted)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] transition-all duration-150 text-left group"
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          {/* Nova logo mark avatar */}
-          <div className="w-6 h-6 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center shrink-0">
-            <img
-              src="/brand/logo-mark.png"
-              alt="Nova Mark"
-              className="w-4 h-4 object-contain"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[12px] font-semibold text-[var(--nova-text-primary)] truncate leading-tight">
-                {activeOrg.name}
-              </span>
-              {/* Plan badge pill */}
-              <span
-                className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium leading-none ${getPlanBadgeClass(
-                  activeOrg.plan
-                )}`}
-              >
-                {activeOrg.plan === "Enterprise Scale" ? "Enterprise" : activeOrg.plan}
-              </span>
+      {asMenuItem ? (
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors flex items-center justify-between"
+        >
+          <span>Organizations</span>
+          <ChevronDown className={`w-3 h-3 text-[var(--nova-text-muted)] transition-all ${isDropdownOpen ? "rotate-0" : "-rotate-90"}`} />
+        </button>
+      ) : (
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[var(--nova-deep)] hover:bg-[var(--nova-border-muted)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] transition-all duration-150 text-left group"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Nova logo mark avatar */}
+            <div className="w-6 h-6 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center shrink-0">
+              <img
+                src="/brand/logo-mark.png"
+                alt="Nova Mark"
+                className="w-4 h-4 object-contain"
+              />
             </div>
-            <div className="text-[10px] font-mono text-[var(--nova-text-muted)] truncate leading-tight mt-0.5">
-              {activeOrg.slug}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[12px] font-semibold text-[var(--nova-text-primary)] truncate leading-tight">
+                  {activeOrg.name}
+                </span>
+                {/* Plan badge pill */}
+                <span
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium leading-none ${getPlanBadgeClass(
+                    activeOrg.plan
+                  )}`}
+                >
+                  {activeOrg.plan === "Enterprise Scale" ? "Enterprise" : activeOrg.plan}
+                </span>
+              </div>
+              <div className="text-[10px] font-mono text-[var(--nova-text-muted)] truncate leading-tight mt-0.5">
+                {activeOrg.slug}
+              </div>
             </div>
           </div>
-        </div>
-        <ChevronDown
-          className={`w-3 h-3 text-[var(--nova-text-muted)] group-hover:text-[var(--nova-text-primary)] shrink-0 transition-all duration-150 ${
-            isDropdownOpen ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+          <ChevronDown
+            className={`w-3 h-3 text-[var(--nova-text-muted)] group-hover:text-[var(--nova-text-primary)] shrink-0 transition-all duration-150 ${
+              isDropdownOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+      )}
 
       {/* ── Dropdown ── */}
       {isDropdownOpen && (
         <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsDropdownOpen(false)}
-          />
-          <div className="absolute left-0 right-0 mt-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] p-1.5 z-50">
+          {/* Backdrop only if not asMenuItem */}
+          {!asMenuItem && (
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setIsDropdownOpen(false)}
+            />
+          )}
+          <div className={asMenuItem ? 'bg-[var(--nova-deep)] border-y border-[var(--nova-border)] p-1.5' : 'absolute left-0 right-0 mt-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] p-1.5 z-50'}>
             {/* Dropdown header */}
             <div className="px-2 py-1.5 mb-0.5 flex items-center justify-between">
               <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--nova-text-muted)]">

@@ -66,7 +66,26 @@ export const systemController = {
         .sort({ createdAt: -1 })
         .limit(limit);
 
-      return res.json({ success: true, count: activities.length, activities });
+      const formatRelativeTime = (date: Date): string => {
+        const diffInSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (diffInSeconds < 60) return "Just now";
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours}h ago`;
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays}d ago`;
+      };
+
+      const formattedActivities = activities.map(act => {
+        const doc = act.toJSON() as any;
+        if (act.createdAt) {
+          doc.timestamp = formatRelativeTime(act.createdAt);
+        }
+        return doc;
+      });
+
+      return res.json({ success: true, count: formattedActivities.length, activities: formattedActivities });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error.message });
     }

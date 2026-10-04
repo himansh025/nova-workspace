@@ -16,7 +16,9 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [newTaskProjectId, setNewTaskProjectId] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -45,7 +47,9 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
     <ToastProvider>
       <div className="flex h-screen w-screen overflow-hidden bg-[var(--nova-bg)] text-[var(--nova-text-primary)] font-sans">
         {/* Persistent Sidebar (Desktop) */}
-        <WorkspaceSidebar className="hidden lg:flex" />
+        {isDesktopSidebarOpen && (
+          <WorkspaceSidebar className="hidden lg:flex" />
+        )}
 
         {/* Mobile Sidebar Overlay Drawer */}
         {isMobileSidebarOpen && (
@@ -65,8 +69,9 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
           {/* Top Header Bar */}
           <WorkspaceNav
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-            onOpenNewTaskModal={() => setIsNewTaskModalOpen(true)}
+            onOpenNewTaskModal={(pid) => { setNewTaskProjectId(pid || null); setIsNewTaskModalOpen(true); }}
             onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            onToggleDesktopSidebar={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
           />
 
           {/* Content Viewport */}
@@ -86,6 +91,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
           isOpen={isNewTaskModalOpen}
           onClose={() => setIsNewTaskModalOpen(false)}
           onTaskSaved={refreshGlobal}
+          projectId={newTaskProjectId || undefined}
         />
         
         {/* Product Tour Guide */}

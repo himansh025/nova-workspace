@@ -213,7 +213,7 @@ export const taskService = {
         organizationId,
         type: "task_status",
         actor: { name: updaterName, initials: updaterInitials },
-        action: `moved to ${updates.status.replace("_", " ").toUpperCase()}`,
+        action: `updated status to ${updates.status.replace("_", " ").toUpperCase()} for`,
         target: task.key,
         timestamp: "Just now",
       });

@@ -17,9 +17,9 @@ import {
   FolderKanban,
   Settings,
   LogOut,
+  ChevronDown,
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
-import { UserProfileModal } from "./UserProfileModal";
 import { useAuth } from "@/context/AuthContext";
 
 interface WorkspaceSidebarProps {
@@ -57,7 +57,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
     specs: 0,
     team: 1,
   });
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -224,42 +224,66 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
     );
   };
 
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (header: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [header]: !prev[header],
+    }));
+  };
+
   return (
     <aside
       className={`w-[240px] bg-[var(--nova-sidebar)] border-r border-[var(--nova-border)] flex flex-col select-none shrink-0 h-full overflow-y-auto no-scrollbar ${className}`}
     >
-      {/* ── Brand Logo & OrgSwitcher Header ── */}
-      <div className="px-3 pt-3 space-y-2">
-        <Link href="/" className="flex items-center px-1 py-1 group">
+      {/* ── Brand Logo Header ── */}
+      <div className="px-4 pt-4 pb-2">
+        <Link href="/" className="flex items-center group">
           <img
-            src="/brand/logo-mark.png"
+            src="/brand/logo-full-light.png"
             alt="Nova Workspace Logo"
-            className="h-7 w-auto object-contain transition-transform group-hover:scale-[1.05]"
+            className="w-32 h-auto object-contain object-left transition-transform group-hover:scale-[1.02]"
           />
         </Link>
-        <OrgSwitcher />
       </div>
 
       {/* ── Main nav ── (grows to fill space) */}
-      <nav className="flex-1 px-2 pb-2 space-y-4 overflow-y-auto no-scrollbar">
-        {navSections.map((section, si) => (
-          <div key={si}>
-            {/* Section header */}
-            {section.header && (
-              <div className="px-3 pt-1 pb-1">
-                <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--nova-text-muted)]">
-                  {section.header}
-                </span>
+      <nav className="flex-1 px-2 pb-2 space-y-4 overflow-y-auto no-scrollbar mt-2">
+        {navSections.map((section, si) => {
+          const isCollapsed = section.header ? collapsedSections[section.header] : false;
+          return (
+            <div key={si}>
+              {/* Section header */}
+              {section.header && (
+                <button
+                  onClick={() => toggleSection(section.header!)}
+                  className="w-full flex items-center justify-between px-3 pt-1 pb-1 hover:bg-[var(--nova-deep)] rounded transition-colors group cursor-pointer"
+                >
+                  <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--nova-text-muted)] group-hover:text-[var(--nova-text-primary)] transition-colors">
+                    {section.header}
+                  </span>
+                  <ChevronDown
+                    size={12}
+                    className={`text-[var(--nova-text-muted)] transition-transform duration-200 ${
+                      isCollapsed ? "-rotate-90" : ""
+                    }`}
+                  />
+                </button>
+              )}
+              {/* Section items */}
+              <div
+                className={`space-y-px overflow-hidden transition-all duration-200 ${
+                  isCollapsed ? "max-h-0 opacity-0" : "max-h-[500px] opacity-100"
+                }`}
+              >
+                {section.items.map((item) => (
+                  <NavRow key={item.href} item={item} />
+                ))}
               </div>
-            )}
-            {/* Section items */}
-            <div className="space-y-px">
-              {section.items.map((item) => (
-                <NavRow key={item.href} item={item} />
-              ))}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Divider before Settings */}
         <div className="border-t border-[var(--nova-border)] pt-1">
@@ -274,25 +298,40 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       </nav>
 
       {/* ── Bottom: user area (pinned) ── */}
-      <div className="bg-[var(--nova-deep)] border-t border-[var(--nova-border)] px-2 py-2 space-y-1 shrink-0">
-        {/* Sign Out — ghost danger treatment */}
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="w-full flex items-center gap-2 px-3 py-1.5 rounded text-[11px] text-[var(--nova-text-muted)] hover:text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-all duration-150"
-        >
-          <LogOut size={13} />
-          <span>Sign Out</span>
-        </button>
+      <div className="bg-[var(--nova-deep)] border-t border-[var(--nova-border)] px-2 py-2 shrink-0 relative">
+        {/* Dropdown Menu */}
+        {isProfileDropdownOpen && (
+          <div className="absolute bottom-full left-2 right-2 mb-2 bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded shadow-xl z-50">
+            <button
+              onClick={() => {
+                setIsProfileDropdownOpen(false);
+                // Placeholder for profile action
+              }}
+              className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors rounded-t"
+            >
+              Profile
+            </button>
+            <OrgSwitcher asMenuItem />
+            <button
+              onClick={() => {
+                setIsProfileDropdownOpen(false);
+                void logout();
+              }}
+              className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-colors rounded-b"
+            >
+              Log Out
+            </button>
+          </div>
+        )}
 
         {/* User profile trigger */}
         <button
           type="button"
-          onClick={() => setIsProfileModalOpen(true)}
-          title="Manage User Profile & Identity"
+          onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+          title="User Profile Menu"
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded hover:bg-[var(--nova-sidebar)] text-left transition-all duration-150 group cursor-pointer"
         >
-          {/* Avatar initial — rounded-lg with initials in accent color bg var(--nova-accent-subtle) text var(--nova-accent) */}
+          {/* Avatar initial */}
           <div className="w-6 h-6 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center text-[11px] font-bold text-[var(--nova-accent)] shrink-0">
             {user?.initials || "U"}
           </div>
@@ -306,12 +345,6 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           </div>
         </button>
       </div>
-
-      {/* User Profile Modal */}
-      <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-      />
     </aside>
   );
 };

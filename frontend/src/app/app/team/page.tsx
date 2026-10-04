@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, X, ArrowUpRight } from "lucide-react";
+import { Plus, X, ArrowUpRight, LayoutGrid, List } from "lucide-react";
 import { TeamMember } from "@/types";
 import { TeamSkeleton } from "@/components/workspace/Skeletons";
 
@@ -13,6 +13,26 @@ export default function TeamPage() {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [email, setEmail] = useState("");
+  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+
+  const toggleAll = () => {
+    if (selectedRows.size === team.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(team.map(m => m.id)));
+    }
+  };
+
+  const toggleRow = (id: string) => {
+    const newSet = new Set(selectedRows);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedRows(newSet);
+  };
 
   const fetchTeam = async () => {
     try {
@@ -75,70 +95,166 @@ export default function TeamPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-xs font-medium shadow-xs transition-colors duration-150 self-start sm:self-auto"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Add Contributor</span>
-        </button>
-      </div>
-
-      {/* Team Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {team.map((member) => (
-          <div
-            key={member.id}
-            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 flex flex-col justify-between space-y-4 hover:border-[var(--nova-border-strong)] transition-all shadow-xs"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--nova-accent-subtle)] text-[var(--nova-accent)] font-bold border border-[var(--nova-accent-border)] flex items-center justify-center text-xs">
-                  {member.initials}
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--nova-text-primary)]">{member.name}</h3>
-                  <p className="text-xs text-[var(--nova-text-secondary)]">{member.role}</p>
-                </div>
-              </div>
-
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  member.status === "online"
-                    ? "bg-[var(--nova-success)] animate-pulse"
-                    : member.status === "away"
-                    ? "bg-[var(--nova-warning)]"
-                    : "bg-[var(--nova-text-muted)]"
-                }`}
-                title={`Status: ${member.status}`}
-              />
-            </div>
-
-            <div className="p-3 rounded-lg bg-[var(--nova-deep)] border border-[var(--nova-border)] space-y-2 text-xs">
-              <div className="flex items-center justify-between text-[var(--nova-text-secondary)]">
-                <span>Active Assigned Issues</span>
-                <span className="font-mono text-[var(--nova-text-primary)] font-medium">
-                  {member.activeTasksCount} tasks
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[var(--nova-text-secondary)]">
-                <span>Direct Contact</span>
-                <span className="font-mono text-[var(--nova-text-muted)] text-[11px] truncate max-w-[140px]">
-                  {member.email}
-                </span>
-              </div>
-            </div>
-
-            <Link
-              href={`/app/tasks`}
-              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] text-xs font-medium transition-colors duration-150"
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* View mode toggle */}
+          <div className="flex items-center bg-[var(--nova-deep)] p-0.5 rounded border border-[var(--nova-border)]">
+            <button
+              onClick={() => setViewMode("card")}
+              className={`p-1 rounded transition-colors ${viewMode === "card" ? "bg-[var(--nova-surface)] shadow-xs text-[var(--nova-text-primary)]" : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-secondary)]"}`}
+              title="Card View"
             >
-              <span>View Assigned Issues</span>
-              <ArrowUpRight className="w-3 h-3 text-[var(--nova-text-secondary)]" />
-            </Link>
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1 rounded transition-colors ${viewMode === "table" ? "bg-[var(--nova-surface)] shadow-xs text-[var(--nova-text-primary)]" : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-secondary)]"}`}
+              title="Table View"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
           </div>
-        ))}
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-xs font-medium shadow-xs transition-colors duration-150"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Contributor</span>
+          </button>
+        </div>
       </div>
+
+      {/* Main Content */}
+      {viewMode === "card" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {team.map((member) => (
+            <div
+              key={member.id}
+              className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 flex flex-col justify-between space-y-4 hover:border-[var(--nova-border-strong)] transition-all shadow-xs"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[var(--nova-accent-subtle)] text-[var(--nova-accent)] font-bold border border-[var(--nova-accent-border)] flex items-center justify-center text-xs">
+                    {member.initials}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-[var(--nova-text-primary)]">{member.name}</h3>
+                    <p className="text-xs text-[var(--nova-text-secondary)]">{member.role}</p>
+                  </div>
+                </div>
+
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    member.status === "online"
+                      ? "bg-[var(--nova-success)] animate-pulse"
+                      : member.status === "away"
+                      ? "bg-[var(--nova-warning)]"
+                      : "bg-[var(--nova-text-muted)]"
+                  }`}
+                  title={`Status: ${member.status}`}
+                />
+              </div>
+
+              <div className="p-3 rounded-lg bg-[var(--nova-deep)] border border-[var(--nova-border)] space-y-2 text-xs">
+                <div className="flex items-center justify-between text-[var(--nova-text-secondary)]">
+                  <span>Active Assigned Issues</span>
+                  <span className="font-mono text-[var(--nova-text-primary)] font-medium">
+                    {member.activeTasksCount} tasks
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[var(--nova-text-secondary)]">
+                  <span>Direct Contact</span>
+                  <span className="font-mono text-[var(--nova-text-muted)] text-[11px] truncate max-w-[140px]">
+                    {member.email}
+                  </span>
+                </div>
+              </div>
+
+              <Link
+                href={`/app/tasks`}
+                className="flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] text-xs font-medium transition-colors duration-150"
+              >
+                <span>View Assigned Issues</span>
+                <ArrowUpRight className="w-3 h-3 text-[var(--nova-text-secondary)]" />
+              </Link>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg overflow-x-auto shadow-xs">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="border-b border-[var(--nova-border)] bg-[var(--nova-deep)] text-[11px] uppercase tracking-wider text-[var(--nova-text-muted)]">
+                <th className="py-3 px-4 w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.size > 0 && selectedRows.size === team.length}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = selectedRows.size > 0 && selectedRows.size < team.length;
+                      }
+                    }}
+                    onChange={toggleAll}
+                    className="rounded border-[var(--nova-border)] bg-[var(--nova-surface)] checked:bg-[var(--nova-accent)] focus:ring-[var(--nova-accent)]"
+                  />
+                </th>
+                <th className="py-3 px-4 font-medium">Engineer</th>
+                <th className="py-3 px-4 font-medium">Role</th>
+                <th className="py-3 px-4 font-medium">Contact</th>
+                <th className="py-3 px-4 font-medium">Status</th>
+                <th className="py-3 px-4 font-medium text-right">Active Tasks</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs divide-y divide-[var(--nova-border)]">
+              {team.map((member) => {
+                const isSelected = selectedRows.has(member.id);
+                return (
+                  <tr
+                    key={member.id}
+                    className={`hover:bg-[var(--nova-deep)] transition-colors ${isSelected ? "bg-[var(--nova-accent-subtle)]/50" : ""}`}
+                  >
+                    <td className="py-3 px-4">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleRow(member.id)}
+                        className="rounded border-[var(--nova-border)] bg-[var(--nova-surface)] checked:bg-[var(--nova-accent)] focus:ring-[var(--nova-accent)]"
+                      />
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-6 h-6 rounded-full bg-[var(--nova-accent-subtle)] text-[var(--nova-accent)] font-bold border border-[var(--nova-accent-border)] flex items-center justify-center text-[9px] shrink-0">
+                          {member.initials}
+                        </div>
+                        <span className="font-semibold text-[var(--nova-text-primary)]">{member.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-[var(--nova-text-secondary)]">{member.role}</td>
+                    <td className="py-3 px-4 text-[var(--nova-text-muted)] font-mono text-[11px]">{member.email}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            member.status === "online"
+                              ? "bg-[var(--nova-success)] animate-pulse"
+                              : member.status === "away"
+                              ? "bg-[var(--nova-warning)]"
+                              : "bg-[var(--nova-text-muted)]"
+                          }`}
+                        />
+                        <span className="capitalize text-[var(--nova-text-secondary)]">{member.status}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono text-[var(--nova-text-primary)]">
+                      {member.activeTasksCount}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Add Contributor Modal */}
       {isModalOpen && (

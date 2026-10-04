@@ -131,32 +131,8 @@ export default function AIPage() {
 
   return (
     <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
-      {/* ── Header ── */}
-      <div className="px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            {/* AI icon badge */}
-            <div className="w-6 h-6 bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] rounded-md flex items-center justify-center shrink-0">
-              <Sparkles className="w-[13px] h-[13px] text-[var(--nova-ai)]" />
-            </div>
-            <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)]">
-              NOVA Context Engine
-            </h1>
-          </div>
-          <p className="text-[12px] text-[var(--nova-text-muted)] pl-8">
-            Realtime multi-repo semantic graph · Grounded in open issues, specs &amp; telemetry
-          </p>
-        </div>
-
-        {/* Status badge — right */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)] rounded text-[10px] font-mono shrink-0">
-          <span className="w-[5px] h-[5px] rounded-full bg-[var(--nova-success)] animate-pulse shrink-0" />
-          <span>Context Live: main@4f81c9a</span>
-        </div>
-      </div>
-
       {/* ── Conversation stream ── */}
-      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 max-w-3xl mx-auto w-full nova-scroll">
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 w-full nova-scroll">
         {messages.map((msg, idx) => (
           <div key={`${msg.id}-${idx}`}>
             {msg.sender === "user" ? (
@@ -264,7 +240,7 @@ export default function AIPage() {
       </div>
 
       {/* ── Bottom input area ── */}
-      <div className="px-5 py-4 border-t border-[var(--nova-border)] bg-[var(--nova-surface)] shrink-0 space-y-3 max-w-3xl mx-auto w-full">
+      <div className="px-5 py-4 border-t border-[var(--nova-border)] bg-[var(--nova-surface)] shrink-0 space-y-3 w-full">
         {/* Quick prompt pills */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--nova-text-muted)]">

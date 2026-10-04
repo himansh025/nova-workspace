@@ -232,7 +232,7 @@ export default function SettingsPage() {
     { id: "ai", label: "AI Copilot", icon: Sparkles },
     { id: "credentials", label: "Credentials & Keys", icon: Key },
     { id: "integrations", label: "Git & Webhooks", icon: GitBranch },
-    { id: "danger", label: "Danger Zone", icon: AlertTriangle },
+    { id: "danger", label: "System Reset", icon: AlertTriangle },
     { id: "all", label: "All Settings", icon: Sliders },
   ];
 
@@ -258,11 +258,6 @@ export default function SettingsPage() {
               <p className="text-[12px] text-[var(--nova-text-muted)] mt-0.5">
                 Customize workspace appearance, manage API credentials, repository sync, and workspace state
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono px-2.5 py-1 rounded-full border bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border-[var(--nova-accent-border)]">
-                Active Preset: {themePreset.toUpperCase()}
-              </span>
             </div>
           </div>
 
@@ -728,7 +723,7 @@ export default function SettingsPage() {
           <div className="bg-[var(--nova-surface)] border border-rose-500/30 rounded-lg p-5 space-y-4">
             <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
               <AlertTriangle className="w-4 h-4" />
-              <h3 className="text-[13px] font-medium">Demo State Management (Danger Zone)</h3>
+              <h3 className="text-[13px] font-medium">System Reset Actions</h3>
             </div>
 
             <p className="text-[12px] text-[var(--nova-text-muted)] leading-relaxed">

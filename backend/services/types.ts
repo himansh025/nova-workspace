@@ -1,4 +1,4 @@
-export type TaskStatus = "backlog" | "in_progress" | "review" | "done";
+export type TaskStatus = "backlog" | "todo" | "in_progress" | "review" | "done";
 export type TaskPriority = "urgent" | "high" | "medium" | "low";
 export type SpecStatus = "drafting" | "review" | "approved";
 export type ReleaseStatus = "draft" | "canary" | "released";

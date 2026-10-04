@@ -20,13 +20,14 @@ import {
   ArrowDown,
   Minus
 } from "lucide-react";
-import { Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
+import { Project, Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 import TaskModal from "@/components/workspace/TaskModal";
 import { KanbanSkeleton } from "@/components/workspace/Skeletons";
 
 /* ─── Status helpers ─────────────────────────────────────────────────────── */
 const STATUS_DOT: Record<TaskStatus, string> = {
   backlog: "bg-[var(--nova-text-muted)]",
+  todo: "bg-[var(--nova-accent)]",
   in_progress: "bg-[var(--nova-info)]",
   review: "bg-[var(--nova-warning)]",
   done: "bg-[var(--nova-success)]",
@@ -35,6 +36,8 @@ const STATUS_DOT: Record<TaskStatus, string> = {
 const STATUS_BADGE: Record<TaskStatus, string> = {
   backlog:
     "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]",
+  todo:
+    "bg-[var(--nova-accent-subtle)] text-[var(--nova-accent)] border border-[var(--nova-accent-border)]",
   in_progress:
     "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]",
   review:
@@ -45,6 +48,7 @@ const STATUS_BADGE: Record<TaskStatus, string> = {
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
   backlog: "Backlog",
+  todo: "To Do",
   in_progress: "In Progress",
   review: "In Review",
   done: "Done",
@@ -84,6 +88,7 @@ function PriorityIcon({ priority }: { priority: TaskPriority }) {
 /* ─── Kanban columns config ──────────────────────────────────────────────── */
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: "backlog", title: "Backlog" },
+  { key: "todo", title: "To Do" },
   { key: "in_progress", title: "In Progress" },
   { key: "review", title: "In Review" },
   { key: "done", title: "Done" },
@@ -99,6 +104,8 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<string>("all");
   const [selectedAssignee, setSelectedAssignee] = useState<string>("all");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
@@ -107,9 +114,37 @@ export default function TasksPage() {
   const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
 
   /* ── Data fetching ──────────────────────────────────────────────────────── */
-  const fetchTasks = async () => {
+  const fetchTasks = async (overrideProjectId?: string) => {
     try {
-      const res = await fetch("/api/tasks");
+      let activeProjectId = overrideProjectId;
+      if (activeProjectId === undefined) {
+        if (typeof window !== "undefined") {
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlProject = urlParams.get("projectId");
+          if (urlProject) {
+            activeProjectId = urlProject;
+            localStorage.setItem("nova_tasks_project", urlProject);
+            setSelectedProject(urlProject);
+            // Optionally clear it from URL so refresh doesn't force it? 
+            // We'll just leave it for now.
+          } else {
+            const saved = localStorage.getItem("nova_tasks_project");
+            if (saved) {
+              activeProjectId = saved;
+              setSelectedProject(saved);
+            } else {
+              activeProjectId = "all";
+            }
+          }
+        }
+      }
+
+      let url = "/api/tasks";
+      if (activeProjectId && activeProjectId !== "all") {
+        url += `?projectId=${encodeURIComponent(activeProjectId)}`;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       if (data.tasks) setTasks(data.tasks);
     } catch (err) {
@@ -117,6 +152,34 @@ export default function TasksPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchProjectsList = async () => {
+    try {
+      const res = await fetch("/api/projects");
+      const data = await res.json();
+      if (data.projects) setProjects(data.projects);
+    } catch(e) {}
+  };
+
+  const handleProjectFilterChange = (val: string) => {
+    setSelectedProject(val);
+    if (val === "all") {
+      localStorage.removeItem("nova_tasks_project");
+    } else {
+      localStorage.setItem("nova_tasks_project", val);
+    }
+    
+    // Also remove from URL to avoid confusion if we change dropdown
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("projectId")) {
+         url.searchParams.delete("projectId");
+         window.history.replaceState({}, "", url.toString());
+      }
+    }
+
+    fetchTasks(val);
   };
 
   const fetchTeam = async () => {
@@ -132,11 +195,13 @@ export default function TasksPage() {
   useEffect(() => {
     fetchTasks();
     fetchTeam();
-    window.addEventListener("task-saved", fetchTasks);
-    window.addEventListener("nova:realtime_sync", fetchTasks);
+    fetchProjectsList();
+    const handleRefresh = () => fetchTasks();
+    window.addEventListener("task-saved", handleRefresh);
+    window.addEventListener("nova:realtime_sync", handleRefresh);
     return () => {
-      window.removeEventListener("task-saved", fetchTasks);
-      window.removeEventListener("nova:realtime_sync", fetchTasks);
+      window.removeEventListener("task-saved", handleRefresh);
+      window.removeEventListener("nova:realtime_sync", handleRefresh);
     };
   }, []);
 
@@ -159,6 +224,41 @@ export default function TasksPage() {
       });
     } catch (err) {
       console.error("Failed to update status", err);
+      fetchTasks();
+    }
+  };
+
+  const handleUpdateAssignee = async (taskId: string, assigneeId: string) => {
+    try {
+      let newAssignee = { id: "unassigned", name: "Unassigned", avatar: "", initials: "--" };
+      if (assigneeId !== "unassigned") {
+        const member = team.find((m) => m.id === assigneeId);
+        if (member) {
+          newAssignee = {
+            id: member.id,
+            name: member.name,
+            avatar: member.avatar || "",
+            initials: member.initials,
+          };
+        }
+      }
+
+      // Optimistic update
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, assignee: newAssignee } : t))
+      );
+      if (selectedTaskDetail?.id === taskId) {
+        setSelectedTaskDetail((prev) =>
+          prev ? { ...prev, assignee: newAssignee } : null
+        );
+      }
+      await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigneeId }),
+      });
+    } catch (err) {
+      console.error("Failed to update assignee", err);
       fetchTasks();
     }
   };
@@ -436,6 +536,7 @@ export default function TasksPage() {
                                 className="bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] text-[9px] rounded px-1 py-0.5 outline-none cursor-pointer"
                               >
                                 <option value="backlog">Backlog</option>
+                                <option value="todo">To Do</option>
                                 <option value="in_progress">In Prog</option>
                                 <option value="review">Review</option>
                                 <option value="done">Done</option>
@@ -537,13 +638,22 @@ export default function TasksPage() {
                   )}
 
                   {/* Assignee */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <div className="w-[22px] h-[22px] rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] text-[var(--nova-accent)] text-[9px] font-bold flex items-center justify-center">
                       {task.assignee.initials}
                     </div>
-                    <span className="text-[11px] text-[var(--nova-text-secondary)] hidden lg:block truncate max-w-[90px]">
-                      {task.assignee.name}
-                    </span>
+                    <select
+                      value={task.assignee.id}
+                      onChange={(e) => handleUpdateAssignee(task.id, e.target.value)}
+                      className="text-[11px] text-[var(--nova-text-secondary)] hidden lg:block bg-transparent outline-none cursor-pointer hover:bg-[var(--nova-deep)] rounded px-1 max-w-[100px] truncate appearance-none"
+                    >
+                      <option value="unassigned">Unassigned</option>
+                      {team.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Actions */}
@@ -623,6 +733,7 @@ export default function TasksPage() {
                     className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer"
                   >
                     <option value="backlog">Backlog</option>
+                                <option value="todo">To Do</option>
                     <option value="in_progress">In Progress</option>
                     <option value="review">In Review</option>
                     <option value="done">Done</option>
@@ -647,9 +758,18 @@ export default function TasksPage() {
                     <div className="w-5 h-5 rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] text-[var(--nova-accent)] text-[9px] font-bold flex items-center justify-center">
                       {selectedTaskDetail.assignee.initials}
                     </div>
-                    <span className="text-[11px] text-[var(--nova-text-secondary)]">
-                      {selectedTaskDetail.assignee.name}
-                    </span>
+                    <select
+                      value={selectedTaskDetail.assignee.id}
+                      onChange={(e) => handleUpdateAssignee(selectedTaskDetail.id, e.target.value)}
+                      className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer max-w-[120px]"
+                    >
+                      <option value="unassigned">Unassigned</option>
+                      {team.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -725,6 +845,7 @@ export default function TasksPage() {
         onClose={() => setIsModalOpen(false)}
         onTaskSaved={fetchTasks}
         taskToEdit={taskToEdit}
+        projectId={selectedProject !== "all" ? selectedProject : undefined}
       />
     </div>
   );
