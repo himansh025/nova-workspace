@@ -15,6 +15,7 @@ import {
 import { Project } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { NotificationCenter } from "./NotificationCenter";
+import { apiFetchInit } from "@/lib/apiHeaders";
 
 interface WorkspaceNavProps {
   onOpenCommandPalette: () => void;
@@ -35,7 +36,7 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/projects")
+    fetch("/api/projects", apiFetchInit())
       .then((res) => res.json())
       .then((data) => {
         if (data.projects && data.projects.length > 0) {

@@ -9,6 +9,7 @@ import {
   resetPasswordWithToken,
 } from "../services/auth";
 import { getUserOrganizations, getOrganizationMembership } from "../services/organizationService";
+import { syncTeamInviteNotificationsForUser } from "../services/teamInviteService";
 import { broadcastEvent } from "../services/events";
 import { parseCookies } from "../middlewares/auth";
 import { ENV } from "../config/env";
@@ -41,6 +42,8 @@ export const authController = {
       const ipAddress = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress;
 
       const { user, sessionToken } = await authenticateUser(email, password, userAgent, ipAddress);
+
+      await syncTeamInviteNotificationsForUser(user.id, user.email);
 
       setSessionCookie(res, sessionToken);
 
@@ -82,6 +85,8 @@ export const authController = {
         role,
         organizationName: organization,
       });
+
+      await syncTeamInviteNotificationsForUser(user.id, user.email);
 
       setSessionCookie(res, sessionToken);
 

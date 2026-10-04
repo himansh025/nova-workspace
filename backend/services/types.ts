@@ -25,6 +25,7 @@ export interface Project {
   velocity: string;
   activeBranch: string;
   repository: string;
+  teamGroupId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

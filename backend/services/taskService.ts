@@ -7,6 +7,7 @@ import { TaskStatus, TaskPriority } from "./types";
 export interface TaskFilter {
   organizationId: string;
   projectId?: string;
+  projectIds?: string[];
   status?: TaskStatus;
   priority?: TaskPriority;
   assigneeId?: string;
@@ -22,7 +23,13 @@ export const taskService = {
     const skip = (page - 1) * limit;
 
     const query: any = { organizationId: filter.organizationId };
-    if (filter.projectId) query.projectId = filter.projectId;
+    if (filter.projectId) {
+      query.projectId = filter.projectId;
+    } else if (filter.projectIds && filter.projectIds.length > 0) {
+      query.projectId = { $in: filter.projectIds };
+    } else if (filter.projectIds && filter.projectIds.length === 0) {
+      query.projectId = { $in: ["__none__"] };
+    }
     if (filter.status) query.status = filter.status;
     if (filter.priority) query.priority = filter.priority;
     if (filter.assigneeId) query["assignee.id"] = filter.assigneeId;

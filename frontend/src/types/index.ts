@@ -13,6 +13,7 @@ export interface TeamMember {
   status: "online" | "away" | "offline" | "pending";
   activeTasksCount: number;
   teamGroupId?: string | null;
+  inviteToken?: string | null;
 }
 
 export interface Project {
@@ -26,6 +27,7 @@ export interface Project {
   velocity: string;
   activeBranch: string;
   repository: string;
+  teamGroupId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

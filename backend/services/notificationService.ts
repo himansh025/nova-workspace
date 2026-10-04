@@ -5,7 +5,7 @@ export const notificationService = {
   async getNotifications(userId: string, organizationId: string, limit: number = 30) {
     return NotificationModel.find({
       userId,
-      organizationId,
+      $or: [{ organizationId }, { type: "team_invite" }],
     })
       .sort({ createdAt: -1 })
       .limit(limit);
@@ -14,8 +14,8 @@ export const notificationService = {
   async getUnreadCount(userId: string, organizationId: string): Promise<number> {
     return NotificationModel.countDocuments({
       userId,
-      organizationId,
       readAt: null,
+      $or: [{ organizationId }, { type: "team_invite" }],
     });
   },
 
@@ -35,16 +35,19 @@ export const notificationService = {
     return res.modifiedCount;
   },
 
-  async createNotification(input: {
-    userId: string;
-    organizationId: string;
-    type: string;
-    title: string;
-    body: string;
-    entityType?: string;
-    entityId?: string;
-    link?: string;
-  }): Promise<INotificationDocument> {
+  async createNotification(
+    input: {
+      userId: string;
+      organizationId: string;
+      type: string;
+      title: string;
+      body: string;
+      entityType?: string;
+      entityId?: string;
+      link?: string;
+    },
+    options?: { broadcast?: boolean }
+  ): Promise<INotificationDocument> {
     const notif = await NotificationModel.create({
       id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       userId: input.userId,
@@ -57,15 +60,34 @@ export const notificationService = {
       link: input.link,
     });
 
-    broadcastEvent({
-      type: "system",
-      category: "system",
-      title: input.title,
-      message: input.body,
-      link: input.link,
-      meta: { notificationId: notif.id, userId: input.userId, organizationId: input.organizationId },
-    });
+    if (options?.broadcast !== false) {
+      broadcastEvent({
+        type: "system",
+        category: "system",
+        title: input.title,
+        message: input.body,
+        link: input.link,
+        meta: { notificationId: notif.id, userId: input.userId, organizationId: input.organizationId },
+      });
+    }
 
     return notif;
+  },
+
+  async findTeamInviteNotification(userId: string, teamMemberId: string) {
+    return NotificationModel.findOne({
+      userId,
+      type: "team_invite",
+      entityType: "team_member",
+      entityId: teamMemberId,
+      readAt: null,
+    });
+  },
+
+  async dismissTeamInviteNotifications(userId: string, teamMemberId: string) {
+    await NotificationModel.updateMany(
+      { userId, type: "team_invite", entityType: "team_member", entityId: teamMemberId },
+      { $set: { readAt: new Date() } }
+    );
   },
 };

@@ -17,6 +17,7 @@ import {
 import { Task, Spec, ActivityItem, Project, Release } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { OverviewSkeleton } from "@/components/workspace/Skeletons";
+import { apiFetchInit } from "@/lib/apiHeaders";
 
 export default function OverviewPage() {
   const { user } = useAuth();
@@ -30,8 +31,8 @@ export default function OverviewPage() {
   const fetchData = async () => {
     try {
       const [projRes, tasksRes, specsRes, actsRes, relRes] = await Promise.all([
-        fetch("/api/projects"),
-        fetch("/api/tasks"),
+        fetch("/api/projects", apiFetchInit()),
+        fetch("/api/tasks", apiFetchInit()),
         fetch("/api/specs"),
         fetch("/api/activity"),
         fetch("/api/releases"),

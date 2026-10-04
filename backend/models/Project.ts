@@ -19,6 +19,7 @@ const ProjectSchema = new Schema<IProjectDocument>(
     velocity: { type: String, default: "38 pts" },
     activeBranch: { type: String, default: "main" },
     repository: { type: String, required: true },
+    teamGroupId: { type: String, default: null },
     createdAt: { type: String, required: true },
     updatedAt: { type: String, required: true },
   },

@@ -116,3 +116,40 @@ export async function sendPasswordResetEmail(email: string, name: string, token:
     html,
   });
 }
+
+export async function sendTeamInviteEmail(
+  email: string,
+  name: string,
+  role: string,
+  organizationName: string,
+  token: string
+): Promise<{ simulated?: boolean }> {
+  const acceptUrl = `${ENV.APP_URL}/invite/team?token=${token}`;
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b;">
+      <h2 style="color: #0f172a; margin-bottom: 16px;">You're invited to join ${organizationName}</h2>
+      <p style="font-size: 15px; line-height: 1.6; color: #475569;">
+        Hi ${name}, you've been invited to join the engineering team as <strong>${role}</strong> on NOVA Workspace.
+      </p>
+      <p style="font-size: 14px; color: #64748b;">Accept the invitation to appear as an active team member and receive assigned work.</p>
+      <div style="margin: 32px 0;">
+        <a href="${acceptUrl}" style="background-color: #0d9488; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
+          Accept team invitation
+        </a>
+      </div>
+      <p style="font-size: 13px; color: #94a3b8;">
+        Or open this link: <a href="${acceptUrl}" style="color: #0d9488;">${acceptUrl}</a>
+      </p>
+      <p style="font-size: 12px; color: #94a3b8; margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+        This invitation expires in 7 days. If you weren't expecting this, you can ignore this email.
+      </p>
+    </div>
+  `;
+
+  const result = await sendEmail({
+    to: email,
+    subject: `Team invitation — ${organizationName} on NOVA`,
+    html,
+  });
+  return { simulated: result.simulated };
+}

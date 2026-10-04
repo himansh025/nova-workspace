@@ -6,8 +6,14 @@ import { FolderKanban, Plus, GitBranch, ArrowUpRight, X, Layers, Clock, LayoutGr
 import { Project } from "@/types";
 import { ProjectsSkeleton } from "@/components/workspace/Skeletons";
 
+interface TeamGroup {
+  id: string;
+  name: string;
+}
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [squads, setSquads] = useState<TeamGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
@@ -15,7 +21,11 @@ export default function ProjectsPage() {
   const [description, setDescription] = useState("");
   const [sprint, setSprint] = useState("Sprint 1");
   const [repository, setRepository] = useState("");
+  const [teamGroupId, setTeamGroupId] = useState("");
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
+
+  const squadNameById = (id?: string | null) =>
+    id ? squads.find((s) => s.id === id)?.name || "Unknown squad" : "Unassigned";
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   const toggleAll = () => {
@@ -36,11 +46,28 @@ export default function ProjectsPage() {
     setSelectedRows(newSet);
   };
 
+  const buildHeaders = () => {
+    const headers: Record<string, string> = {};
+    if (typeof window !== "undefined") {
+      const orgId = localStorage.getItem("nova_active_org_id");
+      if (orgId) headers["x-organization-id"] = orgId;
+      const token = localStorage.getItem("nova_token");
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
   const fetchProjects = async () => {
     try {
-      const res = await fetch("/api/projects");
-      const data = await res.json();
+      const headers = buildHeaders();
+      const [projRes, squadRes] = await Promise.all([
+        fetch("/api/projects", { headers, credentials: "include" }),
+        fetch("/api/team/groups", { headers, credentials: "include" }),
+      ]);
+      const data = await projRes.json();
+      const squadData = await squadRes.json();
       if (data.projects) setProjects(data.projects);
+      if (squadData.groups) setSquads(squadData.groups);
     } catch (err) {
       console.error("Failed to load projects", err);
     } finally {
@@ -58,6 +85,7 @@ export default function ProjectsPage() {
     setDescription("");
     setSprint("Sprint 1");
     setRepository("");
+    setTeamGroupId("");
     setIsModalOpen(true);
   };
 
@@ -67,6 +95,7 @@ export default function ProjectsPage() {
     setDescription(p.description);
     setSprint(p.sprint);
     setRepository(p.repository);
+    setTeamGroupId(p.teamGroupId || "");
     setIsModalOpen(true);
   };
 
@@ -88,8 +117,9 @@ export default function ProjectsPage() {
       if (projectToEdit) {
         const res = await fetch(`/api/projects/${projectToEdit.id}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, description, sprint, repository })
+          headers: { ...buildHeaders(), "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name, description, sprint, repository, teamGroupId: teamGroupId || null })
         });
         const data = await res.json();
         if (data.project) {
@@ -98,8 +128,9 @@ export default function ProjectsPage() {
       } else {
         const res = await fetch("/api/projects", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, description, sprint, repository })
+          headers: { ...buildHeaders(), "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name, description, sprint, repository, teamGroupId: teamGroupId || null })
         });
         const data = await res.json();
         if (data.project) {
@@ -184,6 +215,9 @@ export default function ProjectsPage() {
                 <p className="text-xs text-[var(--nova-text-secondary)] leading-relaxed line-clamp-2">
                   {p.description}
                 </p>
+                <p className="text-[10px] font-mono mt-2 text-[var(--nova-text-muted)]">
+                  Assigned squad: <span className="text-[var(--nova-accent)]">{squadNameById(p.teamGroupId)}</span>
+                </p>
               </div>
 
               <div className="space-y-3 pt-2">
@@ -256,6 +290,7 @@ export default function ProjectsPage() {
                   />
                 </th>
                 <th className="py-3 px-4 font-medium">Project Name</th>
+                <th className="py-3 px-4 font-medium">Assigned Squad</th>
                 <th className="py-3 px-4 font-medium">Sprint</th>
                 <th className="py-3 px-4 font-medium">Progress</th>
                 <th className="py-3 px-4 font-medium">Active Branch</th>
@@ -284,6 +319,9 @@ export default function ProjectsPage() {
                         <span className="font-semibold text-[var(--nova-text-primary)]">{p.name}</span>
                         <span className="text-[10px] text-[var(--nova-text-muted)] truncate max-w-[200px]">{p.description}</span>
                       </div>
+                    </td>
+                    <td className="py-3 px-4 text-[11px] text-[var(--nova-text-muted)]">
+                      {squadNameById(p.teamGroupId)}
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-[10px] font-mono text-[var(--nova-accent)] px-2 py-0.5 rounded bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)]">
@@ -382,6 +420,20 @@ export default function ProjectsPage() {
                   placeholder="Architecture goals and engineering scope..."
                   className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)] resize-none text-xs"
                 />
+              </div>
+
+              <div>
+                <label className="block text-[var(--nova-text-secondary)] text-[11px] mb-1 font-medium">Assigned engineering squad</label>
+                <select
+                  value={teamGroupId}
+                  onChange={(e) => setTeamGroupId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-xs"
+                >
+                  <option value="">No squad (org-wide)</option>
+                  {squads.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

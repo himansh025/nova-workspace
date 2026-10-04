@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { taskService } from "../services/taskService";
 import { TaskStatus, TaskPriority } from "../services/types";
+import {
+  resolveProjectAccess,
+  getAccessibleProjectIds,
+  canAccessProject,
+} from "../services/projectAccessService";
 
 export const taskController = {
   async getTasks(req: Request, res: Response) {
@@ -8,9 +13,19 @@ export const taskController = {
       const orgId = (req as any).organizationId || "org-default";
       const { status, priority, search, page, limit, projectId } = req.query;
 
+      const access = await resolveProjectAccess(req);
+      const accessibleIds = access.isPrivileged ? undefined : await getAccessibleProjectIds(access);
+
+      if (projectId && typeof projectId === "string") {
+        if (!(await canAccessProject(access, projectId))) {
+          return res.json({ success: true, count: 0, tasks: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0 } });
+        }
+      }
+
       const result = await taskService.getTasks({
         organizationId: orgId,
         projectId: projectId as string,
+        projectIds: projectId ? undefined : accessibleIds,
         status: status as TaskStatus,
         priority: priority as TaskPriority,
         search: search as string,
@@ -37,6 +52,12 @@ export const taskController = {
 
       if (!body.title || typeof body.title !== "string") {
         return res.status(400).json({ success: false, error: "Task title is required." });
+      }
+
+      const access = await resolveProjectAccess(req);
+      const targetProjectId = body.projectId as string | undefined;
+      if (targetProjectId && !(await canAccessProject(access, targetProjectId))) {
+        return res.status(403).json({ success: false, error: "You cannot create tasks in this project." });
       }
 
       const task = await taskService.createTask({
@@ -67,6 +88,16 @@ export const taskController = {
       const id = req.params.id as string;
       const updates = req.body;
 
+      const existing = await taskService.getTaskById(orgId, id);
+      if (!existing) {
+        return res.status(404).json({ success: false, error: "Task not found." });
+      }
+
+      const access = await resolveProjectAccess(req);
+      if (!(await canAccessProject(access, existing.projectId))) {
+        return res.status(403).json({ success: false, error: "You do not have access to this task's project." });
+      }
+
       const task = await taskService.updateTask(
         orgId,
         id,
@@ -89,6 +120,16 @@ export const taskController = {
     try {
       const orgId = (req as any).organizationId || "org-default";
       const id = req.params.id as string;
+
+      const existing = await taskService.getTaskById(orgId, id);
+      if (!existing) {
+        return res.status(404).json({ success: false, error: "Task not found." });
+      }
+
+      const access = await resolveProjectAccess(req);
+      if (!(await canAccessProject(access, existing.projectId))) {
+        return res.status(403).json({ success: false, error: "You do not have access to this task's project." });
+      }
 
       const deleted = await taskService.deleteTask(orgId, id);
       if (!deleted) {

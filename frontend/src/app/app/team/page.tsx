@@ -44,6 +44,7 @@ export default function TeamPage() {
   const [groupDesc, setGroupDesc] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -206,8 +207,15 @@ export default function TeamPage() {
       if (data.member) {
         if (isEdit) {
           setTeam(team.map((m) => (m.id === data.member.id ? data.member : m)));
+          setInviteNotice(null);
         } else {
           setTeam([...team, data.member]);
+          if (data.invitation?.acceptUrl) {
+            const hint = data.invitation.simulated
+              ? `Invitation email simulated (SMTP not configured). Share this link: ${data.invitation.acceptUrl}`
+              : `Invitation email sent to ${email}. They must accept before showing as active.`;
+            setInviteNotice(hint);
+          }
         }
         setIsMemberModalOpen(false);
         resetMemberForm();
@@ -217,6 +225,26 @@ export default function TeamPage() {
       console.error("Failed to save member", err);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleResendInvite = async (member: TeamMember) => {
+    try {
+      const res = await fetch(`/api/team/${member.id}/resend-invite`, {
+        method: "POST",
+        credentials: "include",
+        headers: buildAuthHeaders(),
+      });
+      const data = await res.json();
+      if (data.success && data.invitation?.acceptUrl) {
+        setInviteNotice(
+          data.invitation.simulated
+            ? `Resent (simulated). Share link: ${data.invitation.acceptUrl}`
+            : `Invitation resent to ${member.email}.`
+        );
+      }
+    } catch (err) {
+      console.error("Failed to resend invite", err);
     }
   };
 
@@ -298,7 +326,16 @@ export default function TeamPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        {member.status === "pending" && (
+          <button
+            type="button"
+            onClick={() => handleResendInvite(member)}
+            className="w-full py-1.5 text-[10px] font-medium rounded-md border border-[var(--nova-accent-border)] text-[var(--nova-accent)] hover:bg-[var(--nova-accent-subtle)]"
+          >
+            Resend invitation email
+          </button>
+        )}
         <Link
           href="/app/tasks"
           className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md border border-[var(--nova-border)] text-xs font-medium hover:bg-[var(--nova-deep)]"
@@ -407,6 +444,13 @@ export default function TeamPage() {
           </button>
         </div>
       </div>
+
+      {inviteNotice && (
+        <div className="rounded-lg border border-[var(--nova-accent-border)] bg-[var(--nova-accent-subtle)] px-4 py-3 text-xs text-[var(--nova-text-primary)] flex justify-between gap-3">
+          <span className="break-all">{inviteNotice}</span>
+          <button type="button" className="shrink-0 text-[var(--nova-text-muted)]" onClick={() => setInviteNotice(null)}>Dismiss</button>
+        </div>
+      )}
 
       {activeTab === "squads" && (
         <div className="space-y-4">

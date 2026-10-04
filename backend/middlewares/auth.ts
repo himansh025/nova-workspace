@@ -83,6 +83,35 @@ export async function authGuard(req: Request, res: Response, next: NextFunction)
   }
 }
 
+/** Attaches user/session when a valid token is present; does not reject unauthenticated requests. */
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  try {
+    const cookies = parseCookies(req);
+    const authHeader = req.headers.authorization;
+    let token = cookies["nova_session"];
+
+    if (!token && authHeader?.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    const sessionData = await verifySessionToken(token);
+    if (!sessionData) {
+      return next();
+    }
+
+    (req as any).user = sessionData.user;
+    (req as any).sessionId = sessionData.sessionId;
+    (req as any).organizationId = sessionData.organizationId;
+  } catch {
+    // ignore optional auth failures
+  }
+  next();
+}
+
 /**
  * Middleware that strictly enforces the presence of a verified organizationId on the request.
  */

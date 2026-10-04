@@ -13,18 +13,23 @@ import {
   Radio,
   X,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 import { useToast } from "./ToastProvider";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetchInit } from "@/lib/apiHeaders";
 
 export interface NotificationItem {
   id: string;
   type: string;
-  category: "tasks" | "specs" | "releases" | "git" | "system";
+  category: "tasks" | "specs" | "releases" | "git" | "system" | "team";
   title: string;
   message: string;
   timestamp: string;
   link?: string;
   isRead?: boolean;
+  teamMemberId?: string;
+  organizationId?: string;
 }
 
 export function NotificationCenter() {
@@ -33,8 +38,133 @@ export function NotificationCenter() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const { addToast } = useToast();
+  const { user } = useAuth();
+
+  const loadPersistedNotifications = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      const [notifRes, invitesRes] = await Promise.all([
+        fetch("/api/notifications", apiFetchInit()),
+        fetch("/api/team/my-invites", apiFetchInit()),
+      ]);
+
+      const items: NotificationItem[] = [];
+
+      if (notifRes.ok) {
+        const data = await notifRes.json();
+        if (Array.isArray(data.notifications)) {
+          for (const n of data.notifications) {
+            const isTeamInvite = n.type === "team_invite";
+            items.push({
+              id: n.id,
+              type: n.type,
+              category: isTeamInvite ? "team" : "system",
+              title: n.title,
+              message: n.body,
+              timestamp: n.createdAt
+                ? new Date(n.createdAt).toLocaleString()
+                : "Recently",
+              link: n.link,
+              isRead: Boolean(n.readAt),
+              teamMemberId: isTeamInvite ? n.entityId : undefined,
+              organizationId: n.organizationId,
+            });
+          }
+        }
+        if (typeof data.unreadCount === "number") {
+          setUnreadCount(data.unreadCount);
+        }
+      }
+
+      if (invitesRes.ok) {
+        const inviteData = await invitesRes.json();
+        if (Array.isArray(inviteData.invites)) {
+          for (const inv of inviteData.invites) {
+            const exists = items.some((i) => i.teamMemberId === inv.memberId);
+            if (exists) continue;
+            items.push({
+              id: `team-invite-${inv.memberId}`,
+              type: "team_invite",
+              category: "team",
+              title: `Team invitation · ${inv.organizationName}`,
+              message: inv.squadName
+                ? `Join as ${inv.role} in squad “${inv.squadName}”.`
+                : `Join as ${inv.role}.`,
+              timestamp: "Pending",
+              link: inv.acceptUrl ? inv.acceptUrl.replace(/^https?:\/\/[^/]+/, "") : undefined,
+              isRead: false,
+              teamMemberId: inv.memberId,
+              organizationId: inv.organizationId,
+            });
+          }
+        }
+      }
+
+      setNotifications((prev) => {
+        const sseOnly = prev.filter(
+          (p) =>
+            !p.id.startsWith("notif-") &&
+            !p.id.startsWith("team-invite-") &&
+            p.type !== "team_invite"
+        );
+        const merged = [...items, ...sseOnly];
+        const unread = merged.filter((m) => !m.isRead).length;
+        setUnreadCount(unread);
+        return merged;
+      });
+    } catch {
+      // offline or unauthenticated
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadPersistedNotifications();
+  }, [loadPersistedNotifications]);
+
+  const acceptTeamInvite = async (memberId: string, organizationId?: string) => {
+    setAcceptingId(memberId);
+    try {
+      const res = await fetch("/api/team/invites/accept-authenticated", {
+        method: "POST",
+        ...apiFetchInit({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ memberId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        addToast({
+          title: "Could not accept invitation",
+          message: data.error || "Please try again.",
+          type: "accent",
+        });
+        return;
+      }
+      const orgId = organizationId || data.organizationId;
+      if (orgId && typeof window !== "undefined") {
+        localStorage.setItem("nova_active_org_id", orgId);
+      }
+      setNotifications((prev) =>
+        prev.filter((n) => n.teamMemberId !== memberId)
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+      addToast({
+        title: "You're on the team!",
+        message: "Invitation accepted. Open Team to see your squad.",
+        type: "success",
+      });
+      await loadPersistedNotifications();
+    } catch {
+      addToast({
+        title: "Network error",
+        message: "Could not accept invitation.",
+        type: "accent",
+      });
+    } finally {
+      setAcceptingId(null);
+    }
+  };
 
   // Load initial notifications and listen to SSE stream
   useEffect(() => {
@@ -161,6 +291,12 @@ export function NotificationCenter() {
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);
+    if (user) {
+      fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+        ...apiFetchInit(),
+      }).catch(() => {});
+    }
   };
 
   const markAsRead = (id: string) => {
@@ -168,6 +304,12 @@ export function NotificationCenter() {
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
     setUnreadCount((c) => Math.max(0, c - 1));
+    if (user && id.startsWith("notif-")) {
+      fetch(`/api/notifications/${id}/read`, {
+        method: "PATCH",
+        ...apiFetchInit(),
+      }).catch(() => {});
+    }
   };
 
   const filtered = notifications.filter((n) => {
@@ -185,6 +327,8 @@ export function NotificationCenter() {
         return <Rocket className="w-3.5 h-3.5 text-purple-500" />;
       case "git":
         return <GitCommit className="w-3.5 h-3.5 text-amber-500" />;
+      case "team":
+        return <Mail className="w-3.5 h-3.5 text-[var(--nova-accent)]" />;
       default:
         return <Shield className="w-3.5 h-3.5 text-[var(--nova-accent)]" />;
     }
@@ -243,7 +387,7 @@ export function NotificationCenter() {
 
           {/* Category Filter Pills */}
           <div className="flex items-center gap-1 p-2 border-b border-[var(--nova-border)] bg-[var(--nova-bg)] overflow-x-auto text-[11px]">
-            {["all", "tasks", "specs", "releases", "git"].map((cat) => (
+            {["all", "team", "tasks", "specs", "releases", "git"].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -288,7 +432,20 @@ export function NotificationCenter() {
                     <p className="text-[11px] text-[var(--nova-text-secondary)] leading-snug line-clamp-2">
                       {item.message}
                     </p>
-                    {item.link && (
+                    {item.type === "team_invite" && item.teamMemberId && (
+                      <button
+                        type="button"
+                        disabled={acceptingId === item.teamMemberId}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          acceptTeamInvite(item.teamMemberId!, item.organizationId);
+                        }}
+                        className="mt-2 px-2.5 py-1 rounded-md bg-[var(--nova-accent)] text-white text-[10px] font-medium disabled:opacity-60"
+                      >
+                        {acceptingId === item.teamMemberId ? "Accepting…" : "Accept invitation"}
+                      </button>
+                    )}
+                    {item.link && item.type !== "team_invite" && (
                       <Link
                         href={item.link}
                         onClick={() => setIsOpen(false)}

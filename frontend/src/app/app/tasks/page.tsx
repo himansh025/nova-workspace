@@ -23,6 +23,7 @@ import {
 import { Project, Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 import TaskModal from "@/components/workspace/TaskModal";
 import { KanbanSkeleton } from "@/components/workspace/Skeletons";
+import { apiFetchInit, getApiHeaders } from "@/lib/apiHeaders";
 
 /* ─── Status helpers ─────────────────────────────────────────────────────── */
 const STATUS_DOT: Record<TaskStatus, string> = {
@@ -144,7 +145,7 @@ export default function TasksPage() {
         url += `?projectId=${encodeURIComponent(activeProjectId)}`;
       }
       
-      const res = await fetch(url);
+      const res = await fetch(url, apiFetchInit());
       const data = await res.json();
       if (data.tasks) setTasks(data.tasks);
     } catch (err) {
@@ -156,7 +157,7 @@ export default function TasksPage() {
 
   const fetchProjectsList = async () => {
     try {
-      const res = await fetch("/api/projects");
+      const res = await fetch("/api/projects", apiFetchInit());
       const data = await res.json();
       if (data.projects) setProjects(data.projects);
     } catch(e) {}
@@ -184,7 +185,7 @@ export default function TasksPage() {
 
   const fetchTeam = async () => {
     try {
-      const res = await fetch("/api/team");
+      const res = await fetch("/api/team", apiFetchInit());
       const data = await res.json();
       if (data.team) setTeam(data.team);
     } catch (err) {
@@ -218,8 +219,8 @@ export default function TasksPage() {
         );
       }
       await fetch(`/api/tasks/${taskId}`, {
+        ...apiFetchInit({ "Content-Type": "application/json" }),
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
     } catch (err) {
@@ -253,8 +254,8 @@ export default function TasksPage() {
         );
       }
       await fetch(`/api/tasks/${taskId}`, {
+        ...apiFetchInit({ "Content-Type": "application/json" }),
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assigneeId }),
       });
     } catch (err) {
@@ -268,7 +269,7 @@ export default function TasksPage() {
     try {
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
       if (selectedTaskDetail?.id === taskId) setSelectedTaskDetail(null);
-      await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+      await fetch(`/api/tasks/${taskId}`, { ...apiFetchInit(), method: "DELETE" });
     } catch (err) {
       console.error("Failed to delete task", err);
       fetchTasks();

@@ -23,6 +23,8 @@ const TeamMemberSchema = new Schema<ITeamMemberDocument>(
     },
     activeTasksCount: { type: Number, default: 0 },
     teamGroupId: { type: String, default: null },
+    inviteToken: { type: String, default: null, index: true, sparse: true },
+    inviteExpiresAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

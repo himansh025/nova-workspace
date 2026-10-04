@@ -1,15 +1,23 @@
 import { Request, Response } from "express";
 import { sprintService } from "../services/sprintService";
 import { TaskModel } from "../models/Task";
+import { resolveProjectAccess, getAccessibleProjectIds } from "../services/projectAccessService";
 
 export const sprintController = {
   async getSprints(req: Request, res: Response) {
     try {
       const orgId = (req as any).organizationId || "org-default";
+      const access = await resolveProjectAccess(req);
+      const taskQuery: Record<string, unknown> = { organizationId: orgId };
+      if (!access.isPrivileged) {
+        const ids = await getAccessibleProjectIds(access);
+        taskQuery.projectId = { $in: ids.length > 0 ? ids : ["__none__"] };
+      }
+
       const [sprints, activeSprint, allTasks] = await Promise.all([
         sprintService.getSprints(orgId),
         sprintService.getActiveSprint(orgId),
-        TaskModel.find({ organizationId: orgId }).sort({ updatedAt: -1 }),
+        TaskModel.find(taskQuery).sort({ updatedAt: -1 }),
       ]);
 
       const activeTaskIds = new Set(activeSprint?.taskIds || []);
