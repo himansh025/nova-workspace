@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 import { TeamMember } from "../services/types";
 
 export interface ITeamMemberDocument extends Omit<TeamMember, "id">, Document {
+  teamGroupId?: string;
   id: string;
   organizationId: string;
 }
@@ -17,10 +18,11 @@ const TeamMemberSchema = new Schema<ITeamMemberDocument>(
     initials: { type: String, required: true },
     status: {
       type: String,
-      enum: ["online", "away", "offline"],
+      enum: ["online", "away", "offline", "pending"],
       default: "online",
     },
     activeTasksCount: { type: Number, default: 0 },
+    teamGroupId: { type: String, default: null },
   },
   { timestamps: true }
 );

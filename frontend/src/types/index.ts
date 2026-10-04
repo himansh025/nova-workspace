@@ -10,8 +10,9 @@ export interface TeamMember {
   role: string;
   avatar: string;
   initials: string;
-  status: "online" | "away" | "offline";
+  status: "online" | "away" | "offline" | "pending";
   activeTasksCount: number;
+  teamGroupId?: string | null;
 }
 
 export interface Project {

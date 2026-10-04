@@ -58,9 +58,16 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
     team: 1,
   });
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isOrgSubmenuOpen, setIsOrgSubmenuOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/tasks")
+    let headers: Record<string, string> = {};
+    if (typeof window !== "undefined") {
+      const orgId = localStorage.getItem("nova_active_org_id");
+      if (orgId) headers["x-organization-id"] = orgId;
+    }
+
+    fetch("/api/tasks", { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.tasks) {
@@ -69,11 +76,20 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       })
       .catch(() => {});
 
-    fetch("/api/specs")
+    fetch("/api/specs", { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.specs) {
           setCounts((prev) => ({ ...prev, specs: data.specs.length }));
+        }
+      })
+      .catch(() => {});
+      
+    fetch("/api/team", { headers })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.team) {
+          setCounts((prev) => ({ ...prev, team: data.team.length }));
         }
       })
       .catch(() => {});
@@ -235,7 +251,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
   return (
     <aside
-      className={`w-[240px] bg-[var(--nova-sidebar)] border-r border-[var(--nova-border)] flex flex-col select-none shrink-0 h-full overflow-y-auto no-scrollbar ${className}`}
+      className={`w-[240px] bg-[var(--nova-sidebar)] border-r border-[var(--nova-border)] flex flex-col select-none shrink-0 h-full ${className}`}
     >
       {/* ── Brand Logo Header ── */}
       <div className="px-4 pt-4 pb-2">
@@ -298,36 +314,47 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       </nav>
 
       {/* ── Bottom: user area (pinned) ── */}
-      <div className="bg-[var(--nova-deep)] border-t border-[var(--nova-border)] px-2 py-2 shrink-0 relative">
+      <div 
+        className="bg-[var(--nova-deep)] border-t border-[var(--nova-border)] px-2 py-2 shrink-0 relative group/profile"
+        onMouseEnter={() => setIsProfileDropdownOpen(true)}
+        onMouseLeave={() => {
+          if (!isOrgSubmenuOpen) setIsProfileDropdownOpen(false);
+        }}
+      >
         {/* Dropdown Menu */}
         {isProfileDropdownOpen && (
-          <div className="absolute bottom-full left-2 right-2 mb-2 bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded shadow-xl z-50">
-            <button
-              onClick={() => {
-                setIsProfileDropdownOpen(false);
-                // Placeholder for profile action
-              }}
-              className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors rounded-t"
-            >
-              Profile
-            </button>
-            <OrgSwitcher asMenuItem />
-            <button
-              onClick={() => {
-                setIsProfileDropdownOpen(false);
-                void logout();
-              }}
-              className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-colors rounded-b"
-            >
-              Log Out
-            </button>
+          <div className="absolute bottom-full left-2 right-2 pb-2 z-50">
+            <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded shadow-xl">
+              <button
+                onClick={() => {
+                  setIsProfileDropdownOpen(false);
+                  // Placeholder for profile action
+                }}
+                className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors rounded-t"
+              >
+                Profile
+              </button>
+              <OrgSwitcher
+                asMenuItem
+                onDropdownOpenChange={setIsOrgSubmenuOpen}
+              />
+              <button
+                onClick={() => {
+                  setIsProfileDropdownOpen(false);
+                  void logout();
+                }}
+                className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-colors rounded-b"
+              >
+                Log Out
+              </button>
+            </div>
           </div>
         )}
 
         {/* User profile trigger */}
         <button
           type="button"
-          onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+          
           title="User Profile Menu"
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded hover:bg-[var(--nova-sidebar)] text-left transition-all duration-150 group cursor-pointer"
         >
