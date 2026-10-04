@@ -11,9 +11,8 @@ import {
   ArrowUpRight,
   Sparkles,
   Rocket,
-  ShieldCheck,
   FileCode2,
-  Plus
+  Plus,
 } from "lucide-react";
 import { Task, Spec, ActivityItem, Project, Release } from "@/types";
 import { useAuth } from "@/context/AuthContext";
@@ -35,16 +34,17 @@ export default function OverviewPage() {
         fetch("/api/tasks"),
         fetch("/api/specs"),
         fetch("/api/activity"),
-        fetch("/api/releases")
+        fetch("/api/releases"),
       ]);
 
-      const [projData, tasksData, specsData, actsData, relData] = await Promise.all([
-        projRes.json(),
-        tasksRes.json(),
-        specsRes.json(),
-        actsRes.json(),
-        relRes.json()
-      ]);
+      const [projData, tasksData, specsData, actsData, relData] =
+        await Promise.all([
+          projRes.json(),
+          tasksRes.json(),
+          specsRes.json(),
+          actsRes.json(),
+          relRes.json(),
+        ]);
 
       if (projData.projects) setProject(projData.projects[0]);
       if (tasksData.tasks) setTasks(tasksData.tasks);
@@ -68,356 +68,488 @@ export default function OverviewPage() {
     return <OverviewSkeleton />;
   }
 
-  const urgentTasks = tasks.filter((t) => t.priority === "urgent" && t.status !== "done");
+  const urgentTasks = tasks.filter(
+    (t) => t.priority === "urgent" && t.status !== "done"
+  );
   const inProgressTasks = tasks.filter((t) => t.status === "in_progress");
   const doneTasks = tasks.filter((t) => t.status === "done");
-  const completionRate = Math.round((doneTasks.length / (tasks.length || 1)) * 100);
+  const completionRate = Math.round(
+    (doneTasks.length / (tasks.length || 1)) * 100
+  );
+
+  // Decorative sparkline bar heights for cycle time card
+  const sparkBars = [40, 65, 52, 78, 60, 85, 70];
+
+  /** Returns badge classes for a given task status */
+  function statusBadge(status: string) {
+    switch (status) {
+      case "done":
+        return "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]";
+      case "in_progress":
+        return "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]";
+      case "review":
+        return "bg-[var(--nova-warning-subtle)] text-[var(--nova-warning-text)] border border-[var(--nova-warning-border)]";
+      case "blocked":
+      case "urgent":
+        return "bg-[var(--nova-danger-subtle)] text-[var(--nova-danger-text)] border border-[var(--nova-danger-border)]";
+      default:
+        return "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]";
+    }
+  }
+
+  /** Returns badge classes for a spec status */
+  function specStatusBadge(status: string) {
+    if (status === "approved")
+      return "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]";
+    return "bg-[var(--nova-warning-subtle)] text-[var(--nova-warning-text)] border border-[var(--nova-warning-border)]";
+  }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Top Welcome & Context Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+    <div className="p-5 sm:p-6 lg:p-7 space-y-5 max-w-[1280px] mx-auto bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
+      {/* ── Page Header ─────────────────────────────────────────────────── */}
+      <div className="flex justify-between items-start gap-4 pb-5 border-b border-[var(--nova-border)]">
+        {/* Left: workspace label + title + description */}
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-0.5 rounded border border-[var(--color-accent)]/30">
-              ACTIVE WORKSPACE
-            </span>
-            <span className="text-neutral-500 font-mono text-xs">•</span>
-            <span className="text-xs font-mono text-neutral-400">
-              {user?.role || "Engineering Team"}
+          <div className="flex items-center gap-0 pl-2 border-l-2 border-[var(--nova-accent)]">
+            <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-[var(--nova-accent)] font-medium">
+              Active Workspace
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight mt-1.5">
-            {project?.name || (user?.organization ? `${user.organization} Workspace` : "My Workspace")}
+          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--nova-text-primary)] mt-1.5">
+            {project?.name ||
+              (user?.organization
+                ? `${user.organization} Workspace`
+                : "My Workspace")}
           </h1>
-          <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-2xl">
-            {project?.description || "Collaborative engineering workspace, tasks, and architecture specifications."}
+          <p className="text-[12px] text-[var(--nova-text-secondary)] mt-1 max-w-xl">
+            {project?.description ||
+              "Collaborative engineering workspace — tasks, architecture specs, and live pipeline visibility."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        {/* Right: action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/app/ai"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[var(--color-accent)]/15 hover:bg-[var(--color-accent)]/25 border border-[var(--color-accent)]/40 text-xs text-white transition-colors"
+            className="bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] hover:opacity-90 rounded px-3 py-1.5 text-[12px] flex items-center gap-1.5 transition-colors font-medium"
           >
-            <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
-            <span>Ask AI Copilot</span>
+            <Sparkles className="w-[14px] h-[14px] text-[var(--nova-ai)]" />
+            Ask AI Copilot
           </Link>
           <Link
             href="/app/tasks"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-white/10 hover:bg-white/15 border border-white/10 text-xs text-white transition-colors"
+            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:border-[var(--nova-border-strong)] rounded px-3 py-1.5 text-[12px] flex items-center gap-1.5 transition-colors"
           >
-            <span>Open Kanban</span>
-            <ArrowUpRight className="w-3.5 h-3.5 opacity-70" />
+            Open Kanban
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </div>
 
-      {/* KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Cycle Time</span>
-            <Clock className="w-4 h-4 text-sky-400" />
+      {/* ── KPI Metric Cards ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Cycle Time */}
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:border-[var(--nova-border-strong)] transition-colors">
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-[var(--nova-text-muted)]">
+              Cycle Time
+            </span>
+            <Clock className="w-[14px] h-[14px] text-[var(--nova-info-text)]" />
           </div>
-          <div className="text-2xl font-bold text-white tracking-tight font-mono">
+          <div className="text-[24px] font-semibold font-mono text-[var(--nova-text-primary)] tracking-tight leading-none">
             {project?.cycleTime || (tasks.length > 0 ? "1.4d" : "0.0d")}
           </div>
-          <div className="text-[11px] text-emerald-400 font-mono">
-            {tasks.length > 0 ? "Tracking on schedule" : "Ready for new tasks"}
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--nova-success)] shrink-0" />
+            <span className="text-[12px] text-[var(--nova-success-text)] font-medium">
+              {tasks.length > 0 ? "On schedule" : "Ready for tasks"}
+            </span>
+          </div>
+          {/* Decorative sparkline bars */}
+          <div className="flex items-end gap-[3px] h-5 pt-1">
+            {sparkBars.map((h, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-sm"
+                style={{
+                  height: `${h}%`,
+                  background:
+                    i === sparkBars.length - 1
+                      ? "var(--nova-success)"
+                      : "var(--nova-info-text)",
+                  opacity: i === sparkBars.length - 1 ? 1 : 0.6,
+                }}
+              />
+            ))}
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Delivery Velocity</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+        {/* Delivery Velocity */}
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:border-[var(--nova-border-strong)] transition-colors">
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-[var(--nova-text-muted)]">
+              Velocity
+            </span>
+            <TrendingUp className="w-[14px] h-[14px] text-[var(--nova-success)]" />
           </div>
-          <div className="text-2xl font-bold text-white tracking-tight font-mono">
-            {project?.velocity || (tasks.length > 0 ? "+12% vs avg" : "0 pts / sprint")}
+          <div className="text-[24px] font-semibold font-mono text-[var(--nova-text-primary)] tracking-tight leading-none">
+            {tasks.length > 0 ? "+12%" : "0 pts"}
           </div>
-          <div className="text-[11px] text-emerald-400 font-mono">
-            {tasks.length > 0 ? "Tracking ahead of baseline" : "Baseline initializing"}
+          <div className="text-[12px] text-[var(--nova-success-text)] font-medium">
+            {tasks.length > 0 ? "Ahead of baseline" : "Baseline initializing"}
           </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Sprint Progress</span>
-            <CheckCircle2 className="w-4 h-4 text-[var(--color-accent)]" />
-          </div>
-          <div className="text-2xl font-bold text-white tracking-tight font-mono">
-            {completionRate}%
-          </div>
-          <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+          {/* Velocity percentage bar */}
+          <div className="w-full bg-[var(--nova-border-muted)] rounded-full h-1 overflow-hidden">
             <div
-              className="bg-[var(--color-accent)] h-full rounded-full transition-all duration-500"
-              style={{ width: `${completionRate}%` }}
+              className="bg-[var(--nova-success)] h-full rounded-full transition-all duration-500"
+              style={{ width: tasks.length > 0 ? "72%" : "0%" }}
             />
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Blockers</span>
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
+        {/* Sprint Progress */}
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:border-[var(--nova-border-strong)] transition-colors">
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-[var(--nova-text-muted)]">
+              Sprint Progress
+            </span>
+            <CheckCircle2 className="w-[14px] h-[14px] text-[var(--nova-accent)]" />
           </div>
-          <div className="text-2xl font-bold text-amber-400 tracking-tight font-mono">
-            {urgentTasks.length} Detected
+          <div className="text-[24px] font-semibold font-mono text-[var(--nova-text-primary)] tracking-tight leading-none">
+            {completionRate}%
           </div>
-          <div className="text-[11px] text-neutral-400 font-mono">
-            {urgentTasks.length > 0 ? "Requires review intervention" : "0 pipeline bottlenecks"}
+          <div className="w-full bg-[var(--nova-border-muted)] h-1.5 rounded-full overflow-hidden">
+            <div
+              className="bg-[var(--nova-accent)] h-full rounded-full transition-all duration-500"
+              style={{ width: `${completionRate}%` }}
+            />
+          </div>
+          <div className="text-[11px] text-[var(--nova-text-muted)] font-mono">
+            {doneTasks.length} / {tasks.length} tasks done
+          </div>
+        </div>
+
+        {/* Blockers */}
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:border-[var(--nova-border-strong)] transition-colors">
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-[var(--nova-text-muted)]">
+              Blockers
+            </span>
+            <AlertTriangle className="w-[14px] h-[14px] text-[var(--nova-warning)]" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-[24px] font-semibold font-mono tracking-tight leading-none ${
+                urgentTasks.length > 0
+                  ? "text-[var(--nova-warning-text)]"
+                  : "text-[var(--nova-text-muted)]"
+              }`}
+            >
+              {urgentTasks.length}
+            </span>
+            {/* Pulsing dot when blockers exist */}
+            {urgentTasks.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-[var(--nova-danger)] animate-pulse shrink-0" />
+            )}
+          </div>
+          <div
+            className={`text-[12px] font-medium ${
+              urgentTasks.length > 0
+                ? "text-[var(--nova-danger-text)]"
+                : "text-[var(--nova-success-text)]"
+            }`}
+          >
+            {urgentTasks.length > 0 ? "Requires attention" : "Clear"}
           </div>
         </div>
       </div>
 
-      {/* Critical Blocker Alert Callout */}
+      {/* ── Blocker Alert Banner (conditional) ───────────────────────────── */}
       {urgentTasks.length > 0 && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+        <div className="bg-[var(--nova-warning-subtle)] border border-[var(--nova-warning-border)] border-l-4 border-l-[var(--nova-warning)] rounded-lg p-3.5 flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-[var(--nova-warning)] shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-semibold text-amber-200">
-                P0 Urgent Blockers Active ({urgentTasks.length})
+              <div className="text-[12px] font-semibold text-[var(--nova-warning-text)]">
+                P0 Blockers Active ({urgentTasks.length})
               </div>
-              <p className="text-xs text-amber-300/80 mt-0.5">
-                {urgentTasks[0].key}: {urgentTasks[0].title} — Assigned to {urgentTasks[0].assignee.name}
+              <p className="text-[11px] text-[var(--nova-text-secondary)] mt-0.5">
+                {urgentTasks[0].key}: {urgentTasks[0].title} — Assigned to{" "}
+                {urgentTasks[0].assignee.name}
               </p>
             </div>
           </div>
           <Link
             href="/app/tasks"
-            className="px-3 py-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-200 text-xs font-medium self-start sm:self-center transition-colors"
+            className="bg-[var(--nova-warning-subtle)] border border-[var(--nova-warning-border)] text-[var(--nova-warning-text)] hover:opacity-90 rounded px-2.5 py-1 text-[11px] font-medium transition-colors shrink-0"
           >
-            Review Issue →
+            Review
           </Link>
         </div>
       )}
 
-      {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Columns: In-Flight Tasks & Architecture Specs */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Active Work In Flight */}
-          <div className="p-5 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
-            <div className="flex items-center justify-between">
+      {/* ── Main 2-Col Layout ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left span-2: In-Flight Tasks + Architecture Specs */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Active In-Flight Engineering */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg">
+            {/* Panel header */}
+            <div className="px-4 pt-4 pb-3 border-b border-[var(--nova-border-muted)] flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-semibold text-white">Active In-Flight Engineering</h3>
-                <p className="text-xs text-neutral-400">Tasks currently in development and code review</p>
+                <div className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                  Active In-Flight
+                </div>
+                <div className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
+                  Tasks in development and code review
+                </div>
               </div>
               <Link
                 href="/app/tasks"
-                className="text-xs font-mono text-[var(--color-accent)] hover:underline flex items-center gap-1"
+                className="text-[11px] text-[var(--nova-accent)] hover:text-[var(--nova-accent-hover)] transition-colors font-medium"
               >
-                <span>All {tasks.length} tasks</span>
-                <ArrowUpRight className="w-3 h-3" />
+                All {tasks.length} tasks →
               </Link>
             </div>
 
-            <div className="space-y-2.5">
-              {tasks.length === 0 ? (
-                <div className="p-8 rounded-lg bg-[#1B1E26]/50 border border-white/5 text-center flex flex-col items-center justify-center">
-                  <CheckCircle2 className="w-8 h-8 text-neutral-500 mb-2 opacity-60" />
-                  <h4 className="text-xs font-semibold text-white">No active engineering tasks yet</h4>
-                  <p className="text-[11px] text-neutral-400 mt-1 max-w-sm">
-                    Get started by creating your first task or managing backlog items in Kanban.
-                  </p>
-                  <Link
-                    href="/app/tasks"
-                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create Task</span>
-                  </Link>
+            {/* Task rows */}
+            {tasks.length === 0 ? (
+              <div className="px-4 py-10 flex flex-col items-center justify-center text-center">
+                <CheckCircle2 className="w-8 h-8 text-[var(--nova-text-muted)] mb-2 opacity-50" />
+                <div className="text-[12px] font-semibold text-[var(--nova-text-primary)]">
+                  No active engineering tasks yet
                 </div>
-              ) : (
-                tasks.slice(0, 5).map((task) => (
-                  <Link
-                    key={task.id}
-                    href="/app/tasks"
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-[#1B1E26] hover:bg-[#202430] border border-white/5 transition-all gap-2"
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <span className="text-[10px] font-mono text-[var(--color-accent)] font-medium shrink-0">
-                        {task.key}
-                      </span>
-                      <span className="text-xs text-neutral-200 truncate">
-                        {task.title}
-                      </span>
-                    </div>
+                <p className="text-[11px] text-[var(--nova-text-secondary)] mt-1 max-w-xs">
+                  Get started by creating your first task or managing backlog
+                  items in Kanban.
+                </p>
+                <Link
+                  href="/app/tasks"
+                  className="mt-3 inline-flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Create Task
+                </Link>
+              </div>
+            ) : (
+              tasks.slice(0, 5).map((task) => (
+                <Link
+                  key={task.id}
+                  href="/app/tasks"
+                  className="px-4 py-2.5 flex items-center justify-between border-b border-[var(--nova-border-muted)] last:border-0 hover:bg-[var(--nova-deep)] transition-colors cursor-pointer group"
+                >
+                  {/* Left: task key + title */}
+                  <div className="flex items-center min-w-0">
+                    <span className="text-[10px] font-mono text-[var(--nova-accent)] shrink-0">
+                      {task.key}
+                    </span>
+                    <span className="text-[12px] text-[var(--nova-text-primary)] ml-2.5 truncate">
+                      {task.title}
+                    </span>
+                  </div>
 
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                      {task.branch && (
-                        <span className="text-[10px] font-mono text-neutral-400 bg-black/30 px-1.5 py-0.5 rounded flex items-center gap-1">
-                          <GitBranch className="w-3 h-3 text-sky-400" />
-                          <span className="truncate max-w-[100px]">{task.branch}</span>
+                  {/* Right: branch + status badge + avatar */}
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    {task.branch && (
+                      <span className="text-[10px] font-mono text-[var(--nova-text-secondary)] bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <GitBranch className="w-3 h-3 text-[var(--nova-info-text)]" />
+                        <span className="truncate max-w-[90px]">
+                          {task.branch}
                         </span>
-                      )}
-                      <span
-                        className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded ${
-                          task.status === "done"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : task.status === "in_progress"
-                            ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                            : task.status === "review"
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-white/5 text-neutral-400"
-                        }`}
-                      >
-                        {task.status.replace("_", " ")}
                       </span>
-                      <div className="w-5 h-5 rounded-full bg-neutral-700 flex items-center justify-center text-[9px] font-bold text-white">
-                        {task.assignee.initials}
-                      </div>
+                    )}
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${statusBadge(task.status)}`}
+                    >
+                      {task.status.replace("_", " ")}
+                    </span>
+                    {/* Assignee avatar */}
+                    <div className="w-[22px] h-[22px] rounded-full bg-[var(--nova-deep)] border border-[var(--nova-border)] flex items-center justify-center text-[9px] font-bold text-[var(--nova-text-secondary)]">
+                      {task.assignee.initials}
                     </div>
-                  </Link>
-                ))
-              )}
-            </div>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
 
           {/* Architecture Specifications */}
-          <div className="p-5 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg">
+            {/* Panel header */}
+            <div className="px-4 pt-4 pb-3 border-b border-[var(--nova-border-muted)] flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-semibold text-white">Architecture Specifications (Plan)</h3>
-                <p className="text-xs text-neutral-400">Technical requirements and system designs</p>
+                <div className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                  Architecture Specifications
+                </div>
+                <div className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
+                  Technical requirements and system design plans
+                </div>
               </div>
               <Link
                 href="/app/specs"
-                className="text-xs font-mono text-[var(--color-accent)] hover:underline flex items-center gap-1"
+                className="text-[11px] text-[var(--nova-accent)] hover:text-[var(--nova-accent-hover)] transition-colors font-medium"
               >
-                <span>View all specs</span>
-                <ArrowUpRight className="w-3 h-3" />
+                View all specs →
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {specs.length === 0 ? (
-                <div className="col-span-full p-8 rounded-lg bg-[#1B1E26]/50 border border-white/5 text-center flex flex-col items-center justify-center">
-                  <FileCode2 className="w-8 h-8 text-neutral-500 mb-2 opacity-60" />
-                  <h4 className="text-xs font-semibold text-white">No architecture specifications drafted</h4>
-                  <p className="text-[11px] text-neutral-400 mt-1 max-w-sm">
-                    Draft technical specs, RFCs, and system architecture plans with AI co-drafting.
-                  </p>
-                  <Link
-                    href="/app/specs"
-                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Draft First Spec</span>
-                  </Link>
+            {/* Spec grid */}
+            {specs.length === 0 ? (
+              <div className="px-4 py-10 flex flex-col items-center justify-center text-center">
+                <FileCode2 className="w-8 h-8 text-[var(--nova-text-muted)] mb-2 opacity-50" />
+                <div className="text-[12px] font-semibold text-[var(--nova-text-primary)]">
+                  No architecture specifications drafted
                 </div>
-              ) : (
-                specs.map((spec) => (
+                <p className="text-[11px] text-[var(--nova-text-secondary)] mt-1 max-w-xs">
+                  Draft technical specs, RFCs, and system architecture plans
+                  with AI co-drafting.
+                </p>
+                <Link
+                  href="/app/specs"
+                  className="mt-3 inline-flex items-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:border-[var(--nova-border-strong)] rounded px-3 py-1.5 text-[12px] font-medium transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Draft First Spec
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {specs.map((spec, idx) => (
                   <Link
                     key={spec.id}
                     href="/app/specs"
-                    className="p-3.5 rounded-lg bg-[#1B1E26] hover:bg-[#202430] border border-white/5 flex flex-col justify-between transition-all"
+                    className={`p-3.5 hover:bg-[var(--nova-deep)] transition-colors border-b border-[var(--nova-border-muted)] ${
+                      /* Remove right border from last in row; keep for others */
+                      (idx + 1) % 3 !== 0
+                        ? "border-r border-[var(--nova-border-muted)]"
+                        : ""
+                    }`}
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-mono text-sky-400">{spec.key}</span>
-                        <span
-                          className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded ${
-                            spec.status === "approved"
-                              ? "text-emerald-400 bg-emerald-500/10"
-                              : "text-amber-400 bg-amber-500/10"
-                          }`}
-                        >
-                          {spec.status}
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-medium text-white line-clamp-1 mb-1">
-                        {spec.title}
-                      </h4>
-                      <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
-                        {spec.summary}
-                      </p>
+                    {/* Spec key + status badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-[var(--nova-accent)]">
+                        {spec.key}
+                      </span>
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${specStatusBadge(spec.status)}`}
+                      >
+                        {spec.status}
+                      </span>
                     </div>
-                    <div className="mt-3 text-[10px] font-mono text-neutral-500 pt-2 border-t border-white/5 flex items-center justify-between">
+                    <h4 className="text-[12px] font-medium text-[var(--nova-text-primary)] mt-1 line-clamp-1">
+                      {spec.title}
+                    </h4>
+                    <p className="text-[11px] text-[var(--nova-text-secondary)] mt-0.5 line-clamp-2 leading-relaxed">
+                      {spec.summary}
+                    </p>
+                    {/* Footer */}
+                    <div className="flex items-center justify-between text-[10px] font-mono text-[var(--nova-text-muted)] pt-2 mt-2 border-t border-[var(--nova-border-muted)]">
                       <span>Author: {spec.author.name.split(" ")[0]}</span>
                       <span>Spec Engine</span>
                     </div>
                   </Link>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column: Canary Release State & Realtime Stream */}
-        <div className="space-y-6">
-          {/* Canary Deployment Widget */}
-          <div className="p-5 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
+        {/* Right column */}
+        <div className="space-y-5">
+          {/* Canary Release */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-3">
+            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Rocket className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-semibold text-white">Canary Release</h3>
+                <Rocket className="w-4 h-4 text-[var(--nova-success)]" />
+                <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                  Canary Release
+                </span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              {/* Version badge */}
+              <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]">
                 {release?.version || "v1.0.0"}
               </span>
             </div>
 
-            <div className="p-3 rounded-lg bg-black/30 border border-white/5 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-neutral-400">Canary Traffic</span>
-                <span className="font-mono text-white font-semibold">
+            {/* Canary traffic section */}
+            <div className="bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] rounded-md p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-[var(--nova-text-secondary)]">
+                  Canary Traffic
+                </span>
+                <span className="text-[12px] font-semibold font-mono text-[var(--nova-text-primary)]">
                   {release ? `${release.canaryPercentage}%` : "Ready"}
                 </span>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-[var(--nova-border-muted)] rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                  className="bg-[var(--nova-success)] h-full rounded-full transition-all duration-500"
                   style={{ width: `${release?.canaryPercentage || 0}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500 pt-1">
-                <span>Checks: {release?.checksPassed || 0}/{release?.totalChecks || 0} passed</span>
-                <span className="text-emerald-400">Pipeline Ready</span>
+              <div className="flex items-center justify-between text-[10px] font-mono">
+                <span className="text-[var(--nova-text-muted)]">
+                  Checks: {release?.checksPassed || 0}/
+                  {release?.totalChecks || 0} passed
+                </span>
+                <span className="text-[var(--nova-success-text)] font-medium">Pipeline Ready</span>
               </div>
             </div>
 
+            {/* CTA */}
             <Link
               href="/app/releases"
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:border-[var(--nova-border-strong)] rounded px-3 py-1.5 text-[12px] transition-colors"
             >
-              <span>Manage Deployment Pipeline</span>
-              <ArrowUpRight className="w-3 h-3" />
+              Manage Pipeline →
             </Link>
           </div>
 
-          {/* Activity Feed */}
-          <div className="p-5 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Live Activity Stream</h3>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          {/* Live Activity Stream */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg">
+            {/* Header */}
+            <div className="px-4 pt-4 pb-3 border-b border-[var(--nova-border-muted)] flex justify-between items-center">
+              <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                Live Activity
+              </span>
+              <span className="w-2 h-2 rounded-full bg-[var(--nova-success)] animate-pulse" />
             </div>
 
-            <div className="space-y-3">
-              {activities.length === 0 ? (
-                <div className="p-6 rounded-lg bg-black/20 border border-white/5 text-center">
-                  <p className="text-xs text-neutral-400">No activity yet. Actions and updates will stream here in real-time.</p>
-                </div>
-              ) : (
-                activities.slice(0, 6).map((act) => (
-                  <div key={act.id} className="flex items-start gap-2.5 text-xs">
-                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-bold text-neutral-300 shrink-0 mt-0.5">
-                      {act.actor.initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-neutral-300 leading-snug">
-                        <span className="font-medium text-white">{act.actor.name}</span>{" "}
-                        <span className="text-neutral-400">{act.action}</span>{" "}
-                        <span className="font-medium text-[var(--color-accent)]">{act.target}</span>
-                      </p>
-                      <span className="text-[10px] font-mono text-neutral-500">{act.timestamp}</span>
-                    </div>
+            {/* Activity items */}
+            {activities.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-[12px] text-[var(--nova-text-secondary)]">
+                  No activity yet. Actions and updates will stream here in
+                  real-time.
+                </p>
+              </div>
+            ) : (
+              activities.slice(0, 6).map((act) => (
+                <div
+                  key={act.id}
+                  className="px-4 py-2.5 flex items-start gap-2.5 border-b border-[var(--nova-border-muted)] last:border-0"
+                >
+                  {/* Avatar */}
+                  <div className="w-[20px] h-[20px] rounded-full bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] flex items-center justify-center text-[9px] font-bold text-[var(--nova-text-secondary)] shrink-0 mt-0.5">
+                    {act.actor.initials}
                   </div>
-                ))
-              )}
-            </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] leading-snug">
+                      <span className="font-medium text-[var(--nova-text-primary)]">
+                        {act.actor.name}
+                      </span>{" "}
+                      <span className="text-[var(--nova-text-secondary)]">{act.action}</span>{" "}
+                      <span className="text-[var(--nova-accent)] font-medium">{act.target}</span>
+                    </p>
+                    <span className="text-[10px] font-mono text-[var(--nova-text-muted)] mt-0.5 block">
+                      {act.timestamp}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -34,17 +34,19 @@ export const initProductStoryTimeline = (elements: ProductStoryElements) => {
   const setActiveTab = (index: number) => {
     navTabs.forEach((tab, i) => {
       if (i === index) {
-        tab.classList.add("active-tab");
+        tab.classList.add("active-tab", "bg-[var(--landing-primary)]", "text-white", "font-semibold");
+        tab.classList.remove("text-neutral-500", "hover:text-neutral-900");
         tab.setAttribute("aria-selected", "true");
-        tab.style.backgroundColor = "rgba(255, 255, 255, 0.18)";
-        tab.style.color = "#FFFFFF";
-        tab.style.fontWeight = "600";
+        tab.style.backgroundColor = "";
+        tab.style.color = "";
+        tab.style.fontWeight = "";
       } else {
-        tab.classList.remove("active-tab");
+        tab.classList.remove("active-tab", "bg-[var(--landing-primary)]", "text-white", "font-semibold");
+        tab.classList.add("text-neutral-500", "hover:text-neutral-900");
         tab.setAttribute("aria-selected", "false");
-        tab.style.backgroundColor = "transparent";
-        tab.style.color = "rgba(255, 255, 255, 0.4)";
-        tab.style.fontWeight = "400";
+        tab.style.backgroundColor = "";
+        tab.style.color = "";
+        tab.style.fontWeight = "";
       }
     });
   };

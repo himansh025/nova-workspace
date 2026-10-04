@@ -183,22 +183,23 @@ export const CodeSandboxModal: React.FC<CodeSandboxModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl h-[85vh] bg-[#0E1015] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(15,23,42,0.4)] backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={onClose} />
+      <div className="relative w-full max-w-5xl h-[85vh] bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-10 text-[var(--nova-text-primary)]">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#121316]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--nova-border)] bg-[var(--nova-surface)]">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+            <div className="p-2 rounded-lg bg-[rgba(99,102,241,0.1)] border border-[rgba(99,102,241,0.2)] text-[var(--nova-accent)]">
               <Terminal className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-[var(--nova-text-primary)] flex items-center gap-2">
                 <span>{title}</span>
-                <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-white/5 border border-white/10 text-neutral-400 rounded-full">
+                <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] rounded-full">
                   {language}
                 </span>
               </h2>
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs text-[var(--nova-text-secondary)]">
                 Execute AI-generated implementations directly inside an isolated browser sandbox
               </p>
             </div>
@@ -207,29 +208,29 @@ export const CodeSandboxModal: React.FC<CodeSandboxModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleReset}
-              className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-colors"
+              className="p-2 rounded-lg text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] border border-transparent hover:border-[var(--nova-border)] transition-colors"
               title="Reset Code & Console"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--nova-text-primary)] bg-[var(--nova-surface)] hover:bg-[var(--nova-deep)] border border-[var(--nova-border)] transition-colors"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? "Copied" : "Copy Code"}</span>
             </button>
             <button
               onClick={runCode}
               disabled={isRunning}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-all shadow-lg shadow-indigo-600/30"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] disabled:opacity-50 transition-all shadow-xs"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>{isRunning ? "Executing..." : "Run in Sandbox"}</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors ml-2"
+              className="p-2 rounded-lg text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors ml-2"
             >
               <X className="w-5 h-5" />
             </button>
@@ -237,45 +238,45 @@ export const CodeSandboxModal: React.FC<CodeSandboxModalProps> = ({
         </div>
 
         {/* Main Grid: Code Editor (Left) & Live Terminal (Right) */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/10 min-h-0 bg-[#0A0B0D]">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[var(--nova-border)] min-h-0 bg-[var(--nova-bg)]">
           {/* Code Editor Panel */}
           <div className="flex flex-col min-h-0">
-            <div className="flex items-center justify-between px-4 py-2 bg-[#121316]/50 border-b border-white/5 text-xs text-neutral-400">
+            <div className="flex items-center justify-between px-4 py-2 bg-[var(--nova-surface)] border-b border-[var(--nova-border)] text-xs text-[var(--nova-text-secondary)]">
               <div className="flex items-center gap-2">
-                <Code2 className="w-3.5 h-3.5 text-indigo-400" />
+                <Code2 className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
                 <span className="font-mono text-[11px]">source.{language === "rust" ? "rs" : "ts"}</span>
               </div>
-              <span className="text-[10px] text-neutral-500">Editable In-Memory Buffer</span>
+              <span className="text-[10px] text-[var(--nova-text-muted)]">Editable In-Memory Buffer</span>
             </div>
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
               spellCheck={false}
-              className="flex-1 w-full p-4 bg-transparent text-neutral-200 font-mono text-xs leading-relaxed resize-none focus:outline-hidden selection:bg-indigo-500/30 overflow-auto"
+              className="flex-1 w-full p-4 bg-transparent text-[var(--nova-text-primary)] font-mono text-xs leading-relaxed resize-none focus:outline-hidden selection:bg-[var(--nova-accent)]/20 overflow-auto"
             />
           </div>
 
           {/* Live Terminal Output Panel */}
-          <div className="flex flex-col min-h-0 bg-[#07080A]">
-            <div className="flex items-center justify-between px-4 py-2 bg-[#121316]/50 border-b border-white/5 text-xs">
+          <div className="flex flex-col min-h-0 bg-[var(--nova-deep)]">
+            <div className="flex items-center justify-between px-4 py-2 bg-[var(--nova-surface)] border-b border-[var(--nova-border)] text-xs">
               <div className="flex items-center gap-2">
-                <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="font-mono text-[11px] text-neutral-300">Sandbox Console Output</span>
+                <Terminal className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="font-mono text-[11px] text-[var(--nova-text-primary)] font-medium">Sandbox Console Output</span>
               </div>
               <div className="flex items-center gap-3 text-[11px]">
                 {executionTime !== null && (
-                  <span className="flex items-center gap-1 text-neutral-400 font-mono text-[10px]">
-                    <Clock className="w-3 h-3 text-neutral-500" />
+                  <span className="flex items-center gap-1 text-[var(--nova-text-secondary)] font-mono text-[10px]">
+                    <Clock className="w-3 h-3 text-[var(--nova-text-muted)]" />
                     {executionTime}ms
                   </span>
                 )}
                 {exitStatus === "success" && (
-                  <span className="flex items-center gap-1 text-emerald-400 text-[10px] font-mono">
+                  <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-mono font-medium">
                     <CheckCircle2 className="w-3 h-3" /> Exited 0
                   </span>
                 )}
                 {exitStatus === "error" && (
-                  <span className="flex items-center gap-1 text-rose-400 text-[10px] font-mono">
+                  <span className="flex items-center gap-1 text-rose-500 text-[10px] font-mono font-medium">
                     <AlertCircle className="w-3 h-3" /> Error
                   </span>
                 )}
@@ -285,28 +286,28 @@ export const CodeSandboxModal: React.FC<CodeSandboxModalProps> = ({
             {/* Console Log Stream */}
             <div className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-2">
               {outputs.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center text-neutral-600 gap-2">
+                <div className="h-full flex flex-col items-center justify-center text-center text-[var(--nova-text-muted)] gap-2">
                   <Terminal className="w-8 h-8 opacity-40" />
-                  <p className="text-xs">No execution logs yet.</p>
-                  <p className="text-[10px] text-neutral-500">
-                    Click <span className="text-indigo-400 font-semibold">"Run in Sandbox"</span> to execute this implementation.
+                  <p className="text-xs text-[var(--nova-text-secondary)]">No execution logs yet.</p>
+                  <p className="text-[10px] text-[var(--nova-text-muted)]">
+                    Click <span className="text-[var(--nova-accent)] font-semibold">&quot;Run in Sandbox&quot;</span> to execute this implementation.
                   </p>
                 </div>
               ) : (
                 outputs.map((out) => (
                   <div key={out.id} className="flex items-start gap-2.5 leading-relaxed text-[11px]">
-                    <span className="text-neutral-600 text-[10px] select-none shrink-0 pt-0.5">
+                    <span className="text-[var(--nova-text-muted)] text-[10px] select-none shrink-0 pt-0.5">
                       {out.time}
                     </span>
                     <div
                       className={`flex-1 break-all whitespace-pre-wrap ${
                         out.type === "error"
-                          ? "text-rose-400 bg-rose-500/10 p-2 rounded-md border border-rose-500/20"
+                          ? "text-rose-600 bg-rose-500/10 p-2 rounded-md border border-rose-500/20"
                           : out.type === "warn"
-                          ? "text-amber-400"
+                          ? "text-amber-600"
                           : out.type === "system"
-                          ? "text-indigo-300 font-semibold italic"
-                          : "text-neutral-200"
+                          ? "text-[var(--nova-accent)] font-semibold italic"
+                          : "text-[var(--nova-text-primary)]"
                       }`}
                     >
                       {out.content}

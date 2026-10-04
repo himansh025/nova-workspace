@@ -20,13 +20,13 @@ export const ReleaseSummary: React.FC<ReleaseSummaryProps> = ({ className = "" }
 
   return (
     <div
-      className={`bg-[#0F1116] border border-white/10 rounded-xl p-6 text-white select-none ${className}`}
+      className={`bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-xl p-6 text-[var(--nova-text-primary)] select-none ${className}`}
     >
       {/* Header bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-white/10">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-[var(--nova-border)]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--landing-success-subtle)] text-[var(--landing-success)] border border-[var(--landing-success)]/30 font-semibold">
               READY FOR DEPLOYMENT
             </span>
             <span className="text-xs font-mono text-neutral-400">Release Candidate</span>
@@ -38,7 +38,7 @@ export const ReleaseSummary: React.FC<ReleaseSummaryProps> = ({ className = "" }
 
         <div className="flex items-center gap-3">
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
             onClick={() => setPromoted(true)}
             disabled={promoted}
@@ -59,10 +59,10 @@ export const ReleaseSummary: React.FC<ReleaseSummaryProps> = ({ className = "" }
           {checks.map((check, i) => (
             <div
               key={i}
-              className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 border border-white/5 text-xs"
+              className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 border border-[var(--nova-border-muted)] text-xs"
             >
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[var(--landing-success)] shrink-0" />
                 <span className="text-neutral-200">{check.title}</span>
               </div>
               <span className="font-mono text-[10px] text-neutral-500">
@@ -73,17 +73,17 @@ export const ReleaseSummary: React.FC<ReleaseSummaryProps> = ({ className = "" }
         </div>
 
         {/* Right: Canary traffic rollout gauge & Changelog */}
-        <div className="bg-[#151720] rounded-lg border border-white/5 p-4 flex flex-col justify-between">
+        <div className="bg-[var(--nova-elevated)] rounded-lg border border-[var(--nova-border-muted)] p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mb-2">
               <span>CANARY TRAFFIC ROLLOUT</span>
-              <span className="text-emerald-400 font-semibold">
+              <span className="text-[var(--landing-success)] font-semibold">
                 {promoted ? "100% TRAFFIC" : "25% CANARY HEALTHY"}
               </span>
             </div>
             <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden mb-3">
               <div
-                className="h-full bg-gradient-to-r from-[var(--color-accent)] to-emerald-400 transition-all duration-700"
+                className="h-full bg-gradient-to-r from-[var(--landing-primary)] to-[var(--landing-success)] transition-all duration-700"
                 style={{ width: promoted ? "100%" : "25%" }}
               />
             </div>
@@ -93,9 +93,9 @@ export const ReleaseSummary: React.FC<ReleaseSummaryProps> = ({ className = "" }
             </p>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 text-neutral-300">
-              <FileText className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+          <div className="mt-4 pt-3 border-t border-[var(--nova-border)] flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5 text-[var(--nova-text-primary)]">
+              <FileText className="w-3.5 h-3.5 text-[var(--landing-primary)]" />
               <span>Changelog Published</span>
             </div>
             <span className="text-[10px] font-mono text-neutral-500">

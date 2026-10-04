@@ -127,15 +127,15 @@ export default function AISettingsPanel() {
   };
 
   return (
-    <div className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-6">
+    <div className="p-6 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] text-[var(--nova-text-primary)]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--color-accent)]/15 border border-[var(--color-accent)]/30">
-            <Sparkles className="w-5 h-5 text-[var(--color-accent)]" />
+          <div className="p-2 rounded-lg bg-[rgba(139,92,246,0.10)] border border-[rgba(139,92,246,0.25)] text-[#8B5CF6]">
+            <Sparkles className="w-5 h-5 text-[#8B5CF6]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">AI Copilot & LLM Settings</h3>
-            <p className="text-xs text-neutral-400">
+            <h3 className="text-sm font-semibold text-[var(--nova-text-primary)]">AI Copilot & LLM Settings</h3>
+            <p className="text-xs text-[var(--nova-text-secondary)]">
               Configure your organization&apos;s AI model and API key. Encrypted with AES-256-GCM.
             </p>
           </div>
@@ -144,8 +144,8 @@ export default function AISettingsPanel() {
         <span
           className={`text-[10px] font-mono px-2.5 py-1 rounded-full border w-fit ${
             isConfigured
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-              : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+              : "bg-amber-500/10 text-amber-600 border-amber-500/20"
           }`}
         >
           {isConfigured ? "● ACTIVE & ENCRYPTED" : "○ UNCONFIGURED"}
@@ -155,7 +155,7 @@ export default function AISettingsPanel() {
       <form onSubmit={handleSave} className="space-y-4">
         {/* Provider Selection */}
         <div>
-          <label className="block text-neutral-400 text-[11px] mb-1.5 font-medium">LLM Provider</label>
+          <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">LLM Provider</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {[
               { id: "google", label: "Google Gemini", sub: "Gemini 1.5, 2.0" },
@@ -172,12 +172,12 @@ export default function AISettingsPanel() {
                 }}
                 className={`p-3 rounded-lg border text-left transition-all ${
                   provider === p.id
-                    ? "bg-[var(--color-accent)]/15 border-[var(--color-accent)] text-white shadow-xs"
-                    : "bg-[#1B1E28] border-white/5 hover:border-white/15 text-neutral-300"
+                    ? "bg-[rgba(99,102,241,0.08)] border-[var(--nova-accent)] text-[var(--nova-text-primary)] shadow-xs"
+                    : "bg-[var(--nova-bg)] border-[var(--nova-border)] hover:bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)]"
                 }`}
               >
                 <div className="text-xs font-semibold">{p.label}</div>
-                <div className="text-[10px] text-neutral-400 mt-0.5">{p.sub}</div>
+                <div className="text-[10px] text-[var(--nova-text-secondary)] mt-0.5">{p.sub}</div>
               </button>
             ))}
           </div>
@@ -186,13 +186,13 @@ export default function AISettingsPanel() {
         {/* API Key Field */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-neutral-400 text-[11px] font-medium flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-neutral-400" />
+            <label className="text-[11px] font-medium text-[var(--nova-text-secondary)] flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-[var(--nova-text-secondary)]" />
               <span>{provider === "ollama" ? "API Token (Optional)" : "Secret API Key"}</span>
             </label>
             {maskedKey && (
-              <span className="text-[10px] font-mono text-neutral-400">
-                Current: <code className="text-emerald-400">{maskedKey}</code>
+              <span className="text-[10px] font-mono text-[var(--nova-text-secondary)]">
+                Current: <code className="text-emerald-600 font-semibold">{maskedKey}</code>
               </span>
             )}
           </div>
@@ -203,12 +203,12 @@ export default function AISettingsPanel() {
               placeholder={maskedKey ? "Leave blank to keep existing key, or enter new key..." : "Enter your API key..."}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              className="w-full pl-3 pr-10 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)] placeholder:text-neutral-600"
+              className="w-full pl-3 pr-10 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-xs font-mono focus:outline-hidden focus:border-[var(--nova-accent)] placeholder-[var(--nova-text-muted)]"
             />
             <button
               type="button"
               onClick={() => setShowApiKey(!showApiKey)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)]"
             >
               {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
@@ -218,8 +218,8 @@ export default function AISettingsPanel() {
         {/* Base URL (for Ollama or custom proxies) */}
         {(provider === "ollama" || provider === "custom") && (
           <div>
-            <label className="block text-neutral-400 text-[11px] mb-1 font-medium flex items-center gap-1.5">
-              <Server className="w-3.5 h-3.5 text-neutral-400" />
+            <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1 flex items-center gap-1.5">
+              <Server className="w-3.5 h-3.5 text-[var(--nova-text-secondary)]" />
               <span>Ollama Host / Base URL</span>
             </label>
             <input
@@ -227,7 +227,7 @@ export default function AISettingsPanel() {
               placeholder="http://localhost:11434"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
-              className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)]"
+              className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-xs font-mono focus:outline-hidden focus:border-[var(--nova-accent)]"
             />
           </div>
         )}
@@ -235,8 +235,8 @@ export default function AISettingsPanel() {
         {/* Dynamic Model Selection */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-neutral-400 text-[11px] font-medium flex items-center gap-1.5">
-              <Bot className="w-3.5 h-3.5 text-neutral-400" />
+            <label className="text-[11px] font-medium text-[var(--nova-text-secondary)] flex items-center gap-1.5">
+              <Bot className="w-3.5 h-3.5 text-[var(--nova-text-secondary)]" />
               <span>Selected Model</span>
             </label>
 
@@ -244,7 +244,7 @@ export default function AISettingsPanel() {
               type="button"
               onClick={handleFetchModels}
               disabled={isLoadingModels}
-              className="flex items-center gap-1 text-[11px] text-[var(--color-accent)] hover:underline disabled:opacity-50"
+              className="flex items-center gap-1 text-[11px] text-[var(--nova-accent)] hover:underline disabled:opacity-50"
             >
               <RefreshCw className={`w-3 h-3 ${isLoadingModels ? "animate-spin" : ""}`} />
               <span>{isLoadingModels ? "Querying..." : "Fetch Live Models"}</span>
@@ -256,7 +256,7 @@ export default function AISettingsPanel() {
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)]"
+                className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-xs font-mono focus:outline-hidden focus:border-[var(--nova-accent)]"
               >
                 {models.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -270,7 +270,7 @@ export default function AISettingsPanel() {
                 placeholder="e.g. gemini-1.5-pro, gpt-4o, claude-3-5-sonnet"
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)]"
+                className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-xs font-mono focus:outline-hidden focus:border-[var(--nova-accent)]"
               />
             )}
 
@@ -279,10 +279,10 @@ export default function AISettingsPanel() {
               placeholder="Or type custom model name..."
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)]"
+              className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-xs font-mono focus:outline-hidden focus:border-[var(--nova-accent)]"
             />
           </div>
-          <p className="text-[10px] text-neutral-400 mt-1">
+          <p className="text-[10px] text-[var(--nova-text-secondary)] mt-1">
             Click &quot;Fetch Live Models&quot; to populate with models currently enabled on your account.
           </p>
         </div>
@@ -292,7 +292,7 @@ export default function AISettingsPanel() {
           <button
             type="submit"
             disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-medium transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white text-xs font-medium transition-colors disabled:opacity-50"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>{isSaving ? "Saving Encrypted Credentials..." : "Save AI Configuration"}</span>

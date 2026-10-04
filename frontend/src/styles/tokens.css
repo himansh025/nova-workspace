@@ -1,54 +1,122 @@
 :root {
-  /* ==================================================
-     NOVA WORKSPACE — GLOBAL DESIGN TOKENS
-     Linear-level sophistication + Vercel technical confidence
-     ================================================== */
+  /* =========================================
+     NOVA WORKSPACE — DESIGN SYSTEM v2
+     Premium engineering command center
+     ========================================= */
 
-  /* Color tokens - Semantic Light Base */
-  --color-background: #FBFBFC;
-  --color-surface: #FFFFFF;
-  --color-surface-muted: #F3F4F6;
-  --color-surface-elevated: #FFFFFF;
-  --color-foreground: #0E1013;
-  --color-muted: #666D79;
-  --color-muted-subtle: #9CA3AF;
-  --color-border: #E5E7EB;
-  --color-border-subtle: #F0F2F5;
-  --color-border-strong: #D1D5DB;
-  
-  /* Brand Accent: Executive Indigo */
-  --color-accent: #7C8AF9;
-  --color-accent-hover: #697BE8;
-  --color-accent-subtle: rgba(124, 138, 249, 0.08);
-  --color-accent-border: rgba(124, 138, 249, 0.2);
-  --color-accent-foreground: #EEF2FF;
+  /* Dedicated Fixed Brand Tokens (Warm Editorial Public Landing Page) */
+  --landing-bg: #F7F5F0;
+  --landing-surface: #FFFFFF;
+  --landing-surface-muted: #EFECE6;
+  --landing-surface-elevated: #F3EFE7;
+  --landing-border: #E6E1D8;
+  --landing-border-muted: #EEEAE2;
+  --landing-border-strong: #D1C9BC;
+  --landing-text: #171717;
+  --landing-text-muted: #68645D;
+  --landing-text-subtle: #8C867B;
+  --landing-primary: #C85A3F;
+  --landing-primary-hover: #A94731;
+  --landing-primary-subtle: rgba(200, 90, 63, 0.08);
+  --landing-primary-border: rgba(200, 90, 63, 0.22);
+  --landing-success: #68745A;
+  --landing-success-subtle: rgba(104, 116, 90, 0.12);
+  --landing-gold: #B4935A;
+  --landing-gold-subtle: rgba(180, 147, 90, 0.12);
+  --landing-grid: rgba(23, 23, 23, 0.035);
 
-  /* Optional Secondary Accent: Soft Blue */
-  --color-secondary-accent: #0284C7;
-  --color-secondary-accent-subtle: rgba(2, 132, 199, 0.08);
+  /* Surface hierarchy (Modern Dark Theme) */
+  --nova-bg: #0B0D12;
+  --nova-sidebar: #101217;
+  --nova-surface: #14171E;
+  --nova-elevated: #1B1E26;
+  --nova-deep: #21252F;
+  --nova-overlay: rgba(0, 0, 0, 0.6);
 
-  /* Status Colors */
-  --color-success: #34D399;
-  --color-success-subtle: rgba(52, 211, 153, 0.12);
-  --color-warning: #F3A65A;
-  --color-warning-subtle: rgba(243, 166, 90, 0.12);
-  --color-error: #F87171;
+  /* Borders */
+  --nova-border: rgba(255, 255, 255, 0.12);
+  --nova-border-muted: rgba(255, 255, 255, 0.06);
+  --nova-border-strong: rgba(255, 255, 255, 0.24);
+  --nova-border-focus: rgba(99, 102, 241, 0.6);
 
-  /* Dark Sections & Product Console Tokens */
-  --color-dark: #090D12;
-  --color-dark-surface: #101720;
-  --color-dark-surface-elevated: #171F2B;
-  --color-dark-surface-muted: #1B2431;
-  --color-dark-foreground: #F5F6F8;
-  --color-dark-muted: #8B92A0;
-  --color-dark-border: rgba(255, 255, 255, 0.09);
-  --color-dark-border-subtle: rgba(255, 255, 255, 0.05);
+  /* Text */
+  --nova-text-primary: #FFFFFF;
+  --nova-text-secondary: #A1A1AA;
+  --nova-text-muted: #71717A;
+  --nova-text-placeholder: #52525B;
 
-  /* Typography tokens */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', ui-monospace, monospace;
+  /* Primary brand accent: Indigo */
+  --nova-accent: #6366F1;
+  --nova-accent-hover: #4F46E5;
+  --nova-accent-subtle: rgba(99, 102, 241, 0.12);
+  --nova-accent-border: rgba(99, 102, 241, 0.25);
+  --nova-accent-text: #818CF8;
 
-  /* Spacing tokens */
+  /* AI accent: Violet */
+  --nova-ai: #A855F7;
+  --nova-ai-subtle: rgba(168, 85, 247, 0.15);
+  --nova-ai-border: rgba(168, 85, 247, 0.3);
+  --nova-ai-text: #C084FC;
+
+  /* Status: Success */
+  --nova-success: #10B981;
+  --nova-success-subtle: rgba(16, 185, 129, 0.12);
+  --nova-success-border: rgba(16, 185, 129, 0.25);
+  --nova-success-text: #34D399;
+
+  /* Status: Warning */
+  --nova-warning: #F59E0B;
+  --nova-warning-subtle: rgba(245, 158, 11, 0.12);
+  --nova-warning-border: rgba(245, 158, 11, 0.25);
+  --nova-warning-text: #FBBF24;
+
+  /* Status: Danger */
+  --nova-danger: #EF4444;
+  --nova-danger-subtle: rgba(239, 68, 68, 0.12);
+  --nova-danger-border: rgba(239, 68, 68, 0.25);
+  --nova-danger-text: #F87171;
+
+  /* Status: Info / sky */
+  --nova-info: #0EA5E9;
+  --nova-info-subtle: rgba(14, 165, 233, 0.12);
+  --nova-info-border: rgba(14, 165, 233, 0.25);
+  --nova-info-text: #38BDF8;
+
+  /* Legacy compatibility mappings */
+  --color-background: var(--nova-bg);
+  --color-surface: var(--nova-surface);
+  --color-surface-muted: var(--nova-elevated);
+  --color-surface-elevated: var(--nova-deep);
+  --color-foreground: var(--nova-text-primary);
+  --color-muted: var(--nova-text-secondary);
+  --color-muted-subtle: var(--nova-text-muted);
+  --color-border: var(--nova-border);
+  --color-border-subtle: var(--nova-border-muted);
+  --color-border-strong: var(--nova-border-strong);
+  --color-accent: var(--nova-accent);
+  --color-accent-hover: var(--nova-accent-hover);
+  --color-accent-subtle: var(--nova-accent-subtle);
+  --color-accent-border: var(--nova-accent-border);
+  --color-accent-foreground: var(--nova-accent-text);
+  --color-success: var(--nova-success);
+  --color-success-subtle: var(--nova-success-subtle);
+  --color-warning: var(--nova-warning);
+  --color-warning-subtle: var(--nova-warning-subtle);
+  --color-error: var(--nova-danger);
+  --color-dark: var(--nova-bg);
+  --color-dark-surface: var(--nova-surface);
+  --color-dark-surface-elevated: var(--nova-elevated);
+  --color-dark-surface-muted: var(--nova-deep);
+  --color-dark-foreground: var(--nova-text-primary);
+  --color-dark-muted: var(--nova-text-secondary);
+  --color-dark-border: var(--nova-border);
+  --color-dark-border-subtle: var(--nova-border-muted);
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* Spacing scale */
   --spacing-xxs: 4px;
   --spacing-xs: 8px;
   --spacing-sm: 12px;
@@ -58,38 +126,28 @@
   --spacing-2xl: 48px;
   --spacing-3xl: 64px;
   --spacing-4xl: 96px;
-  --spacing-5xl: 128px;
   --container-max: 1320px;
   --page-padding: clamp(20px, 5vw, 64px);
 
-  /* Radius tokens */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Radius scale */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  /* Shadow tokens */
-  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  --shadow-card: 0 4px 16px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-  --shadow-elevated: 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-  --shadow-product: 0 24px 60px -12px rgba(0, 0, 0, 0.22), 0 8px 24px -4px rgba(0, 0, 0, 0.08);
-  --shadow-glow: 0 0 24px -6px rgba(124, 138, 249, 0.2);
-}
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-accent-glow: 0 0 0 1px rgba(99,102,241,0.3);
+  --shadow-ai-glow: 0 0 0 1px rgba(139,92,246,0.3);
 
-/* Dark mode mapping placeholder (for full site dark toggle) */
-[data-theme="dark"] {
-  --color-background: #0B0C0E;
-  --color-surface: #121316;
-  --color-surface-muted: #17191E;
-  --color-surface-elevated: #1C1E25;
-  --color-foreground: #F5F6F8;
-  --color-muted: #8B92A0;
-  --color-muted-subtle: #5F6675;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-subtle: rgba(255, 255, 255, 0.05);
-  --color-border-strong: rgba(255, 255, 255, 0.18);
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  /* Transition durations */
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
+  --transition-slow: 250ms ease;
 }

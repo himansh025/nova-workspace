@@ -57,37 +57,37 @@ export const Chart: React.FC<ChartProps> = ({ className = "", isDark = true }) =
       ref={containerRef}
       className={`rounded-xl border ${
         isDark
-          ? "bg-[#111216] border-white/10 text-white"
-          : "bg-white border-[var(--color-border)] text-[var(--color-foreground)]"
+          ? "bg-[var(--nova-bg)] border-[var(--nova-border)] text-[var(--nova-text-primary)]"
+          : "bg-white border-[var(--landing-border)] text-[var(--landing-text)]"
       } p-5 ${className}`}
     >
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 pb-5 border-b border-white/10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 pb-5 border-b border-[var(--nova-border)]">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-neutral-400 font-mono mb-1">
-            <Clock className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+            <Clock className="w-3.5 h-3.5 text-[var(--landing-primary)]" />
             <span>Cycle Time</span>
           </div>
           <div className="text-xl font-medium tracking-tight">1.4 days</div>
-          <div className="text-[11px] font-mono text-emerald-400 mt-0.5">
+          <div className="text-[11px] font-mono text-[var(--landing-success)] mt-0.5 font-semibold">
             ↓ 42% from last sprint
           </div>
         </div>
 
         <div>
           <div className="flex items-center gap-1.5 text-xs text-neutral-400 font-mono mb-1">
-            <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+            <TrendingUp className="w-3.5 h-3.5 text-[#0EA5E9]" />
             <span>Velocity</span>
           </div>
           <div className="text-xl font-medium tracking-tight">48 pts</div>
-          <div className="text-[11px] font-mono text-emerald-400 mt-0.5">
+          <div className="text-[11px] font-mono text-[var(--landing-success)] mt-0.5 font-semibold">
             ↑ 24% throughput
           </div>
         </div>
 
         <div>
           <div className="flex items-center gap-1.5 text-xs text-neutral-400 font-mono mb-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-[var(--landing-success)]" />
             <span>Completed</span>
           </div>
           <div className="text-xl font-medium tracking-tight">94.2%</div>
@@ -114,7 +114,7 @@ export const Chart: React.FC<ChartProps> = ({ className = "", isDark = true }) =
           <span>SPRINT BURNUP & THROUGHPUT TRAJECTORY</span>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-0.5 bg-[var(--color-accent)] inline-block" />
+              <span className="w-2.5 h-0.5 bg-[var(--landing-primary)] inline-block" />
               <span>Actual Velocity</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -130,8 +130,8 @@ export const Chart: React.FC<ChartProps> = ({ className = "", isDark = true }) =
         >
           <defs>
             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#5E43F3" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#5E43F3" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#C85A3F" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#C85A3F" stopOpacity="0.0" />
             </linearGradient>
           </defs>
 
@@ -169,7 +169,7 @@ export const Chart: React.FC<ChartProps> = ({ className = "", isDark = true }) =
             ref={pathRef}
             d={primaryPathData}
             fill="none"
-            stroke="var(--color-accent)"
+            stroke="var(--landing-primary)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -186,7 +186,7 @@ export const Chart: React.FC<ChartProps> = ({ className = "", isDark = true }) =
                   cx={x}
                   cy={y}
                   r="3.5"
-                  className="fill-[var(--color-accent)] stroke-[#111216] stroke-2"
+                  className="fill-[var(--landing-primary)] stroke-[#111216] stroke-2"
                 />
               </g>
             );

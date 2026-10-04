@@ -27,18 +27,18 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
       case "medium":
         return <span className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded text-[9px] font-mono">P2</span>;
       default:
-        return <span className="text-neutral-400 bg-white/5 px-1.5 py-0.5 rounded text-[9px] font-mono">P3</span>;
+        return <span className="text-[var(--nova-text-secondary)] bg-[var(--nova-elevated)] px-1.5 py-0.5 rounded text-[9px] font-mono">P3</span>;
     }
   };
 
   return (
-    <div className={`flex flex-col h-full bg-[#111216] text-neutral-200 overflow-hidden ${className}`}>
+    <div className={`flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] overflow-hidden ${className}`}>
       {/* Board Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-[#0E1014]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-sidebar)]">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-neutral-400">Board</span>
-          <span className="text-neutral-600">/</span>
-          <span className="text-xs font-medium text-white">Sprint 48 Active Cycle</span>
+          <span className="text-xs font-mono text-[var(--nova-text-secondary)]">Board</span>
+          <span className="text-[var(--nova-text-muted)]">/</span>
+          <span className="text-xs font-medium text-[var(--nova-text-primary)]">Sprint 48 Active Cycle</span>
           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             84% Complete
           </span>
@@ -46,17 +46,17 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
 
         <div className="flex items-center gap-2">
           <div className="flex -space-x-1.5">
-            <div className="w-5 h-5 rounded-full bg-indigo-600 text-[9px] flex items-center justify-center text-white border border-[#0E1014]">
+            <div className="w-5 h-5 rounded-full bg-indigo-600 text-[9px] flex items-center justify-center text-[var(--nova-text-primary)] border border-[var(--nova-sidebar)]">
               ER
             </div>
-            <div className="w-5 h-5 rounded-full bg-emerald-600 text-[9px] flex items-center justify-center text-white border border-[#0E1014]">
+            <div className="w-5 h-5 rounded-full bg-emerald-600 text-[9px] flex items-center justify-center text-[var(--nova-text-primary)] border border-[var(--nova-sidebar)]">
               MC
             </div>
-            <div className="w-5 h-5 rounded-full bg-violet-600 text-[9px] flex items-center justify-center text-white border border-[#0E1014]">
+            <div className="w-5 h-5 rounded-full bg-violet-600 text-[9px] flex items-center justify-center text-[var(--nova-text-primary)] border border-[var(--nova-sidebar)]">
               SN
             </div>
           </div>
-          <button className="flex items-center gap-1 text-[11px] bg-white/5 hover:bg-white/10 text-neutral-300 px-2 py-1 rounded border border-white/10 transition-colors">
+          <button className="flex items-center gap-1 text-[11px] bg-[var(--nova-elevated)] hover:bg-[var(--nova-surface)] text-[var(--nova-text-primary)] px-2 py-1 rounded border border-[var(--nova-border)] transition-colors">
             <Plus className="w-3 h-3" />
             <span>New Issue</span>
           </button>
@@ -70,19 +70,19 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
           return (
             <div
               key={col.key}
-              className="flex flex-col bg-[#16181E] rounded-lg border border-white/5 p-3 min-w-[200px]"
+              className="flex flex-col bg-[var(--nova-elevated)] rounded-lg border border-[var(--nova-border-muted)] p-3 min-w-[200px]"
             >
               {/* Column Title */}
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/5">
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--nova-border-muted)]">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--nova-text-secondary)]">
                     {col.title}
                   </span>
-                  <span className="text-[10px] font-mono text-neutral-500 bg-white/5 px-1.5 py-0.2 rounded">
+                  <span className="text-[10px] font-mono text-[var(--nova-text-muted)] bg-[var(--nova-elevated)] px-1.5 py-0.2 rounded">
                     {colTasks.length}
                   </span>
                 </div>
-                <MoreHorizontal className="w-3.5 h-3.5 text-neutral-600 hover:text-neutral-400 cursor-pointer" />
+                <MoreHorizontal className="w-3.5 h-3.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-secondary)] cursor-pointer" />
               </div>
 
               {/* Task Cards */}
@@ -90,7 +90,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
                 {colTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="p-3 rounded-md bg-[#1B1E26] border border-white/10 hover:border-white/20 transition-all cursor-pointer shadow-xs group"
+                    className="p-3 rounded-md bg-[var(--nova-surface)] border border-[var(--nova-border)] hover:border-[var(--nova-border-strong)] transition-all cursor-pointer shadow-xs group"
                   >
                     <div className="flex items-center justify-between gap-2 mb-1.5">
                       <span className="text-[10px] font-mono text-[var(--color-accent)] font-medium">
@@ -99,28 +99,28 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
                       {priorityBadge(task.priority)}
                     </div>
 
-                    <p className="text-xs font-normal text-neutral-200 leading-snug line-clamp-2 mb-2.5">
+                    <p className="text-xs font-normal text-[var(--nova-text-primary)] leading-snug line-clamp-2 mb-2.5">
                       {task.title}
                     </p>
 
                     {task.branch && (
-                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400 mb-2 bg-black/20 px-1.5 py-0.5 rounded w-fit">
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-[var(--nova-text-secondary)] mb-2 bg-[var(--nova-elevated)] px-1.5 py-0.5 rounded w-fit">
                         <GitBranch className="w-3 h-3 text-[var(--color-secondary-accent)]" />
                         <span className="truncate max-w-[140px]">{task.branch}</span>
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-neutral-400">
+                    <div className="flex items-center justify-between pt-1 border-t border-[var(--nova-border-muted)] text-[10px] text-[var(--nova-text-secondary)]">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-4 h-4 rounded-full bg-neutral-700 text-white text-[8px] flex items-center justify-center font-bold">
+                        <div className="w-4 h-4 rounded-full bg-[var(--nova-elevated)] text-[var(--nova-text-primary)] text-[8px] flex items-center justify-center font-bold">
                           {task.assignee.initials}
                         </div>
-                        <span className="text-neutral-400 text-[10px]">
+                        <span className="text-[var(--nova-text-secondary)] text-[10px]">
                           {task.assignee.name.split(" ")[0]}
                         </span>
                       </div>
                       {task.estimate && (
-                        <span className="font-mono text-neutral-500">
+                        <span className="font-mono text-[var(--nova-text-muted)]">
                           {task.estimate}
                         </span>
                       )}
@@ -129,7 +129,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
                 ))}
 
                 {colTasks.length === 0 && (
-                  <div className="h-20 border border-dashed border-white/5 rounded flex items-center justify-center text-[11px] text-neutral-600 font-mono">
+                  <div className="h-20 border border-dashed border-[var(--nova-border-muted)] rounded flex items-center justify-center text-[11px] text-[var(--nova-text-muted)] font-mono">
                     No active items
                   </div>
                 )}

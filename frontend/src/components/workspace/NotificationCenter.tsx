@@ -178,15 +178,15 @@ export function NotificationCenter() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "tasks":
-        return <CheckSquare className="w-3.5 h-3.5 text-blue-400" />;
+        return <CheckSquare className="w-3.5 h-3.5 text-blue-500" />;
       case "specs":
-        return <FileText className="w-3.5 h-3.5 text-emerald-400" />;
+        return <FileText className="w-3.5 h-3.5 text-emerald-500" />;
       case "releases":
-        return <Rocket className="w-3.5 h-3.5 text-purple-400" />;
+        return <Rocket className="w-3.5 h-3.5 text-purple-500" />;
       case "git":
-        return <GitCommit className="w-3.5 h-3.5 text-amber-400" />;
+        return <GitCommit className="w-3.5 h-3.5 text-amber-500" />;
       default:
-        return <Shield className="w-3.5 h-3.5 text-indigo-400" />;
+        return <Shield className="w-3.5 h-3.5 text-[var(--nova-accent)]" />;
     }
   };
 
@@ -195,13 +195,13 @@ export function NotificationCenter() {
       {/* Bell Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/10"
+        className="relative p-2 text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] rounded-lg hover:bg-[var(--nova-surface)] transition-colors border border-transparent hover:border-[var(--nova-border)]"
         title="Real-Time Notification Center"
         aria-label="Notifications"
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-indigo-600 rounded-full shadow-[0_0_8px_rgba(94,67,243,0.6)] animate-pulse">
+          <span className="absolute top-1 right-1 flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-[var(--nova-accent)] rounded-full shadow-xs">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -209,15 +209,15 @@ export function NotificationCenter() {
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#121316] border border-white/10 rounded-xl shadow-2xl shadow-black/80 z-50 overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-[0_12px_32px_rgba(0,0,0,0.08)] rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[var(--nova-text-primary)]">
           {/* Header */}
-          <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+          <div className="p-3.5 border-b border-[var(--nova-border)] flex items-center justify-between bg-[var(--nova-surface)]">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-white uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[var(--nova-text-primary)] uppercase tracking-wider">
                 Live Notifications
               </span>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full">
+                <span className="px-1.5 py-0.5 text-[10px] font-mono bg-[rgba(99,102,241,0.12)] text-[var(--nova-accent)] border border-[rgba(99,102,241,0.25)] rounded-full">
                   {unreadCount} new
                 </span>
               )}
@@ -226,7 +226,7 @@ export function NotificationCenter() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-indigo-400 transition-colors"
+                  className="flex items-center gap-1 text-[11px] text-[var(--nova-text-secondary)] hover:text-[var(--nova-accent)] transition-colors"
                 >
                   <CheckCheck className="w-3 h-3" />
                   Read all
@@ -234,7 +234,7 @@ export function NotificationCenter() {
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-zinc-500 hover:text-zinc-300 p-0.5"
+                className="text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] p-0.5"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -242,15 +242,15 @@ export function NotificationCenter() {
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1 p-2 border-b border-white/5 bg-black/20 overflow-x-auto text-[11px]">
+          <div className="flex items-center gap-1 p-2 border-b border-[var(--nova-border)] bg-[var(--nova-bg)] overflow-x-auto text-[11px]">
             {["all", "tasks", "specs", "releases", "git"].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`px-2 py-1 rounded-md capitalize transition-colors shrink-0 ${
                   activeCategory === cat
-                    ? "bg-white/10 text-white font-medium"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
+                    ? "bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] font-medium"
+                    : "text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)]"
                 }`}
               >
                 {cat}
@@ -259,9 +259,9 @@ export function NotificationCenter() {
           </div>
 
           {/* Notification List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
+          <div className="max-h-80 overflow-y-auto divide-y divide-[var(--nova-border)]">
             {filtered.length === 0 ? (
-              <div className="py-8 text-center text-xs text-zinc-500">
+              <div className="py-8 text-center text-xs text-[var(--nova-text-muted)]">
                 No notifications in this category
               </div>
             ) : (
@@ -269,30 +269,30 @@ export function NotificationCenter() {
                 <div
                   key={item.id}
                   onClick={() => markAsRead(item.id)}
-                  className={`p-3 transition-colors hover:bg-white/[0.04] cursor-pointer flex gap-3 ${
-                    !item.isRead ? "bg-indigo-500/[0.04]" : ""
+                  className={`p-3 transition-colors hover:bg-[var(--nova-deep)] cursor-pointer flex gap-3 ${
+                    !item.isRead ? "bg-[rgba(99,102,241,0.04)]" : ""
                   }`}
                 >
-                  <div className="mt-0.5 w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                  <div className="mt-0.5 w-6 h-6 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] flex items-center justify-center shrink-0">
                     {getCategoryIcon(item.category)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <p className="text-xs font-medium text-zinc-200 truncate">
+                      <p className="text-xs font-medium text-[var(--nova-text-primary)] truncate">
                         {item.title}
                       </p>
-                      <span className="text-[10px] text-zinc-500 shrink-0">
+                      <span className="text-[10px] text-[var(--nova-text-muted)] shrink-0">
                         {item.timestamp}
                       </span>
                     </div>
-                    <p className="text-[11px] text-zinc-400 leading-snug line-clamp-2">
+                    <p className="text-[11px] text-[var(--nova-text-secondary)] leading-snug line-clamp-2">
                       {item.message}
                     </p>
                     {item.link && (
                       <Link
                         href={item.link}
                         onClick={() => setIsOpen(false)}
-                        className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
+                        className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-[var(--nova-accent)] hover:underline transition-colors"
                       >
                         <span>View Details</span>
                         <ExternalLink className="w-2.5 h-2.5" />
@@ -300,7 +300,7 @@ export function NotificationCenter() {
                     )}
                   </div>
                   {!item.isRead && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--nova-accent)] mt-1.5 shrink-0" />
                   )}
                 </div>
               ))
@@ -308,12 +308,12 @@ export function NotificationCenter() {
           </div>
 
           {/* Footer with Real-time Status */}
-          <div className="p-2.5 bg-black/40 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
+          <div className="p-2.5 bg-[var(--nova-bg)] border-t border-[var(--nova-border)] flex items-center justify-between text-[11px] text-[var(--nova-text-secondary)]">
             <div className="flex items-center gap-1.5">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
                   isConnected
-                    ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse"
+                    ? "bg-emerald-500 shadow-xs animate-pulse"
                     : "bg-amber-500"
                 }`}
               />
@@ -321,7 +321,7 @@ export function NotificationCenter() {
                 {isConnected ? "SSE Real-Time Sync Connected" : "Connecting live stream..."}
               </span>
             </div>
-            <Radio className="w-3 h-3 text-zinc-600" />
+            <Radio className="w-3 h-3 text-[var(--nova-text-muted)]" />
           </div>
         </div>
       )}

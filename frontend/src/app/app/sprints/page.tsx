@@ -211,172 +211,194 @@ export default function SprintsPage() {
 
   // Area fill under actual line
   const lastActualIndex = actualDays.length - 1;
-  const actualAreaPath = actualDays.length > 0
-    ? `${actualPath} L ${getX(lastActualIndex)} ${paddingY + chartH} L ${getX(0)} ${paddingY + chartH} Z`
-    : "";
+  const actualAreaPath =
+    actualDays.length > 0
+      ? `${actualPath} L ${getX(lastActualIndex)} ${paddingY + chartH} L ${getX(0)} ${paddingY + chartH} Z`
+      : "";
 
   const completedCount = sprintTasks.filter((t) => t.status === "done").length;
   const totalCount = sprintTasks.length;
-  const completionPercentage = activeSprint ? Math.round((activeSprint.completedPoints / (activeSprint.totalPoints || 1)) * 100) : 0;
-  const isAhead = activeSprint && activeSprint.burndown.find((b) => b.day === activeSprint.currentDay)
-    ? (activeSprint.burndown.find((b) => b.day === activeSprint.currentDay)!.idealRemaining - activeSprint.remainingPoints) >= 0
-    : true;
+  const completionPercentage = activeSprint
+    ? Math.round((activeSprint.completedPoints / (activeSprint.totalPoints || 1)) * 100)
+    : 0;
+  const isAhead =
+    activeSprint && activeSprint.burndown.find((b) => b.day === activeSprint.currentDay)
+      ? (activeSprint.burndown.find((b) => b.day === activeSprint.currentDay)!.idealRemaining -
+          activeSprint.remainingPoints) >= 0
+      : true;
+
+  /* ─── Priority badge helper ──────────────────────────────── */
+  const getPriorityBadge = (priority: string) => {
+    if (priority === "urgent")
+      return "bg-[var(--nova-danger-subtle)] text-[var(--nova-danger-text)] border border-[var(--nova-danger-border)]";
+    if (priority === "high")
+      return "bg-[var(--nova-warning-subtle)] text-[var(--nova-warning-text)] border border-[var(--nova-warning-border)]";
+    return "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]";
+  };
 
   return (
-    <div className="flex-1 bg-[#0B0C0E] text-white flex flex-col overflow-y-auto no-scrollbar">
-      {/* Top Banner Header */}
-      <div className="border-b border-white/10 bg-[#101216] px-6 py-5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1.5">
-                <Zap className="w-3 h-3 text-indigo-400 fill-indigo-400/20" />
-                Active Sprint
-              </span>
-              <span className="text-xs text-neutral-400 font-mono">
-                {activeSprint?.startDate} — {activeSprint?.endDate}
-              </span>
-              <span className="text-neutral-600">•</span>
-              <span className="text-xs text-emerald-400 font-mono font-medium flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Day {activeSprint?.currentDay} of {activeSprint?.totalDays} (6 days remaining)
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              {activeSprint?.name || "Sprint Studio"}
+    <div className="flex flex-col h-full overflow-hidden bg-[var(--nova-bg)]">
+      {/* ── Sticky Page Header ──────────────────────────────── */}
+      <div className="shrink-0 px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] text-[var(--nova-text-primary)] flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)]">
+              Sprint Planning
             </h1>
-            <p className="text-xs text-neutral-400 mt-1 max-w-2xl leading-relaxed">
-              {activeSprint?.goal}
-            </p>
+            {activeSprint && (
+              <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]">
+                Active
+              </span>
+            )}
           </div>
+          <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
+            {activeSprint
+              ? `${activeSprint.name} · Day ${activeSprint.currentDay} of ${activeSprint.totalDays}`
+              : "No active sprint"}
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => {
-                if (backlogTasks.length > 0) setSelectedTaskForPoker(backlogTasks[0]);
-              }}
-              className="px-3.5 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-mono font-medium text-neutral-200 border border-white/10 flex items-center gap-2 transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              Poker Deck
-            </button>
-            <button
-              onClick={() => setIsCompleteModalOpen(true)}
-              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-mono font-medium text-white shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Complete Sprint
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          {/* Poker Deck button — uses AI violet accent */}
+          <button
+            onClick={() => {
+              if (backlogTasks.length > 0) setSelectedTaskForPoker(backlogTasks[0]);
+            }}
+            className="flex items-center gap-1.5 bg-[var(--nova-ai-subtle)] hover:bg-[rgba(139,92,246,0.18)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded px-3 py-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Poker Deck
+          </button>
+
+          {/* Complete Sprint — primary CTA */}
+          <button
+            onClick={() => setIsCompleteModalOpen(true)}
+            className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 cursor-pointer"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Complete Sprint
+          </button>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto w-full p-6 space-y-6">
-        {/* KPI Strip */}
+      {/* ── Scrollable Body ──────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto nova-scroll px-5 py-4 space-y-4">
+
+        {/* ── KPI Strip ───────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="p-4 rounded-xl bg-[#12141A] border border-white/5 relative overflow-hidden">
-            <div className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">Total Committed</div>
-            <div className="text-2xl font-bold text-white font-mono mt-1">
-              {activeSprint?.totalPoints} <span className="text-xs text-neutral-500 font-sans">pts</span>
+          {/* Total Committed */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-3.5">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] mb-1">
+              Committed
             </div>
-            <div className="text-[11px] text-neutral-400 mt-1 flex items-center gap-1">
-              <span>{totalCount} scope items</span>
+            <div className="text-[22px] font-semibold text-[var(--nova-text-primary)] font-mono leading-none">
+              {activeSprint?.totalPoints}
+              <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
             </div>
+            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">{totalCount} scope items</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-[#12141A] border border-white/5 relative overflow-hidden">
-            <div className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">Burned / Done</div>
-            <div className="text-2xl font-bold text-emerald-400 font-mono mt-1">
-              {activeSprint?.completedPoints} <span className="text-xs text-neutral-500 font-sans">pts</span>
+          {/* Burned / Done */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-3.5">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] mb-1">
+              Burned / Done
             </div>
-            <div className="text-[11px] text-emerald-400/80 mt-1 flex items-center gap-1">
+            <div className="text-[22px] font-semibold text-[var(--nova-success)] font-mono leading-none">
+              {activeSprint?.completedPoints}
+              <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
+            </div>
+            <div className="text-[11px] text-[var(--nova-success-text)] mt-1 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" />
-              <span>{completionPercentage}% complete ({completedCount} tasks)</span>
+              {completionPercentage}% · {completedCount} tasks
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-[#12141A] border border-white/5 relative overflow-hidden">
-            <div className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">Remaining Scope</div>
-            <div className="text-2xl font-bold text-indigo-400 font-mono mt-1">
-              {activeSprint?.remainingPoints} <span className="text-xs text-neutral-500 font-sans">pts</span>
+          {/* Remaining */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-3.5">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] mb-1">
+              Remaining
             </div>
-            <div className="text-[11px] text-neutral-400 mt-1">
+            <div className="text-[22px] font-semibold text-[var(--nova-accent)] font-mono leading-none">
+              {activeSprint?.remainingPoints}
+              <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
+            </div>
+            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">
               {totalCount - completedCount} open issues
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-[#12141A] border border-white/5 relative overflow-hidden">
-            <div className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">Team Velocity</div>
-            <div className="text-2xl font-bold text-purple-400 font-mono mt-1">
-              {avgVelocity} <span className="text-xs text-neutral-500 font-sans">pts/sprint</span>
+          {/* Velocity */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-3.5">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] mb-1">
+              Velocity
             </div>
-            <div className="text-[11px] text-neutral-400 mt-1">
-              Rolling 3-sprint avg
+            <div className="text-[22px] font-semibold text-[var(--nova-ai)] font-mono leading-none">
+              {avgVelocity}
+              <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts/sprint</span>
             </div>
+            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">Rolling 3-sprint avg</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-[#12141A] border border-white/5 relative overflow-hidden">
-            <div className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">Burndown Pace</div>
-            <div className={`text-sm font-bold font-mono mt-2 flex items-center gap-1.5 ${isAhead ? "text-emerald-400" : "text-amber-400"}`}>
-              <span className={`w-2 h-2 rounded-full ${isAhead ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-              {isAhead ? "+5 pts Ahead of Pace" : "Slightly Behind"}
+          {/* Burndown Pace */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-3.5">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] mb-1">
+              Pace
             </div>
-            <div className="text-[11px] text-neutral-400 mt-1">
-              On track for Sep 22 release
+            <div
+              className={`text-[13px] font-semibold mt-1 flex items-center gap-1.5 ${
+                isAhead ? "text-[var(--nova-success-text)]" : "text-[var(--nova-warning-text)]"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isAhead ? "bg-[var(--nova-success)] animate-pulse" : "bg-[var(--nova-warning)]"
+                }`}
+              />
+              {isAhead ? "+5 pts Ahead" : "Slightly Behind"}
             </div>
+            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">On track for Sep 22</div>
           </div>
         </div>
 
-        {/* Interactive Burndown Chart Card */}
-        <div className="p-5 rounded-2xl bg-[#12141A] border border-white/10 shadow-xl space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        {/* ── Burndown Chart ───────────────────────────────────── */}
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
               <div className="flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-indigo-400" />
-                <h2 className="text-sm font-semibold text-white tracking-wide">
-                  Interactive Burndown Trajectory
-                </h2>
-                <span className="text-[10px] font-mono text-neutral-500 bg-white/5 px-2 py-0.5 rounded">
+                <TrendingDown className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+                <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                  Burndown Trajectory
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] px-2 py-0.5 rounded">
                   Daily Point Depletion
                 </span>
               </div>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                Target vs actual burned story points across 14 sprint days. Hover over nodes to inspect daily deltas.
+              <p className="text-[12px] text-[var(--nova-text-secondary)] mt-0.5">
+                Target vs actual burned story points across {activeSprint?.totalDays || 14} sprint days. Hover nodes to inspect daily deltas.
               </p>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 text-xs font-mono">
+            <div className="flex items-center gap-4 shrink-0">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-0.5 border-t-2 border-dashed border-neutral-500" />
-                <span className="text-neutral-400">Ideal Guideline</span>
+                <div className="w-5 border-t-2 border-dashed border-[var(--nova-text-muted)]" />
+                <span className="text-[11px] text-[var(--nova-text-muted)]">Ideal</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-1 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                <span className="text-indigo-300 font-semibold">Actual Remaining</span>
+                <div className="w-5 h-1 bg-[var(--nova-accent)] rounded-full" />
+                <span className="text-[11px] text-[var(--nova-text-secondary)]">Actual</span>
               </div>
             </div>
           </div>
 
-          {/* SVG Canvas Container */}
-          <div className="relative w-full overflow-x-auto no-scrollbar pt-2">
-            <svg
-              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-              className="w-full h-56 select-none"
-            >
+          {/* SVG Canvas */}
+          <div className="relative w-full overflow-x-auto nova-scroll pt-1">
+            <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-52 select-none">
               <defs>
                 <linearGradient id="actualAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="var(--nova-accent)" stopOpacity="0.20" />
+                  <stop offset="100%" stopColor="var(--nova-accent)" stopOpacity="0.0" />
                 </linearGradient>
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
               </defs>
 
               {/* Grid Horizontal Lines */}
@@ -389,13 +411,13 @@ export default function SprintsPage() {
                       y1={y}
                       x2={svgWidth - paddingX}
                       y2={y}
-                      stroke="rgba(255,255,255,0.06)"
+                      stroke="var(--nova-border-muted)"
                       strokeDasharray="4 4"
                     />
                     <text
                       x={paddingX - 8}
                       y={y + 3}
-                      fill="#737373"
+                      fill="var(--nova-text-muted)"
                       fontSize="9"
                       fontFamily="monospace"
                       textAnchor="end"
@@ -417,13 +439,13 @@ export default function SprintsPage() {
                       y1={paddingY}
                       x2={x}
                       y2={paddingY + chartH}
-                      stroke={isCurrent ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)"}
+                      stroke={isCurrent ? "var(--nova-accent-border)" : "var(--nova-border-muted)"}
                       strokeDasharray={isCurrent ? "2 2" : undefined}
                     />
                     <text
                       x={x}
                       y={paddingY + chartH + 16}
-                      fill={isCurrent ? "#818cf8" : "#737373"}
+                      fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-text-muted)"}
                       fontWeight={isCurrent ? "bold" : "normal"}
                       fontSize="9"
                       fontFamily="monospace"
@@ -436,27 +458,19 @@ export default function SprintsPage() {
               })}
 
               {/* Area Under Actual Line */}
-              {actualAreaPath && (
-                <path d={actualAreaPath} fill="url(#actualAreaGrad)" />
-              )}
+              {actualAreaPath && <path d={actualAreaPath} fill="url(#actualAreaGrad)" />}
 
               {/* Ideal Burndown Line */}
               <path
                 d={idealPath}
                 fill="none"
-                stroke="#52525b"
-                strokeWidth="1.8"
+                stroke="var(--nova-border-strong)"
+                strokeWidth="1.5"
                 strokeDasharray="6 4"
               />
 
               {/* Actual Burndown Line */}
-              <path
-                d={actualPath}
-                fill="none"
-                stroke="#6366f1"
-                strokeWidth="3"
-                filter="url(#glow)"
-              />
+              <path d={actualPath} fill="none" stroke="var(--nova-accent)" strokeWidth="2.5" />
 
               {/* Actual Data Nodes */}
               {actualDays.map((d, i) => {
@@ -475,19 +489,19 @@ export default function SprintsPage() {
                     <circle
                       cx={x}
                       cy={y}
-                      r={isHovered ? 7 : isCurrent ? 5 : 4}
-                      fill={isCurrent ? "#a5b4fc" : "#6366f1"}
-                      stroke="#0B0C0E"
+                      r={isHovered ? 6 : isCurrent ? 5 : 3.5}
+                      fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-accent)"}
+                      stroke="var(--nova-surface)"
                       strokeWidth="2"
                     />
                     {isCurrent && (
                       <circle
                         cx={x}
                         cy={y}
-                        r="9"
+                        r="8"
                         fill="none"
-                        stroke="#818cf8"
-                        strokeWidth="1.5"
+                        stroke="var(--nova-accent-text)"
+                        strokeWidth="1"
                         className="animate-ping"
                       />
                     )}
@@ -496,73 +510,74 @@ export default function SprintsPage() {
               })}
             </svg>
 
-            {/* Hover Tooltip Overlay */}
+            {/* Hover Tooltip */}
             {hoveredDay && (
-              <div className="absolute top-2 right-4 bg-neutral-900 border border-white/20 p-2.5 rounded-lg shadow-2xl text-xs font-mono text-neutral-200 pointer-events-none z-10">
-                <div className="text-white font-bold flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                  Day {hoveredDay} ({burndownData[hoveredDay - 1]?.date})
+              <div className="absolute top-2 right-3 bg-[var(--nova-elevated)] border border-[var(--nova-border-strong)] p-2.5 rounded-lg shadow-md text-[11px] font-mono text-[var(--nova-text-secondary)] pointer-events-none z-10">
+                <div className="text-[var(--nova-text-primary)] font-medium flex items-center gap-1.5 mb-1">
+                  <Calendar className="w-3 h-3 text-[var(--nova-accent)]" />
+                  Day {hoveredDay} · {burndownData[hoveredDay - 1]?.date}
                 </div>
-                <div className="mt-1 text-neutral-300">
-                  Actual Remaining:{" "}
-                  <span className="text-indigo-400 font-bold">
+                <div>
+                  Actual:{" "}
+                  <span className="text-[var(--nova-accent)] font-semibold">
                     {burndownData[hoveredDay - 1]?.actualRemaining ?? "N/A"} pts
                   </span>
                 </div>
-                <div className="text-neutral-400">
-                  Ideal Remaining:{" "}
-                  <span className="text-neutral-200">
-                    {burndownData[hoveredDay - 1]?.idealRemaining} pts
-                  </span>
+                <div className="text-[var(--nova-text-muted)]">
+                  Ideal: {burndownData[hoveredDay - 1]?.idealRemaining} pts
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Poker Deck Quick Tool */}
+        {/* ── Planning Poker Deck ──────────────────────────────── */}
         {selectedTaskForPoker && (
-          <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-neutral-900 border border-indigo-500/30 shadow-lg">
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-ai-border)] shadow-xs rounded-lg p-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-indigo-400" />
-                  <span className="text-xs font-mono font-semibold uppercase tracking-wider text-indigo-300">
-                    Planning Poker Estimation Deck
+                <div className="flex items-center gap-2 mb-1">
+                  {/* AI-accent left border treatment */}
+                  <span className="w-0.5 h-4 rounded-full bg-[var(--nova-ai)]" />
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--nova-ai)]" />
+                  <span className="text-[12px] font-medium text-[var(--nova-ai-text)]">
+                    Planning Poker
                   </span>
-                  <span className="text-xs font-mono text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">
+                  <span className="rounded px-1.5 py-0.5 text-[10px] font-mono bg-[var(--nova-ai-subtle)] text-[var(--nova-ai-text)] border border-[var(--nova-ai-border)]">
                     {selectedTaskForPoker.key}
                   </span>
                 </div>
-                <p className="text-xs text-neutral-300 mt-1">
-                  Vote story point complexity for: <strong className="text-white">{selectedTaskForPoker.title}</strong>
+                <p className="text-[12px] text-[var(--nova-text-secondary)]">
+                  Vote story point complexity for:{" "}
+                  <strong className="text-[var(--nova-text-primary)]">{selectedTaskForPoker.title}</strong>
                 </p>
               </div>
 
-              {pokerSuccessMsg && (
-                <div className="px-3 py-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-1.5 animate-fadeIn">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  {pokerSuccessMsg}
-                </div>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {pokerSuccessMsg && (
+                  <span className="flex items-center gap-1.5 rounded px-2 py-1 bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)] text-[11px] font-mono">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {pokerSuccessMsg}
+                  </span>
+                )}
 
-              <div className="flex items-center gap-1.5 flex-wrap">
                 {fibonacciDeck.map((pts) => (
                   <button
                     key={pts}
                     onClick={() => handleCastVote(pts)}
-                    className={`w-9 h-11 rounded-lg font-mono text-xs font-bold border transition-all transform hover:-translate-y-1 active:translate-y-0 ${
+                    className={`w-9 h-11 rounded font-mono text-[12px] font-semibold border transition-all duration-150 cursor-pointer hover:-translate-y-0.5 ${
                       selectedPoints === pts
-                        ? "bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-500/50"
-                        : "bg-neutral-800/90 text-neutral-200 border-white/10 hover:border-indigo-400 hover:bg-neutral-700"
+                        ? "bg-[var(--nova-accent)] text-white border-[var(--nova-accent-border)]"
+                        : "bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] hover:text-[var(--nova-text-primary)]"
                     }`}
                   >
                     {pts}
                   </button>
                 ))}
+
                 <button
                   onClick={() => setSelectedTaskForPoker(null)}
-                  className="px-2 py-1 text-xs text-neutral-400 hover:text-white font-mono ml-2"
+                  className="text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-2 py-1.5 text-[12px] transition-all duration-150 ml-1 cursor-pointer"
                 >
                   Close
                 </button>
@@ -571,87 +586,100 @@ export default function SprintsPage() {
           </div>
         )}
 
-        {/* Dual Columns: Sprint Scope vs Backlog Grooming */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Column 1: Active Sprint Committed Scope */}
-          <div className="p-5 rounded-2xl bg-[#12141A] border border-white/10 space-y-4">
-            <div className="flex items-center justify-between">
+        {/* ── Dual Columns: Sprint Scope vs Backlog ────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Column 1: Committed Scope */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--nova-border-muted)]">
               <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-sm font-semibold text-white">
-                  Committed Scope ({sprintTasks.length})
-                </h3>
+                <Target className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+                <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                  Committed Scope
+                </span>
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] border border-[var(--nova-border)]">
+                  {sprintTasks.length}
+                </span>
               </div>
-              <span className="text-xs font-mono text-neutral-400">
+              <span className="text-[11px] text-[var(--nova-text-muted)] font-mono">
                 {activeSprint?.completedPoints} / {activeSprint?.totalPoints} pts done
               </span>
             </div>
 
-            <div className="space-y-2">
+            {/* Progress bar */}
+            <div className="px-4 pt-3 pb-1">
+              <div className="bg-[var(--nova-deep)] h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--nova-accent)] rounded-full transition-all duration-300"
+                  style={{ width: `${completionPercentage}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="px-3 pb-3 pt-2 space-y-1.5 nova-scroll max-h-96 overflow-y-auto">
               {sprintTasks.map((task) => {
                 const isDone = task.status === "done";
                 return (
                   <div
                     key={task.id}
-                    className={`p-3 rounded-xl border transition-all ${
+                    className={`bg-[var(--nova-elevated)] border rounded-md p-3 transition-all duration-150 ${
                       isDone
-                        ? "bg-emerald-950/10 border-emerald-500/20 opacity-80"
-                        : "bg-[#161820] border-white/5 hover:border-white/20"
+                        ? "border-[var(--nova-success-border)] opacity-70"
+                        : "border-[var(--nova-border)] hover:border-[var(--nova-border-strong)] hover:bg-[var(--nova-deep)]"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        {/* Done toggle */}
                         <button
                           onClick={() => handleToggleTaskStatus(task)}
-                          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors duration-150 cursor-pointer ${
                             isDone
-                              ? "bg-emerald-500 border-emerald-400 text-black"
-                              : "border-neutral-500 hover:border-neutral-300"
+                              ? "bg-[var(--nova-success)] border-[var(--nova-success)]"
+                              : "border-[var(--nova-border-strong)] hover:border-[var(--nova-accent)]"
                           }`}
                         >
-                          {isDone && <CheckCircle2 className="w-3.5 h-3.5" />}
+                          {isDone && <CheckCircle2 className="w-3 h-3 text-white" />}
                         </button>
 
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-mono font-medium text-neutral-400">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[var(--nova-accent)] font-mono text-[10px] uppercase tracking-widest">
                               {task.key}
                             </span>
                             <span
-                              className={`text-[10px] font-mono px-1.5 py-0.2 rounded uppercase ${
-                                task.priority === "urgent"
-                                  ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                                  : task.priority === "high"
-                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                                  : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                              }`}
+                              className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${getPriorityBadge(task.priority)}`}
                             >
                               {task.priority}
                             </span>
-                            <span className="text-[11px] font-mono text-indigo-400 font-semibold bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                            <span className="rounded px-1.5 py-0.5 text-[10px] font-mono font-medium bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]">
                               {task.estimate || "3 pts"}
                             </span>
                           </div>
-                          <p className={`text-xs mt-1 truncate ${isDone ? "line-through text-neutral-500" : "text-neutral-200"}`}>
+                          <p
+                            className={`text-[12px] mt-1 truncate ${
+                              isDone ? "line-through text-[var(--nova-text-muted)]" : "text-[var(--nova-text-primary)]"
+                            }`}
+                          >
                             {task.title}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => setSelectedTaskForPoker(task)}
                           title="Estimate with Poker Deck"
-                          className="p-1 rounded text-neutral-400 hover:text-indigo-400 hover:bg-white/5 transition-colors"
+                          className="p-1 rounded text-[var(--nova-text-muted)] hover:text-[var(--nova-ai)] hover:bg-[var(--nova-ai-subtle)] transition-all duration-150 cursor-pointer"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleToggleSprintTask(task.id, null)}
                           title="Move to Backlog"
-                          className="text-[11px] font-mono text-neutral-400 hover:text-rose-400 px-2 py-0.5 rounded hover:bg-white/5 transition-colors"
+                          className="text-[11px] text-[var(--nova-text-muted)] hover:text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] rounded px-2 py-1 transition-all duration-150 cursor-pointer"
                         >
-                          To Backlog
+                          Backlog
                         </button>
                       </div>
                     </div>
@@ -660,72 +688,67 @@ export default function SprintsPage() {
               })}
 
               {sprintTasks.length === 0 && (
-                <div className="p-8 text-center text-neutral-500 text-xs font-mono border border-dashed border-white/10 rounded-xl">
-                  No tasks currently assigned to this sprint. Pick items from the backlog!
+                <div className="py-10 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-md mx-1">
+                  No tasks assigned to this sprint. Pick items from the backlog.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Column 2: Product Backlog & Grooming */}
-          <div className="p-5 rounded-2xl bg-[#12141A] border border-white/10 space-y-4">
-            <div className="flex items-center justify-between">
+          {/* Column 2: Product Backlog */}
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--nova-border-muted)]">
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-purple-400" />
-                <h3 className="text-sm font-semibold text-white">
-                  Product Backlog ({backlogTasks.length})
-                </h3>
+                <Layers className="w-3.5 h-3.5 text-[var(--nova-ai)]" />
+                <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                  Product Backlog
+                </span>
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] border border-[var(--nova-border)]">
+                  {backlogTasks.length}
+                </span>
               </div>
-              <span className="text-xs font-mono text-neutral-400">
-                Ready for Sprint Grooming
-              </span>
+              <span className="text-[11px] text-[var(--nova-text-muted)]">Ready for Grooming</span>
             </div>
 
-            <div className="space-y-2">
+            <div className="px-3 py-3 space-y-1.5 nova-scroll max-h-[26rem] overflow-y-auto">
               {backlogTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="p-3 rounded-xl bg-[#161820] border border-white/5 hover:border-white/20 transition-all"
+                  className="bg-[var(--nova-elevated)] border border-[var(--nova-border)] hover:border-[var(--nova-border-strong)] hover:bg-[var(--nova-deep)] rounded-md p-3 transition-all duration-150"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono font-medium text-neutral-400">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[var(--nova-accent)] font-mono text-[10px] uppercase tracking-widest">
                           {task.key}
                         </span>
                         <span
-                          className={`text-[10px] font-mono px-1.5 py-0.2 rounded uppercase ${
-                            task.priority === "urgent"
-                              ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                              : task.priority === "high"
-                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                              : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                          }`}
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${getPriorityBadge(task.priority)}`}
                         >
                           {task.priority}
                         </span>
-                        <span className="text-[11px] font-mono text-purple-400 font-semibold bg-purple-500/10 px-1.5 py-0.5 rounded">
+                        <span className="rounded px-1.5 py-0.5 text-[10px] font-mono font-medium bg-[var(--nova-ai-subtle)] text-[var(--nova-ai-text)] border border-[var(--nova-ai-border)]">
                           {task.estimate || "Unestimated"}
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-200 mt-1 truncate">
-                        {task.title}
-                      </p>
+                      <p className="text-[12px] text-[var(--nova-text-primary)] mt-1 truncate">{task.title}</p>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => setSelectedTaskForPoker(task)}
                         title="Estimate Story Points"
-                        className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-indigo-300 text-[11px] font-mono border border-white/10 flex items-center gap-1 transition-colors"
+                        className="flex items-center gap-1 bg-[var(--nova-ai-subtle)] hover:bg-[rgba(139,92,246,0.18)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded px-2 py-1 text-[11px] transition-all duration-150 cursor-pointer"
                       >
                         <Sparkles className="w-3 h-3" />
                         Estimate
                       </button>
                       <button
-                        onClick={() => handleToggleSprintTask(task.id, activeSprint?.id || "sprint-24")}
+                        onClick={() =>
+                          handleToggleSprintTask(task.id, activeSprint?.id || "sprint-24")
+                        }
                         title="Add to Active Sprint"
-                        className="px-2 py-1 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-mono flex items-center gap-1 transition-colors"
+                        className="flex items-center gap-1 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-2 py-1 text-[11px] font-medium transition-colors duration-150 cursor-pointer"
                       >
                         <Plus className="w-3 h-3" />
                         Sprint
@@ -736,164 +759,191 @@ export default function SprintsPage() {
               ))}
 
               {backlogTasks.length === 0 && (
-                <div className="p-8 text-center text-neutral-500 text-xs font-mono border border-dashed border-white/10 rounded-xl">
-                  Product backlog is empty! All items groomed.
+                <div className="py-10 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-md mx-1">
+                  Product backlog is empty — all items groomed!
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Velocity History & Sprint Pipeline */}
-        <div className="p-5 rounded-2xl bg-[#12141A] border border-white/10 space-y-4">
-          <div className="flex items-center justify-between">
+        {/* ── Velocity History & Sprint Pipeline ───────────────── */}
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-sm font-semibold text-white tracking-wide">
-                Historical Sprint Velocity & Throughput
-              </h3>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                Committed vs Completed story points across previous iterations.
+              <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
+                Sprint Velocity History
+              </span>
+              <p className="text-[12px] text-[var(--nova-text-secondary)] mt-0.5">
+                Committed vs completed story points across previous iterations.
               </p>
             </div>
-            <div className="text-xs font-mono text-neutral-400">
-              Target Capacity: <strong className="text-white">40 pts</strong>
-            </div>
+            <span className="text-[11px] text-[var(--nova-text-muted)] font-mono">
+              Target capacity:{" "}
+              <span className="text-[var(--nova-text-primary)] font-medium">40 pts</span>
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {velocityHistory.map((item) => (
-              <div key={item.sprintId} className="p-4 rounded-xl bg-[#161820] border border-white/5 space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-white font-semibold">{item.sprintName}</span>
-                  <span className="text-emerald-400">{item.completionRate}%</span>
+              <div
+                key={item.sprintId}
+                className="bg-[var(--nova-elevated)] border border-[var(--nova-border)] rounded-md p-3 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-medium text-[var(--nova-text-primary)] truncate">
+                    {item.sprintName}
+                  </span>
+                  <span className="text-[11px] text-[var(--nova-success-text)] font-mono">
+                    {item.completionRate}%
+                  </span>
                 </div>
-                <div className="h-2 w-full bg-neutral-800 rounded-full overflow-hidden">
+                <div className="bg-[var(--nova-deep)] h-1.5 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-500 rounded-full"
+                    className="h-full bg-[var(--nova-success)] rounded-full"
                     style={{ width: `${Math.min(100, item.completionRate)}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                  <span>Committed: {item.committedPoints} pts</span>
-                  <span className="text-neutral-200">Done: {item.completedPoints} pts</span>
+                <div className="flex items-center justify-between text-[11px] font-mono text-[var(--nova-text-muted)]">
+                  <span>Committed: {item.committedPoints}p</span>
+                  <span className="text-[var(--nova-text-secondary)]">Done: {item.completedPoints}p</span>
                 </div>
               </div>
             ))}
 
-            {/* Upcoming Sprint 25 Preview Card */}
+            {/* Upcoming Sprint Preview */}
             {sprints.find((s) => s.status === "planned") && (
-              <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20 space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-indigo-300 font-semibold">Sprint 25 (Planned)</span>
-                  <span className="text-neutral-400">34 pts scope</span>
+              <div className="bg-[var(--nova-elevated)] border border-[var(--nova-accent-border)] rounded-md p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-medium text-[var(--nova-accent-text)]">
+                    Sprint 25
+                  </span>
+                  <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]">
+                    Planned
+                  </span>
                 </div>
-                <p className="text-[11px] text-neutral-400 line-clamp-2">
-                  Multi-region sharding & edge session stores.
+                <p className="text-[11px] text-[var(--nova-text-secondary)] line-clamp-2">
+                  Multi-region sharding &amp; edge session stores. 34 pts scope.
                 </p>
                 <button
                   onClick={() => handleStartSprint("sprint-25")}
-                  className="w-full mt-1 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/30 text-xs font-mono flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-3 py-1.5 text-[12px] transition-all duration-150 cursor-pointer"
                 >
                   <Play className="w-3 h-3" />
-                  Kicking off next
+                  Start Sprint
                 </button>
               </div>
             )}
           </div>
         </div>
+
       </div>
 
-      {/* Complete Sprint Modal */}
+      {/* ── Complete Sprint Modal ────────────────────────────── */}
       {isCompleteModalOpen && activeSprint && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#14161F] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-5 animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <CheckCircle2 className="w-5 h-5" />
+        <div className="fixed inset-0 bg-[var(--nova-overlay)] z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[var(--nova-elevated)] border border-[var(--nova-border-strong)] rounded-xl shadow-xl p-5 space-y-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[var(--nova-border)] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[var(--nova-success-subtle)] border border-[var(--nova-success-border)] flex items-center justify-center">
+                  <CheckCircle2 className="w-4.5 h-4.5 text-[var(--nova-success)]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-[15px] font-semibold text-[var(--nova-text-primary)]">
                     Complete {activeSprint.name.split(":")[0]}
                   </h3>
-                  <p className="text-xs text-neutral-400">
+                  <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
                     Finalize story point burn and handle incomplete scope items.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCompleteModalOpen(false)}
-                className="text-neutral-400 hover:text-white text-xs font-mono"
+                className="text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded p-1.5 transition-all duration-150 text-[13px] leading-none cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#0B0C0E] border border-white/5 text-xs font-mono">
-              <div>
-                <span className="text-neutral-500 block">Completed Points</span>
-                <span className="text-emerald-400 text-lg font-bold">
-                  {activeSprint.completedPoints} pts
-                </span>
+            {/* Stats Summary */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg p-3">
+                <div className="text-[11px] text-[var(--nova-text-muted)] mb-0.5">Completed</div>
+                <div className="text-[20px] font-semibold text-[var(--nova-success)] font-mono leading-none">
+                  {activeSprint.completedPoints}
+                  <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
+                </div>
               </div>
-              <div>
-                <span className="text-neutral-500 block">Incomplete Points</span>
-                <span className="text-amber-400 text-lg font-bold">
-                  {activeSprint.remainingPoints} pts
-                </span>
+              <div className="bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg p-3">
+                <div className="text-[11px] text-[var(--nova-text-muted)] mb-0.5">Incomplete</div>
+                <div className="text-[20px] font-semibold text-[var(--nova-warning)] font-mono leading-none">
+                  {activeSprint.remainingPoints}
+                  <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
+                </div>
               </div>
             </div>
 
+            {/* Rollover Destination */}
             <div className="space-y-2">
-              <label className="text-xs font-mono text-neutral-300 block">
-                Destination for Incomplete Tasks ({sprintTasks.filter((t) => t.status !== "done").length} items):
+              <label className="text-[12px] text-[var(--nova-text-secondary)]">
+                Destination for incomplete tasks (
+                {sprintTasks.filter((t) => t.status !== "done").length} items):
               </label>
               <div className="space-y-2">
-                <label className="flex items-center gap-2.5 p-3 rounded-xl bg-neutral-900 border border-white/10 cursor-pointer hover:border-indigo-500/50 transition-colors">
+                <label className="flex items-center gap-3 p-3 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] cursor-pointer transition-all duration-150">
                   <input
                     type="radio"
                     name="rollover"
                     value="sprint-25"
                     checked={rolloverTarget === "sprint-25"}
                     onChange={(e) => setRolloverTarget(e.target.value)}
-                    className="text-indigo-600 focus:ring-0"
+                    className="accent-[var(--nova-accent)]"
                   />
-                  <div className="text-xs">
-                    <div className="font-semibold text-white">Sprint 25 (Recommended)</div>
-                    <div className="text-neutral-400 text-[11px]">Rollover directly into upcoming sprint iteration</div>
+                  <div>
+                    <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">
+                      Sprint 25 <span className="text-[var(--nova-accent-text)] text-[11px]">(Recommended)</span>
+                    </div>
+                    <div className="text-[11px] text-[var(--nova-text-muted)]">
+                      Rollover directly into upcoming sprint iteration
+                    </div>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-2.5 p-3 rounded-xl bg-neutral-900 border border-white/10 cursor-pointer hover:border-indigo-500/50 transition-colors">
+                <label className="flex items-center gap-3 p-3 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] cursor-pointer transition-all duration-150">
                   <input
                     type="radio"
                     name="rollover"
                     value=""
                     checked={rolloverTarget === ""}
                     onChange={(e) => setRolloverTarget(e.target.value)}
-                    className="text-indigo-600 focus:ring-0"
+                    className="accent-[var(--nova-accent)]"
                   />
-                  <div className="text-xs">
-                    <div className="font-semibold text-white">Product Backlog</div>
-                    <div className="text-neutral-400 text-[11px]">Move uncompleted items back to unscheduled backlog</div>
+                  <div>
+                    <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">Product Backlog</div>
+                    <div className="text-[11px] text-[var(--nova-text-muted)]">
+                      Move uncompleted items back to unscheduled backlog
+                    </div>
                   </div>
                 </label>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--nova-border-muted)]">
               <button
                 onClick={() => setIsCompleteModalOpen(false)}
-                className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-mono text-neutral-300 transition-colors"
+                className="bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-3 py-1.5 text-[12px] transition-all duration-150 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCompleteSprint}
                 disabled={isSubmittingComplete}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-mono font-semibold text-white shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all"
+                className="flex items-center gap-1.5 bg-[var(--nova-success)] hover:bg-[#059669] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isSubmittingComplete ? "Finalizing..." : "Confirm & Archive Sprint"}
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {isSubmittingComplete ? "Finalizing…" : "Confirm & Archive Sprint"}
               </button>
             </div>
           </div>

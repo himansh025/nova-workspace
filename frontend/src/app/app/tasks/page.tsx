@@ -9,12 +9,89 @@ import {
   GitBranch,
   Trash2,
   Edit2,
-  GripVertical
+  GripVertical,
+  X,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Circle,
+  ArrowUp,
+  ArrowRight,
+  ArrowDown,
+  Minus
 } from "lucide-react";
 import { Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 import TaskModal from "@/components/workspace/TaskModal";
 import { KanbanSkeleton } from "@/components/workspace/Skeletons";
 
+/* ─── Status helpers ─────────────────────────────────────────────────────── */
+const STATUS_DOT: Record<TaskStatus, string> = {
+  backlog: "bg-[var(--nova-text-muted)]",
+  in_progress: "bg-[var(--nova-info)]",
+  review: "bg-[var(--nova-warning)]",
+  done: "bg-[var(--nova-success)]",
+};
+
+const STATUS_BADGE: Record<TaskStatus, string> = {
+  backlog:
+    "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]",
+  in_progress:
+    "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]",
+  review:
+    "bg-[var(--nova-warning-subtle)] text-[var(--nova-warning-text)] border border-[var(--nova-warning-border)]",
+  done:
+    "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]",
+};
+
+const STATUS_LABEL: Record<TaskStatus, string> = {
+  backlog: "Backlog",
+  in_progress: "In Progress",
+  review: "In Review",
+  done: "Done",
+};
+
+/* ─── Priority helpers ───────────────────────────────────────────────────── */
+const PRIORITY_COLOR: Record<TaskPriority, string> = {
+  urgent: "text-[var(--nova-danger)]",
+  high: "text-[var(--nova-warning)]",
+  medium: "text-[var(--nova-accent)]",
+  low: "text-[var(--nova-text-muted)]",
+};
+
+const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  urgent: "Urgent",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
+function PriorityIcon({ priority }: { priority: TaskPriority }) {
+  const cls = `w-3 h-3 shrink-0 ${PRIORITY_COLOR[priority]}`;
+  switch (priority) {
+    case "urgent":
+      return <AlertCircle className={cls} />;
+    case "high":
+      return <ArrowUp className={cls} />;
+    case "medium":
+      return <ArrowRight className={cls} />;
+    case "low":
+      return <ArrowDown className={cls} />;
+    default:
+      return <Minus className={cls} />;
+  }
+}
+
+/* ─── Kanban columns config ──────────────────────────────────────────────── */
+const COLUMNS: { key: TaskStatus; title: string }[] = [
+  { key: "backlog", title: "Backlog" },
+  { key: "in_progress", title: "In Progress" },
+  { key: "review", title: "In Review" },
+  { key: "done", title: "Done" },
+];
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TasksPage
+   ════════════════════════════════════════════════════════════════════════════ */
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -29,6 +106,7 @@ export default function TasksPage() {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
 
+  /* ── Data fetching ──────────────────────────────────────────────────────── */
   const fetchTasks = async () => {
     try {
       const res = await fetch("/api/tasks");
@@ -62,21 +140,22 @@ export default function TasksPage() {
     };
   }, []);
 
+  /* ── Status / delete handlers ───────────────────────────────────────────── */
   const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
     try {
       // Optimistic update
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
       );
-
       if (selectedTaskDetail?.id === taskId) {
-        setSelectedTaskDetail((prev) => (prev ? { ...prev, status: newStatus } : null));
+        setSelectedTaskDetail((prev) =>
+          prev ? { ...prev, status: newStatus } : null
+        );
       }
-
       await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus }),
       });
     } catch (err) {
       console.error("Failed to update status", err);
@@ -96,6 +175,7 @@ export default function TasksPage() {
     }
   };
 
+  /* ── Filtering ──────────────────────────────────────────────────────────── */
   const filteredTasks = tasks.filter((t) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -113,250 +193,239 @@ export default function TasksPage() {
     return matchesSearch && matchesPriority && matchesAssignee;
   });
 
-  const columns: { key: TaskStatus; title: string; color: string }[] = [
-    { key: "backlog", title: "Backlog", color: "text-neutral-400" },
-    { key: "in_progress", title: "In Progress", color: "text-blue-400" },
-    { key: "review", title: "In Review", color: "text-amber-400" },
-    { key: "done", title: "Done", color: "text-emerald-400" }
-  ];
-
-  const priorityBadge = (priority: TaskPriority) => {
-    switch (priority) {
-      case "urgent":
-        return <span className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded text-[9px] font-mono">P0 Urgent</span>;
-      case "high":
-        return <span className="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded text-[9px] font-mono">P1 High</span>;
-      case "medium":
-        return <span className="text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded text-[9px] font-mono">P2 Med</span>;
-      default:
-        return <span className="text-neutral-400 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[9px] font-mono">P3 Low</span>;
-    }
-  };
-
+  /* ── Loading state ──────────────────────────────────────────────────────── */
   if (isLoading) {
     return <KanbanSkeleton />;
   }
 
+  /* ════════════════════════════════════════════════════════════════════════
+     Render
+     ════════════════════════════════════════════════════════════════════════ */
   return (
-    <div className="flex flex-col h-full bg-[#111216] text-neutral-200">
-      {/* Top Controls Header */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-white">Engineering Issues</h1>
-            <span className="text-xs font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/5">
-              {filteredTasks.length} tasks
-            </span>
-          </div>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Sprint 48 Active Cycle • Drag or update status across columns
-          </p>
+    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
+
+      {/* ── Top toolbar ───────────────────────────────────────────────────── */}
+      <div className="px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex items-center justify-between gap-3 shrink-0">
+        {/* Left: title + subtitle */}
+        <div className="flex flex-col">
+          <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)] leading-none">
+            Tasks &amp; Board
+          </h1>
+          <span className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
+            Sprint 48 Active Cycle · Drag or update status across columns
+          </span>
         </div>
 
-        {/* Filter Bar & Views */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter issues..."
-              className="pl-8 pr-3 py-1.5 rounded-md bg-[#161820] border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-hidden focus:border-[var(--color-accent)] w-36 sm:w-48"
-            />
-          </div>
-
-          {/* Priority Filter */}
-          <select
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="px-2.5 py-1.5 rounded-md bg-[#161820] border border-white/10 text-xs text-neutral-300 focus:outline-hidden focus:border-[var(--color-accent)]"
-          >
-            <option value="all">All Priorities</option>
-            <option value="urgent">P0 Urgent</option>
-            <option value="high">P1 High</option>
-            <option value="medium">P2 Medium</option>
-            <option value="low">P3 Low</option>
-          </select>
-
-          {/* Assignee Filter */}
-          <select
-            value={selectedAssignee}
-            onChange={(e) => setSelectedAssignee(e.target.value)}
-            className="px-2.5 py-1.5 rounded-md bg-[#161820] border border-white/10 text-xs text-neutral-300 focus:outline-hidden focus:border-[var(--color-accent)]"
-          >
-            <option value="all">All Engineers</option>
-            {team.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-[#161820] border border-white/10 rounded-md p-0.5">
+        {/* Right: view toggle + new task */}
+        <div className="flex items-center gap-2.5">
+          {/* Kanban / List toggle */}
+          <div className="bg-[var(--nova-deep)] border border-[var(--nova-border)] rounded p-0.5 flex gap-0.5">
             <button
               onClick={() => setViewMode("kanban")}
-              className={`p-1.5 rounded ${
-                viewMode === "kanban" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
-              }`}
               title="Kanban Board"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-all duration-150 ${
+                viewMode === "kanban"
+                  ? "bg-[var(--nova-surface)] text-[var(--nova-text-primary)] shadow-xs"
+                  : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
+              }`}
             >
-              <Kanban className="w-3.5 h-3.5" />
+              <Kanban className="w-3 h-3" />
+              <span>Kanban</span>
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded ${
-                viewMode === "list" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
-              }`}
               title="List View"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-all duration-150 ${
+                viewMode === "list"
+                  ? "bg-[var(--nova-surface)] text-[var(--nova-text-primary)] shadow-xs"
+                  : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
+              }`}
             >
-              <List className="w-3.5 h-3.5" />
+              <List className="w-3 h-3" />
+              <span>List</span>
             </button>
           </div>
 
-          {/* New Issue Button */}
+          {/* New Task primary button */}
           <button
             onClick={() => {
               setTaskToEdit(null);
               setIsModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-medium shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-[12px] font-medium transition-colors duration-150"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>New Issue</span>
+            <span>New Task</span>
           </button>
         </div>
       </div>
 
-      {/* Main Board Area */}
-      <div className="flex-1 overflow-hidden p-4 sm:p-6 flex">
-        {viewMode === "kanban" ? (
-          /* Kanban Columns Grid */
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full h-full overflow-y-auto no-scrollbar">
-            {columns.map((col) => {
-              const colTasks = filteredTasks.filter((t) => t.status === col.key);
-              const isColDraggedOver = dragOverCol === col.key;
+      {/* ── Filter row ────────────────────────────────────────────────────── */}
+      <div className="px-5 py-2.5 bg-[var(--nova-bg)] border-b border-[var(--nova-border-muted)] flex items-center gap-3 shrink-0">
+        {/* Search */}
+        <div className="flex items-center gap-2">
+          <Search className="w-3.5 h-3.5 text-[var(--nova-text-muted)] shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search issues..."
+            className="bg-transparent border-none text-[12px] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-muted)] outline-none w-52 max-w-xs"
+          />
+        </div>
 
-              return (
-                <div
-                  key={col.key}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                    if (dragOverCol !== col.key) setDragOverCol(col.key);
-                  }}
-                  onDragEnter={(e) => {
-                    e.preventDefault();
-                    setDragOverCol(col.key);
-                  }}
-                  onDragLeave={(e) => {
-                    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-                    setDragOverCol(null);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const taskId = e.dataTransfer.getData("text/plain") || draggingTaskId;
-                    if (taskId) {
-                      handleUpdateStatus(taskId, col.key);
-                    }
-                    setDragOverCol(null);
-                    setDraggingTaskId(null);
-                  }}
-                  className={`flex flex-col rounded-xl border p-3.5 h-full overflow-hidden min-w-[240px] transition-all duration-200 ${
-                    isColDraggedOver
-                      ? "bg-[#181B26] border-[var(--color-accent)] ring-2 ring-[var(--color-accent)]/30"
-                      : "bg-[#14161D] border-white/10"
-                  }`}
-                >
-                  {/* Column Header */}
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/5 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-mono uppercase tracking-wider font-semibold ${col.color}`}>
-                        {col.title}
-                      </span>
-                      <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded">
-                        {colTasks.length}
-                      </span>
+        {/* Separator */}
+        <div className="h-4 w-px bg-[var(--nova-border)] shrink-0" />
+
+        {/* Priority filter */}
+        <select
+          value={selectedPriority}
+          onChange={(e) => setSelectedPriority(e.target.value)}
+          className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
+        >
+          <option value="all">All Priorities</option>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+
+        {/* Assignee filter */}
+        <select
+          value={selectedAssignee}
+          onChange={(e) => setSelectedAssignee(e.target.value)}
+          className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
+        >
+          <option value="all">All Engineers</option>
+          {team.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Issue count */}
+        <span className="text-[11px] text-[var(--nova-text-muted)] ml-auto">
+          {filteredTasks.length} issues
+        </span>
+      </div>
+
+      {/* ── Main content area ─────────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* ── Kanban view ───────────────────────────────────────────────── */}
+        {viewMode === "kanban" && (
+          <div className="flex-1 overflow-x-auto overflow-y-hidden">
+            <div className="flex gap-3 h-full px-5 py-4 items-start min-w-max">
+              {COLUMNS.map((col) => {
+                const colTasks = filteredTasks.filter((t) => t.status === col.key);
+                const isColDraggedOver = dragOverCol === col.key;
+
+                return (
+                  <div
+                    key={col.key}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragOverCol !== col.key) setDragOverCol(col.key);
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      setDragOverCol(col.key);
+                    }}
+                    onDragLeave={(e) => {
+                      if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                      setDragOverCol(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const taskId = e.dataTransfer.getData("text/plain") || draggingTaskId;
+                      if (taskId) handleUpdateStatus(taskId, col.key);
+                      setDragOverCol(null);
+                      setDraggingTaskId(null);
+                    }}
+                    className={`w-64 shrink-0 flex flex-col max-h-full bg-[var(--nova-deep)] border rounded-lg p-3 transition-all duration-200 ${
+                      isColDraggedOver
+                        ? "border-[var(--nova-accent)] bg-[var(--nova-accent-subtle)]"
+                        : "border-[var(--nova-border)]"
+                    }`}
+                  >
+                    {/* Column header */}
+                    <div className="flex items-center justify-between mb-3 px-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[col.key]}`} />
+                        <span className="text-[11px] font-medium text-[var(--nova-text-secondary)]">
+                          {col.title}
+                        </span>
+                        <span className="bg-[var(--nova-surface)] text-[var(--nova-text-muted)] border border-[var(--nova-border-muted)] font-mono text-[10px] rounded px-1.5 ml-0.5">
+                          {colTasks.length}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setTaskToEdit(null);
+                          setIsModalOpen(true);
+                        }}
+                        className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-surface)] rounded transition-colors duration-150"
+                        title="Add task"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        setTaskToEdit(null);
-                        setIsModalOpen(true);
-                      }}
-                      className="p-1 text-neutral-500 hover:text-white rounded hover:bg-white/5"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
 
-                  {/* Task Cards Container */}
-                  <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar pr-0.5">
-                    {colTasks.map((task) => {
-                      const isCardBeingDragged = draggingTaskId === task.id;
-
-                      return (
-                        <div
-                          key={task.id}
-                          draggable={true}
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("text/plain", task.id);
-                            e.dataTransfer.effectAllowed = "move";
-                            setDraggingTaskId(task.id);
-                          }}
-                          onDragEnd={() => {
-                            setDraggingTaskId(null);
-                            setDragOverCol(null);
-                          }}
-                          onClick={() => {
-                            if (!draggingTaskId) setSelectedTaskDetail(task);
-                          }}
-                          className={`p-3.5 rounded-lg bg-[#1A1D26] hover:bg-[#202430] border transition-all cursor-grab active:cursor-grabbing group shadow-sm flex flex-col justify-between space-y-2.5 ${
-                            isCardBeingDragged
-                              ? "opacity-40 scale-[0.98] border-dashed border-[var(--color-accent)] shadow-2xl"
-                              : "border-white/10 hover:border-white/25"
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                    {/* Cards */}
+                    <div className="flex flex-col gap-2 flex-1 overflow-y-auto nova-scroll">
+                      {colTasks.map((task) => {
+                        const isDragging = draggingTaskId === task.id;
+                        return (
+                          <div
+                            key={task.id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", task.id);
+                              e.dataTransfer.effectAllowed = "move";
+                              setDraggingTaskId(task.id);
+                            }}
+                            onDragEnd={() => {
+                              setDraggingTaskId(null);
+                              setDragOverCol(null);
+                            }}
+                            onClick={() => {
+                              if (!draggingTaskId) setSelectedTaskDetail(task);
+                            }}
+                            className={`group bg-[var(--nova-surface)] border rounded-md p-3 cursor-grab active:cursor-grabbing hover:border-[var(--nova-border-strong)] hover:shadow-xs transition-all duration-150 ${
+                              isDragging
+                                ? "opacity-40 scale-[0.97] border-dashed border-[var(--nova-accent)]"
+                                : "border-[var(--nova-border)]"
+                            }`}
+                          >
+                            {/* Top row: key + priority icon + drag grip */}
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-mono text-[10px] text-[var(--nova-accent)] font-medium">
+                                {task.key}
+                              </span>
                               <div className="flex items-center gap-1.5">
-                                <GripVertical className="w-3.5 h-3.5 text-neutral-600 group-hover:text-neutral-400 shrink-0 transition-colors" />
-                                <span className="text-[10px] font-mono text-[var(--color-accent)] font-medium">
-                                  {task.key}
-                                </span>
+                                <PriorityIcon priority={task.priority} />
+                                <GripVertical className="w-3 h-3 text-[var(--nova-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
                               </div>
-                              {priorityBadge(task.priority)}
                             </div>
-                            <h3 className="text-xs font-medium text-white leading-snug line-clamp-2 pl-0.5">
+
+                            {/* Title */}
+                            <h3 className="text-[12px] text-[var(--nova-text-primary)] leading-snug mt-1.5 line-clamp-2">
                               {task.title}
                             </h3>
-                          </div>
 
-                          {task.branch && (
-                            <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400 bg-black/30 px-2 py-0.5 rounded w-fit max-w-full">
-                              <GitBranch className="w-3 h-3 text-sky-400 shrink-0" />
-                              <span className="truncate">{task.branch}</span>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[10px] text-neutral-400">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-4 h-4 rounded-full bg-neutral-700 text-white text-[8px] flex items-center justify-center font-bold">
-                                {task.assignee.initials}
-                              </div>
-                              <span className="text-neutral-400 text-[10px] truncate max-w-[80px]">
-                                {task.assignee.name.split(" ")[0]}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {task.estimate && (
-                                <span className="font-mono text-neutral-500 text-[10px]">
-                                  {task.estimate}
-                                </span>
+                            {/* Bottom row: branch + assignee avatar */}
+                            <div className="flex items-center mt-2.5 gap-1.5">
+                              {task.branch && (
+                                <div className="flex items-center gap-1 bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] rounded px-1.5 py-0.5">
+                                  <GitBranch className="w-2.5 h-2.5 text-[var(--nova-info)] shrink-0" />
+                                  <span className="font-mono text-[10px] text-[var(--nova-text-muted)] truncate max-w-[100px]">
+                                    {task.branch}
+                                  </span>
+                                </div>
                               )}
-                              {/* Quick column mover */}
+                              {/* Quick status mover */}
                               <select
                                 value={task.status}
                                 onClick={(e) => e.stopPropagation()}
@@ -364,95 +433,128 @@ export default function TasksPage() {
                                   e.stopPropagation();
                                   handleUpdateStatus(task.id, e.target.value as TaskStatus);
                                 }}
-                                className="bg-black/40 border border-white/10 text-neutral-400 text-[9px] rounded px-1 py-0.5 focus:outline-hidden"
+                                className="bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] text-[9px] rounded px-1 py-0.5 outline-none cursor-pointer"
                               >
                                 <option value="backlog">Backlog</option>
                                 <option value="in_progress">In Prog</option>
                                 <option value="review">Review</option>
                                 <option value="done">Done</option>
                               </select>
+                              <div
+                                className="w-5 h-5 rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] text-[var(--nova-accent)] text-[9px] font-bold flex items-center justify-center ml-auto shrink-0"
+                                title={task.assignee.name}
+                              >
+                                {task.assignee.initials}
+                              </div>
                             </div>
                           </div>
+                        );
+                      })}
+
+                      {/* Drop target cue */}
+                      {isColDraggedOver &&
+                        draggingTaskId &&
+                        !colTasks.some((t) => t.id === draggingTaskId) && (
+                          <div className="py-4 px-3 rounded border-2 border-dashed border-[var(--nova-accent)] bg-[var(--nova-accent-subtle)] text-[var(--nova-accent)] flex items-center justify-center text-[11px] font-mono animate-pulse">
+                            Drop to move → {col.title}
+                          </div>
+                        )}
+
+                      {/* Empty column state */}
+                      {colTasks.length === 0 && !isColDraggedOver && (
+                        <div className="h-24 border border-dashed border-[var(--nova-border)] rounded-lg flex items-center justify-center text-[11px] text-[var(--nova-text-muted)] font-mono">
+                          Drag issues here
                         </div>
-                      );
-                    })}
-
-                    {/* Active Drag-Over Drop Target Cue */}
-                    {isColDraggedOver && draggingTaskId && !colTasks.some((t) => t.id === draggingTaskId) && (
-                      <div className="py-4 px-3 rounded-lg border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-accent)] flex items-center justify-center gap-1.5 text-xs font-mono animate-pulse">
-                        <span>Drop here to move to {col.title}</span>
-                      </div>
-                    )}
-
-                    {colTasks.length === 0 && !isColDraggedOver && (
-                      <div className="h-28 border border-dashed border-white/5 rounded-lg flex flex-col items-center justify-center text-[11px] text-neutral-600 font-mono space-y-1">
-                        <span>Drag issues here</span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          /* Table / List View */
-          <div className="w-full bg-[#14161D] rounded-xl border border-white/10 overflow-hidden flex flex-col">
-            <div className="grid grid-cols-12 px-4 py-3 bg-[#0E1015] border-b border-white/10 text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
-              <div className="col-span-2">Key & Priority</div>
-              <div className="col-span-5">Title & Description</div>
-              <div className="col-span-2">Status</div>
-              <div className="col-span-2">Assignee</div>
-              <div className="col-span-1 text-right">Actions</div>
+                );
+              })}
             </div>
+          </div>
+        )}
 
-            <div className="flex-1 overflow-y-auto divide-y divide-white/5">
-              {filteredTasks.map((task) => (
+        {/* ── List view ─────────────────────────────────────────────────── */}
+        {viewMode === "list" && (
+          <div className="flex-1 overflow-y-auto nova-scroll">
+            {filteredTasks.length === 0 ? (
+              <div className="p-8 flex flex-col items-center justify-center text-center gap-3">
+                <CheckCircle2 className="w-8 h-8 text-[var(--nova-text-muted)]" />
+                <p className="text-[13px] font-medium text-[var(--nova-text-primary)]">No issues found</p>
+                <p className="text-[11px] text-[var(--nova-text-muted)]">
+                  Try adjusting your filters or create a new task.
+                </p>
+                <button
+                  onClick={() => { setTaskToEdit(null); setIsModalOpen(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-[12px] font-medium transition-colors duration-150 mt-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New Task
+                </button>
+              </div>
+            ) : (
+              filteredTasks.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => setSelectedTaskDetail(task)}
-                  className="grid grid-cols-12 px-4 py-3 text-xs items-center hover:bg-white/5 transition-colors cursor-pointer"
+                  className="group px-5 py-2.5 flex items-center gap-3 border-b border-[var(--nova-border-muted)] hover:bg-[var(--nova-deep)] transition-colors cursor-pointer"
+                  style={{
+                    borderLeft: `3px solid ${
+                      task.priority === "urgent"
+                        ? "var(--nova-danger)"
+                        : task.priority === "high"
+                        ? "var(--nova-warning)"
+                        : task.priority === "medium"
+                        ? "var(--nova-accent)"
+                        : "var(--nova-border)"
+                    }`,
+                  }}
                 >
-                  <div className="col-span-2 flex items-center gap-2">
-                    <span className="font-mono text-[var(--color-accent)] font-medium">
-                      {task.key}
+                  {/* Key */}
+                  <span className="font-mono text-[10px] text-[var(--nova-accent)] w-16 shrink-0">
+                    {task.key}
+                  </span>
+
+                  {/* Status badge */}
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium w-24 shrink-0 text-center ${STATUS_BADGE[task.status]}`}
+                  >
+                    {STATUS_LABEL[task.status]}
+                  </span>
+
+                  {/* Title */}
+                  <span className="text-[12px] text-[var(--nova-text-primary)] flex-1 truncate">
+                    {task.title}
+                  </span>
+
+                  {/* Branch */}
+                  {task.branch ? (
+                    <span className="font-mono text-[10px] text-[var(--nova-text-muted)] truncate max-w-32 hidden md:block">
+                      {task.branch}
                     </span>
-                    {priorityBadge(task.priority)}
-                  </div>
-                  <div className="col-span-5 truncate pr-4">
-                    <span className="text-white font-medium">{task.title}</span>
-                    <span className="text-neutral-500 ml-2 text-[11px] truncate">
-                      {task.description}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <span
-                      className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded ${
-                        task.status === "done"
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : task.status === "in_progress"
-                          ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                          : task.status === "review"
-                          ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                          : "bg-white/5 text-neutral-400"
-                      }`}
-                    >
-                      {task.status.replace("_", " ")}
-                    </span>
-                  </div>
-                  <div className="col-span-2 flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full bg-neutral-700 text-white text-[9px] flex items-center justify-center font-bold">
+                  ) : (
+                    <span className="w-32 hidden md:block" />
+                  )}
+
+                  {/* Assignee */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="w-[22px] h-[22px] rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] text-[var(--nova-accent)] text-[9px] font-bold flex items-center justify-center">
                       {task.assignee.initials}
                     </div>
-                    <span className="text-neutral-300 truncate">{task.assignee.name}</span>
+                    <span className="text-[11px] text-[var(--nova-text-secondary)] hidden lg:block truncate max-w-[90px]">
+                      {task.assignee.name}
+                    </span>
                   </div>
-                  <div className="col-span-1 flex items-center justify-end gap-2">
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setTaskToEdit(task);
                         setIsModalOpen(true);
                       }}
-                      className="p-1 text-neutral-400 hover:text-white"
+                      className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-surface)] rounded transition-colors duration-150"
                       title="Edit"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -462,145 +564,162 @@ export default function TasksPage() {
                         e.stopPropagation();
                         handleDeleteTask(task.id);
                       }}
-                      className="p-1 text-neutral-500 hover:text-rose-400"
+                      className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded transition-colors duration-150"
                       title="Delete"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
         )}
-      </div>
 
-      {/* Slide-over / Detail Drawer for selected task */}
-      {selectedTaskDetail && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setSelectedTaskDetail(null)}
-          />
-          <div className="relative z-10 w-full max-w-md bg-[#14161D] border-l border-white/10 h-full p-6 flex flex-col justify-between text-neutral-200 text-xs shadow-2xl overflow-y-auto no-scrollbar">
-            <div className="space-y-6">
-              {/* Drawer Top */}
-              <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-[var(--color-accent)]">
-                    {selectedTaskDetail.key}
-                  </span>
-                  {priorityBadge(selectedTaskDetail.priority)}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setTaskToEdit(selectedTaskDetail);
-                      setIsModalOpen(true);
-                    }}
-                    className="p-1.5 rounded hover:bg-white/5 text-neutral-400 hover:text-white"
-                    title="Edit issue"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTask(selectedTaskDetail.id)}
-                    className="p-1.5 rounded hover:bg-white/5 text-neutral-400 hover:text-rose-400"
-                    title="Delete issue"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+        {/* ── Task detail panel ─────────────────────────────────────────── */}
+        {selectedTaskDetail && (
+          <div className="w-80 shrink-0 bg-[var(--nova-surface)] border-l border-[var(--nova-border)] flex flex-col shadow-lg">
+            {/* Panel header */}
+            <div className="px-4 py-3 border-b border-[var(--nova-border)] flex items-center justify-between shrink-0">
+              <span className="font-mono text-[11px] text-[var(--nova-accent)] font-medium">
+                {selectedTaskDetail.key}
+              </span>
+              <button
+                onClick={() => setSelectedTaskDetail(null)}
+                className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded transition-colors duration-150"
+                title="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-              {/* Title & Description */}
-              <div>
-                <h2 className="text-base font-semibold text-white mb-2">
-                  {selectedTaskDetail.title}
-                </h2>
-                <p className="text-neutral-400 leading-relaxed text-xs">
-                  {selectedTaskDetail.description || "No description provided."}
+            {/* Panel content */}
+            <div className="px-4 py-4 space-y-4 overflow-y-auto flex-1 nova-scroll">
+              {/* Title */}
+              <h2 className="text-[15px] font-medium text-[var(--nova-text-primary)] leading-snug">
+                {selectedTaskDetail.title}
+              </h2>
+
+              {/* Description */}
+              {selectedTaskDetail.description && (
+                <p className="text-[12px] text-[var(--nova-text-secondary)] leading-relaxed">
+                  {selectedTaskDetail.description}
                 </p>
-              </div>
+              )}
 
-              {/* Properties Grid */}
-              <div className="bg-[#1B1E28] rounded-lg p-4 border border-white/5 space-y-3">
+              {/* Metadata block */}
+              <div className="bg-[var(--nova-deep)] border border-[var(--nova-border)] rounded-lg p-3 space-y-3">
+                {/* Status */}
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-400 text-[11px]">Status</span>
+                  <span className="text-[11px] text-[var(--nova-text-muted)]">Status</span>
                   <select
                     value={selectedTaskDetail.status}
                     onChange={(e) =>
-                      handleUpdateStatus(selectedTaskDetail.id, e.target.value as TaskStatus)
+                      handleUpdateStatus(
+                        selectedTaskDetail.id,
+                        e.target.value as TaskStatus
+                      )
                     }
-                    className="bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                    className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer"
                   >
                     <option value="backlog">Backlog</option>
                     <option value="in_progress">In Progress</option>
-                    <option value="review">Review</option>
+                    <option value="review">In Review</option>
                     <option value="done">Done</option>
                   </select>
                 </div>
 
+                {/* Priority */}
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-400 text-[11px]">Assignee</span>
+                  <span className="text-[11px] text-[var(--nova-text-muted)]">Priority</span>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px] font-bold">
+                    <PriorityIcon priority={selectedTaskDetail.priority} />
+                    <span className="text-[11px] text-[var(--nova-text-secondary)]">
+                      {PRIORITY_LABEL[selectedTaskDetail.priority]}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Assignee */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[var(--nova-text-muted)]">Assignee</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] text-[var(--nova-accent)] text-[9px] font-bold flex items-center justify-center">
                       {selectedTaskDetail.assignee.initials}
                     </div>
-                    <span className="text-white text-xs">
+                    <span className="text-[11px] text-[var(--nova-text-secondary)]">
                       {selectedTaskDetail.assignee.name}
                     </span>
                   </div>
                 </div>
 
+                {/* Git branch */}
                 {selectedTaskDetail.branch && (
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-400 text-[11px]">Git Branch</span>
-                    <span className="font-mono text-sky-400 text-[11px] bg-black/40 px-2 py-0.5 rounded">
-                      {selectedTaskDetail.branch}
-                    </span>
+                    <span className="text-[11px] text-[var(--nova-text-muted)]">Branch</span>
+                    <div className="flex items-center gap-1 bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-1.5 py-0.5">
+                      <GitBranch className="w-2.5 h-2.5 text-[var(--nova-info)] shrink-0" />
+                      <span className="font-mono text-[10px] text-[var(--nova-text-muted)] max-w-[140px] truncate">
+                        {selectedTaskDetail.branch}
+                      </span>
+                    </div>
                   </div>
                 )}
 
+                {/* Estimate */}
                 {selectedTaskDetail.estimate && (
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-400 text-[11px]">Estimate</span>
-                    <span className="font-mono text-neutral-300 text-xs">
+                    <span className="text-[11px] text-[var(--nova-text-muted)]">Estimate</span>
+                    <span className="font-mono text-[11px] text-[var(--nova-text-secondary)]">
                       {selectedTaskDetail.estimate}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-400 text-[11px]">Tags</span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    {selectedTaskDetail.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-neutral-300 font-mono"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                {/* Tags */}
+                {selectedTaskDetail.tags.length > 0 && (
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[11px] text-[var(--nova-text-muted)] shrink-0">Tags</span>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {selectedTaskDetail.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-1.5 py-0.5 rounded bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[10px] text-[var(--nova-text-secondary)] font-mono"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+
+              {/* Panel actions */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    setTaskToEdit(selectedTaskDetail);
+                    setIsModalOpen(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--nova-deep)] hover:bg-[var(--nova-elevated)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded text-[12px] transition-colors duration-150"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteTask(selectedTaskDetail.id)}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded text-[12px] transition-colors duration-150"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Delete
+                </button>
               </div>
             </div>
-
-            {/* Close action */}
-            <div className="pt-4 border-t border-white/10 flex justify-end">
-              <button
-                onClick={() => setSelectedTaskDetail(null)}
-                className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/15 text-white font-medium"
-              >
-                Close Drawer
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Creation / Edit Modal */}
+      {/* ── Creation / Edit Modal ──────────────────────────────────────────── */}
       <TaskModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

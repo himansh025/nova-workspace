@@ -124,19 +124,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(15,23,42,0.4)] backdrop-blur-xs">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-[#14161D] border border-white/15 rounded-xl shadow-2xl overflow-hidden z-10 text-neutral-200 text-xs">
+      <div className="relative w-full max-w-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden z-10 text-[var(--nova-text-primary)] text-xs">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-[#171922]">
+        <div className="px-5 py-4 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm text-white">
+            <span className="font-semibold text-sm text-[var(--nova-text-primary)]">
               {taskToEdit ? `Edit Issue ${taskToEdit.key}` : "Create New Engineering Issue"}
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-neutral-400 hover:text-white rounded hover:bg-white/5"
+            className="p-1 text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] rounded hover:bg-[var(--nova-deep)] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -146,8 +146,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto no-scrollbar">
           {/* Title */}
           <div>
-            <label className="block text-neutral-400 text-[11px] font-medium mb-1">
-              Issue Title <span className="text-rose-400">*</span>
+            <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+              Issue Title <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -155,13 +155,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Implement WebAssembly zero-copy memory bridge"
-              className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white placeholder-neutral-500 focus:outline-hidden focus:border-[var(--color-accent)]"
+              className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-muted)] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-neutral-400 text-[11px] font-medium mb-1">
+            <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
               Description & Acceptance Criteria
             </label>
             <textarea
@@ -169,7 +169,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Technical context, repro steps, or implementation notes..."
-              className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white placeholder-neutral-500 focus:outline-hidden focus:border-[var(--color-accent)] resize-none"
+              className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-muted)] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)] resize-none"
             />
           </div>
 
@@ -177,13 +177,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             {/* Status */}
             <div>
-              <label className="block text-neutral-400 text-[11px] font-medium mb-1">
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Lifecycle Status
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white focus:outline-hidden focus:border-[var(--color-accent)]"
+                className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
               >
                 <option value="backlog">Backlog</option>
                 <option value="in_progress">In Progress</option>
@@ -194,13 +194,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
             {/* Priority */}
             <div>
-              <label className="block text-neutral-400 text-[11px] font-medium mb-1">
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Priority SLA
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white focus:outline-hidden focus:border-[var(--color-accent)]"
+                className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
               >
                 <option value="urgent">P0 Urgent</option>
                 <option value="high">P1 High</option>
@@ -213,13 +213,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             {/* Assignee */}
             <div>
-              <label className="block text-neutral-400 text-[11px] font-medium mb-1">
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Assignee
               </label>
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white focus:outline-hidden focus:border-[var(--color-accent)]"
+                className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
               >
                 {team.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -231,7 +231,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
             {/* Story Points / Estimate */}
             <div>
-              <label className="block text-neutral-400 text-[11px] font-medium mb-1">
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Estimate
               </label>
               <input
@@ -239,16 +239,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 value={estimate}
                 onChange={(e) => setEstimate(e.target.value)}
                 placeholder="e.g. 3 pts"
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white placeholder-neutral-500 focus:outline-hidden focus:border-[var(--color-accent)]"
-              >
-              </input>
+                className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-muted)] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
+              />
             </div>
           </div>
 
           {/* Git Branch & Tags */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-neutral-400 text-[11px] font-medium mb-1">
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Git Branch (Optional)
               </label>
               <input
@@ -256,11 +255,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
                 placeholder="feat/my-branch"
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-hidden focus:border-[var(--color-accent)]"
+                className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-muted)] font-mono text-[11px] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
               />
             </div>
             <div>
-              <label className="block text-neutral-400 text-[11px] font-medium mb-1">
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Tags (Comma separated)
               </label>
               <input
@@ -268,24 +267,24 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
                 placeholder="Core, Infra, Bug"
-                className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white placeholder-neutral-500 text-[11px] focus:outline-hidden focus:border-[var(--color-accent)]"
+                className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-muted)] text-[11px] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
               />
             </div>
           </div>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-white/10">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--nova-border)]">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-md hover:bg-white/5 text-neutral-400 hover:text-white transition-colors"
+              className="px-3.5 py-1.5 rounded-md bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !title.trim()}
-              className="px-4 py-1.5 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white font-medium shadow-xs disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              className="px-4 py-1.5 rounded-md bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white font-medium shadow-xs disabled:opacity-50 transition-colors flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>{isSubmitting ? "Saving..." : taskToEdit ? "Save Changes" : "Create Issue"}</span>

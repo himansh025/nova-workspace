@@ -12,16 +12,42 @@ import {
   Sparkles,
   Copy,
   Code2,
-  Play
+  Play,
+  Search,
 } from "lucide-react";
 import { Spec, SpecStatus } from "@/types";
 import { CodeSandboxModal } from "@/components/workspace/CodeSandboxModal";
 import { SpecsSkeleton } from "@/components/workspace/Skeletons";
 
+/* ─────────────────────────────────────────────
+   Status badge helper — spec-specific palette
+───────────────────────────────────────────── */
+function SpecStatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    approved:
+      "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]",
+    review:
+      "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]",
+    draft:
+      "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]",
+    drafting:
+      "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]",
+  };
+  const cls = map[status] ?? map.draft;
+  return (
+    <span
+      className={`${cls} rounded px-1.5 py-0.5 text-[10px] font-medium capitalize`}
+    >
+      {status}
+    </span>
+  );
+}
+
 export default function SpecsPage() {
   const [specs, setSpecs] = useState<Spec[]>([]);
   const [selectedSpec, setSelectedSpec] = useState<Spec | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [editTitle, setEditTitle] = useState("");
@@ -73,7 +99,7 @@ export default function SpecsPage() {
       const res = await fetch(`/api/specs/${selectedSpec.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status }),
       });
       const data = await res.json();
       if (data.spec) {
@@ -93,7 +119,7 @@ export default function SpecsPage() {
       const res = await fetch(`/api/specs/${selectedSpec.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: editTitle, content: editContent })
+        body: JSON.stringify({ title: editTitle, content: editContent }),
       });
       const data = await res.json();
       if (data.spec) {
@@ -131,8 +157,8 @@ export default function SpecsPage() {
           title: newTitle,
           summary: newSummary,
           content: newContent || newSummary,
-          tags: ["Architecture", "Plan"]
-        })
+          tags: ["Architecture", "Plan"],
+        }),
       });
       const data = await res.json();
       if (data.spec) {
@@ -155,7 +181,7 @@ export default function SpecsPage() {
       const res = await fetch("/api/ai/generate-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ specId: selectedSpec.id, language: "typescript" })
+        body: JSON.stringify({ specId: selectedSpec.id, language: "typescript" }),
       });
       const data = await res.json();
       if (data.codeSnippet) {
@@ -176,62 +202,83 @@ export default function SpecsPage() {
     }
   };
 
-  const filteredSpecs = specs.filter(
-    (s) => filterStatus === "all" || s.status === filterStatus
-  );
+  const filteredSpecs = specs.filter((s) => {
+    const matchesStatus = filterStatus === "all" || s.status === filterStatus;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !q ||
+      s.title.toLowerCase().includes(q) ||
+      s.key?.toLowerCase().includes(q) ||
+      s.summary?.toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
 
   if (loading) {
     return <SpecsSkeleton />;
   }
 
+  /* ─── Filter pill classes ─── */
+  const filterCls = (val: string) =>
+    filterStatus === val
+      ? "bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]"
+      : "text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] border border-transparent";
+
   return (
-    <div className="flex flex-col h-full bg-[#111216] text-neutral-200">
-      {/* Top Bar */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-        <div>
+    <div className="flex flex-col h-full bg-[var(--nova-bg)]">
+      {/* ── Page Header ── */}
+      <div className="px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] text-[var(--nova-text-primary)] flex items-center justify-between shrink-0 gap-3">
+        {/* Left: title + subtitle */}
+        <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-white">Architecture Specifications</h1>
-            <span className="text-xs font-mono text-[var(--color-accent)] bg-[var(--color-accent)]/15 border border-[var(--color-accent)]/30 px-2 py-0.5 rounded">
-              PLAN ENGINE ACTIVE
+            <FileCode2 className="w-3.5 h-3.5 text-[var(--nova-accent)] shrink-0" />
+            <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)] leading-none">
+              Architecture Specs
+            </h1>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] px-1.5 py-0.5 rounded hidden sm:inline">
+              Plan Engine
             </span>
           </div>
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5 leading-none hidden sm:block">
             Link requirements to pull requests, vector clocks, and schema migrations
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* Status Filter Tabs */}
-          <div className="flex bg-[#161820] border border-white/10 rounded-md p-0.5 text-xs">
-            <button
-              onClick={() => setFilterStatus("all")}
-              className={`px-2.5 py-1 rounded ${
-                filterStatus === "all" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              All ({specs.length})
-            </button>
-            <button
-              onClick={() => setFilterStatus("approved")}
-              className={`px-2.5 py-1 rounded ${
-                filterStatus === "approved" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              Approved
-            </button>
-            <button
-              onClick={() => setFilterStatus("review")}
-              className={`px-2.5 py-1 rounded ${
-                filterStatus === "review" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              In Review
-            </button>
+        {/* Right: search + filter tabs + new button */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Search */}
+          <div className="relative hidden sm:flex items-center">
+            <Search className="absolute left-2 w-3 h-3 text-[var(--nova-text-muted)] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search specs…"
+              className="pl-6 pr-3 py-1.5 w-44 bg-[var(--nova-bg)] border border-[var(--nova-border)] focus:border-[var(--nova-accent)] rounded text-[11px] text-[var(--nova-text-primary)] placeholder:text-[var(--nova-text-muted)] outline-none transition-colors duration-150"
+            />
           </div>
 
+          {/* Status filters */}
+          <div className="flex items-center gap-0.5 bg-[var(--nova-bg)] border border-[var(--nova-border-muted)] rounded p-0.5">
+            {[
+              { val: "all", label: `All ${specs.length}` },
+              { val: "approved", label: "Approved" },
+              { val: "review", label: "Review" },
+              { val: "draft", label: "Draft" },
+            ].map(({ val, label }) => (
+              <button
+                key={val}
+                onClick={() => setFilterStatus(val)}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all duration-150 cursor-pointer ${filterCls(val)}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* New Spec */}
           <button
             onClick={() => setIsNewSpecModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-medium shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Spec</span>
@@ -239,111 +286,110 @@ export default function SpecsPage() {
         </div>
       </div>
 
-      {/* Main Two-Pane Split View */}
+      {/* ── Main Split View ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Pane: Specs List */}
-        <div className="w-full md:w-80 lg:w-96 border-r border-white/10 bg-[#12141A] flex flex-col shrink-0 overflow-y-auto no-scrollbar divide-y divide-white/5">
+        {/* ── Left Pane: Spec List ── */}
+        <div className="w-full md:w-72 lg:w-80 border-r border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col shrink-0 overflow-y-auto nova-scroll">
           {filteredSpecs.map((spec) => {
             const isSelected = selectedSpec?.id === spec.id;
             return (
               <div
                 key={spec.id}
                 onClick={() => handleSelectSpec(spec)}
-                className={`p-4 cursor-pointer transition-all ${
+                className={`relative px-4 py-3 border-b border-[var(--nova-border-muted)] flex items-start gap-3 cursor-pointer group transition-colors duration-150 ${
                   isSelected
-                    ? "bg-[#181B24] border-l-2 border-[var(--color-accent)]"
-                    : "hover:bg-white/5"
+                    ? "bg-[rgba(99,102,241,0.08)] border-l-2 border-l-[#6366F1]"
+                    : "hover:bg-[var(--nova-deep)] border-l-2 border-l-transparent"
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-mono font-medium text-[var(--color-accent)]">
-                    {spec.key}
-                  </span>
-                  <span
-                    className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${
-                      spec.status === "approved"
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                        : spec.status === "review"
-                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                        : "bg-white/5 text-neutral-400"
-                    }`}
-                  >
-                    {spec.status}
-                  </span>
-                </div>
-                <h3 className="text-xs font-medium text-white line-clamp-1 mb-1">
-                  {spec.title}
-                </h3>
-                <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed mb-2">
-                  {spec.summary}
-                </p>
-                <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
-                  <span>Author: {spec.author.name}</span>
-                  <span>{spec.tags.join(", ")}</span>
+                {/* Main content */}
+                <div className="flex-1 min-w-0">
+                  {/* Key + status row */}
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-accent)]">
+                      {spec.key}
+                    </span>
+                    <SpecStatusBadge status={spec.status} />
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-[13px] font-medium text-[var(--nova-text-primary)] line-clamp-1 leading-snug mb-0.5">
+                    {spec.title}
+                  </h3>
+
+                  {/* Summary */}
+                  <p className="text-[11px] text-[var(--nova-text-muted)] line-clamp-1 leading-relaxed mb-1.5">
+                    {spec.summary}
+                  </p>
+
+                  {/* Meta */}
+                  <div className="flex items-center justify-between font-mono text-[10px] text-[var(--nova-text-muted)]">
+                    <span>{spec.author.name}</span>
+                    <span>{new Date(spec.createdAt).toLocaleDateString()}</span>
+                  </div>
                 </div>
               </div>
             );
           })}
 
           {filteredSpecs.length === 0 && (
-            <div className="p-8 text-center text-xs text-neutral-500 font-mono">
-              No specifications found for selected filter.
+            <div className="p-8 text-center">
+              <p className="font-mono text-[11px] text-[var(--nova-text-muted)]">No specs match the current filter.</p>
             </div>
           )}
         </div>
 
-        {/* Right Pane: Spec Document Reader & Editor */}
-        <div className="hidden md:flex flex-1 flex-col bg-[#14161D] overflow-hidden">
+        {/* ── Right Pane: Detail View ── */}
+        <div className="hidden md:flex flex-1 flex-col bg-[var(--nova-surface)] border-l border-[var(--nova-border)] overflow-hidden">
           {selectedSpec ? (
             <div className="flex flex-col h-full">
-              {/* Document Header & Actions */}
-              <div className="px-6 py-4 border-b border-white/10 bg-[#161822] flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-mono text-[var(--color-accent)] font-bold">
+              {/* Detail Header */}
+              <div className="px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex items-center justify-between shrink-0 gap-3">
+                {/* Left: key + title + status */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--nova-accent)] shrink-0">
                     {selectedSpec.key}
                   </span>
-                  <span
-                    className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded ${
-                      selectedSpec.status === "approved"
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                        : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-                    }`}
-                  >
-                    {selectedSpec.status}
+                  <span className="text-[var(--nova-text-muted)]">·</span>
+                  <span className="text-[13px] font-medium text-[var(--nova-text-primary)] truncate">
+                    {selectedSpec.title}
                   </span>
+                  <SpecStatusBadge status={selectedSpec.status} />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Status Progression Controls */}
-                  {selectedSpec.status !== "approved" && (
-                    <button
-                      onClick={() => handleUpdateStatus("approved")}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition-colors"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Approve Spec</span>
-                    </button>
-                  )}
-                  {selectedSpec.status === "drafting" && (
+                {/* Right: action buttons */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Status progression */}
+                  {selectedSpec.status === "drafting" ? (
                     <button
                       onClick={() => handleUpdateStatus("review")}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-medium transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-info-subtle)] hover:bg-[rgba(14,165,233,0.18)] border border-[var(--nova-info-border)] text-[var(--nova-info-text)] rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
                     >
                       <span>Submit for Review</span>
                     </button>
+                  ) : null}
+
+                  {selectedSpec.status !== "approved" && (
+                    <button
+                      onClick={() => handleUpdateStatus("approved")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-success-subtle)] hover:bg-[rgba(16,185,129,0.18)] border border-[var(--nova-success-border)] text-[var(--nova-success-text)] rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Approve</span>
+                    </button>
                   )}
 
-                  {/* Generate AI Code Button */}
+                  {/* AI: Generate Code — violet */}
                   <button
                     onClick={handleGenerateCode}
                     disabled={isGeneratingCode}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/30 border border-[var(--color-accent)]/40 text-[var(--color-accent)] text-xs font-medium transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-ai-subtle)] hover:bg-[rgba(139,92,246,0.18)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded text-[12px] font-medium transition-colors duration-150 disabled:opacity-50 cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>{isGeneratingCode ? "Generating..." : "Generate AI Code"}</span>
+                    <span>{isGeneratingCode ? "Generating…" : "AI Code"}</span>
                   </button>
 
-                  {/* Live Sandbox Button */}
+                  {/* Live Sandbox */}
                   <button
                     onClick={() => {
                       if (!generatedCode) {
@@ -352,166 +398,206 @@ export default function SpecsPage() {
                         setIsSandboxOpen(true);
                       }
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-medium transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-success-subtle)] hover:bg-[rgba(16,185,129,0.18)] border border-[var(--nova-success-border)] text-[var(--nova-success-text)] rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Live Sandbox</span>
+                    <span>Sandbox</span>
                   </button>
 
-                  {/* Toggle Edit */}
+                  {/* Edit / Save toggle */}
                   {isEditing ? (
                     <button
                       onClick={handleSaveEdit}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-medium transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      <span>Save Spec</span>
+                      <span>Save</span>
                     </button>
                   ) : (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 text-xs font-medium transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                       <span>Edit</span>
                     </button>
                   )}
 
+                  {/* Delete */}
                   <button
                     onClick={() => handleDeleteSpec(selectedSpec.id)}
-                    className="p-1.5 rounded hover:bg-white/5 text-neutral-500 hover:text-rose-400"
                     title="Delete Specification"
+                    className="p-1.5 rounded text-[var(--nova-text-muted)] hover:text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-colors duration-150 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Document Body */}
-              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 no-scrollbar">
+              {/* Detail Body */}
+              <div className="flex-1 overflow-y-auto nova-scroll px-6 py-5">
                 {isEditing ? (
-                  <div className="space-y-4">
+                  /* ── Edit mode ── */
+                  <div className="space-y-4 max-w-3xl">
                     <div>
-                      <label className="block text-neutral-400 text-xs font-medium mb-1">
+                      <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
                         Specification Title
                       </label>
                       <input
                         type="text"
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-sm focus:outline-hidden focus:border-[var(--color-accent)]"
+                        className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] focus:border-[var(--nova-accent)] rounded-md text-[var(--nova-text-primary)] text-[13px] outline-none transition-colors duration-150"
                       />
                     </div>
                     <div>
-                      <label className="block text-neutral-400 text-xs font-medium mb-1">
+                      <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
                         Specification Content (Markdown)
                       </label>
                       <textarea
-                        rows={16}
+                        rows={18}
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white font-mono text-xs focus:outline-hidden focus:border-[var(--color-accent)] resize-none"
+                        className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] focus:border-[var(--nova-accent)] rounded-md text-[var(--nova-text-primary)] font-mono text-[11px] outline-none transition-colors duration-150 resize-none"
                       />
                     </div>
                   </div>
                 ) : (
-                  <div className="max-w-3xl space-y-6">
+                  /* ── Read mode ── */
+                  <div className="max-w-3xl space-y-5">
+                    {/* Title + meta */}
                     <div>
-                      <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                      <h1 className="text-[18px] font-semibold text-[var(--nova-text-primary)] tracking-tight leading-snug mb-2">
                         {selectedSpec.title}
                       </h1>
-                      <div className="flex items-center gap-3 text-xs font-mono text-neutral-400 mt-2">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-[var(--nova-text-muted)]">
                         <span>Lead: {selectedSpec.author.name}</span>
-                        <span>•</span>
-                        <span>Created: {new Date(selectedSpec.createdAt).toLocaleDateString()}</span>
-                        <span>•</span>
-                        <span className="text-emerald-400">Board Consensus Met</span>
+                        <span className="text-[var(--nova-border-strong)]">·</span>
+                        <span>Created {new Date(selectedSpec.createdAt).toLocaleDateString()}</span>
+                        <span className="text-[var(--nova-border-strong)]">·</span>
+                        <span className="text-[var(--nova-success-text)]">Board Consensus Met</span>
+                        {selectedSpec.tags?.length > 0 && (
+                          <>
+                            <span className="text-[var(--nova-border-strong)]">·</span>
+                            <span>{selectedSpec.tags.join(", ")}</span>
+                          </>
+                        )}
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-lg bg-[#1B1E28] border border-white/5 text-xs text-neutral-300 leading-relaxed font-sans">
-                      <span className="font-semibold text-white block mb-1">Executive Summary:</span>
-                      {selectedSpec.summary}
+                    {/* Summary block */}
+                    <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-4">
+                      <p className="text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1 uppercase tracking-wider font-mono">
+                        Executive Summary
+                      </p>
+                      <p className="text-[13px] text-[var(--nova-text-primary)] leading-relaxed">
+                        {selectedSpec.summary}
+                      </p>
                     </div>
 
-                    {/* Formatted Markdown Content */}
-                    <div className="prose prose-invert max-w-none text-xs leading-relaxed text-neutral-300 space-y-4 whitespace-pre-wrap font-mono bg-black/20 p-5 rounded-lg border border-white/5">
-                      {selectedSpec.content}
+                    {/* Content — AI-assist visual strip */}
+                    <div className="border-l-2 border-[var(--nova-ai)] pl-4">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Sparkles className="w-3 h-3 text-[var(--nova-ai)]" />
+                        <span className="font-mono text-[10px] text-[var(--nova-ai)] uppercase tracking-widest">
+                          Spec Content
+                        </span>
+                      </div>
+                      <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 font-mono text-[11px] text-[var(--nova-text-secondary)] leading-relaxed whitespace-pre-wrap">
+                        {selectedSpec.content}
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-neutral-500 text-xs font-mono">
-              Select a specification from the directory
+            /* Empty state */
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
+              <div className="w-10 h-10 rounded-xl bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center">
+                <FileCode2 className="w-5 h-5 text-[var(--nova-accent)]" />
+              </div>
+              <p className="font-mono text-[11px] text-[var(--nova-text-muted)]">
+                Select a specification from the list
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* New Spec Modal */}
+      {/* ── New Spec Modal ── */}
       {isNewSpecModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--nova-overlay)]">
           <div className="fixed inset-0" onClick={() => setIsNewSpecModalOpen(false)} />
-          <div className="relative w-full max-w-lg bg-[#14161D] border border-white/15 rounded-xl shadow-2xl p-5 z-10 text-xs text-neutral-200">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <span className="text-sm font-semibold text-white">
+          <div className="relative w-full max-w-lg bg-[var(--nova-surface)] border border-[var(--nova-border-strong)] rounded-xl shadow-xl z-10">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--nova-border)]">
+              <span className="text-[13px] font-semibold text-[var(--nova-text-primary)]">
                 Draft Architecture Specification
               </span>
               <button
                 onClick={() => setIsNewSpecModalOpen(false)}
-                className="p-1 text-neutral-400 hover:text-white"
+                className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] rounded transition-colors duration-150 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSpec} className="space-y-4">
+            {/* Form */}
+            <form onSubmit={handleCreateSpec} className="p-5 space-y-4">
               <div>
-                <label className="block text-neutral-400 text-[11px] mb-1">Title</label>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
+                  Title
+                </label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Distributed Consensus Engine via Raft"
-                  className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white focus:outline-hidden focus:border-[var(--color-accent)]"
+                  className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] focus:border-[var(--nova-accent)] rounded-md text-[var(--nova-text-primary)] text-[12px] outline-none transition-colors duration-150"
                 />
               </div>
               <div>
-                <label className="block text-neutral-400 text-[11px] mb-1">Summary</label>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
+                  Summary
+                </label>
                 <textarea
                   rows={2}
                   required
                   value={newSummary}
                   onChange={(e) => setNewSummary(e.target.value)}
-                  placeholder="High-level architecture intent and SLA..."
-                  className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white focus:outline-hidden focus:border-[var(--color-accent)] resize-none"
+                  placeholder="High-level architecture intent and SLA…"
+                  className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] focus:border-[var(--nova-accent)] rounded-md text-[var(--nova-text-primary)] text-[12px] outline-none transition-colors duration-150 resize-none"
                 />
               </div>
               <div>
-                <label className="block text-neutral-400 text-[11px] mb-1">Detailed Spec Content</label>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
+                  Detailed Spec Content
+                </label>
                 <textarea
-                  rows={6}
+                  rows={7}
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
-                  placeholder="Technical design, protocol primitives, verification criteria..."
-                  className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white font-mono text-[11px] focus:outline-hidden focus:border-[var(--color-accent)] resize-none"
+                  placeholder="Technical design, protocol primitives, verification criteria…"
+                  className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] focus:border-[var(--nova-accent)] rounded-md text-[var(--nova-text-primary)] font-mono text-[11px] outline-none transition-colors duration-150 resize-none"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+
+              {/* Footer actions */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-[var(--nova-border-muted)]">
                 <button
                   type="button"
                   onClick={() => setIsNewSpecModalOpen(false)}
-                  className="px-3 py-1.5 rounded text-neutral-400 hover:text-white"
+                  className="text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-3 py-1.5 text-[12px] transition-colors duration-150 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
                 >
+                  <Plus className="w-3.5 h-3.5" />
                   Create Spec
                 </button>
               </div>
@@ -520,56 +606,66 @@ export default function SpecsPage() {
         </div>
       )}
 
-      {/* Generated Code Modal */}
+      {/* ── Generated Code Modal ── */}
       {generatedCode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--nova-overlay)]">
           <div className="fixed inset-0" onClick={() => setGeneratedCode(null)} />
-          <div className="relative w-full max-w-2xl bg-[#14161D] border border-white/15 rounded-xl shadow-2xl overflow-hidden z-10 text-xs text-neutral-200">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-[#171922]">
+          <div className="relative w-full max-w-2xl bg-[var(--nova-surface)] border border-[var(--nova-border-strong)] rounded-xl shadow-xl overflow-hidden z-10">
+            {/* Code modal header */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--nova-border)] bg-[var(--nova-surface)]">
               <div className="flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-[var(--color-accent)]" />
-                <span className="font-semibold text-sm text-white">
-                  AI Generated Implementation — {selectedSpec?.key}
+                {/* AI violet accent */}
+                <div className="w-1.5 h-4 bg-[var(--nova-ai)] rounded-full" />
+                <Code2 className="w-4 h-4 text-[var(--nova-ai)]" />
+                <span className="text-[13px] font-semibold text-[var(--nova-text-primary)]">
+                  AI Generated Implementation
+                </span>
+                <span className="font-mono text-[10px] text-[var(--nova-accent-text)] bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] px-1.5 py-0.5 rounded">
+                  {selectedSpec?.key}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={handleCopyCode}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-white/10 hover:bg-white/15 text-white text-[11px] font-mono transition-colors"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[var(--nova-surface)] hover:bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded text-[11px] font-mono transition-colors duration-150 cursor-pointer"
                 >
                   <Copy className="w-3 h-3" />
-                  <span>{copied ? "Copied!" : "Copy Code"}</span>
+                  {copied ? "Copied!" : "Copy"}
                 </button>
                 <button
                   onClick={() => setGeneratedCode(null)}
-                  className="p-1 text-neutral-400 hover:text-white rounded"
+                  className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] rounded transition-colors duration-150 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="p-5 overflow-y-auto max-h-[70vh] no-scrollbar">
-              <pre className="p-4 rounded-lg bg-[#0B0C0E] border border-white/10 font-mono text-xs text-emerald-400 overflow-x-auto whitespace-pre leading-relaxed">
+            {/* Code block */}
+            <div className="p-4 overflow-y-auto max-h-[60vh] nova-scroll">
+              <pre className="p-4 bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg font-mono text-[11px] text-[var(--nova-success-text)] overflow-x-auto whitespace-pre leading-relaxed">
                 {generatedCode}
               </pre>
             </div>
 
-            <div className="px-5 py-3 border-t border-white/10 bg-[#0E1015] flex justify-between items-center text-[10px] font-mono text-neutral-400">
-              <span>TypeScript Engine Delegate • Grounded in {selectedSpec?.key}</span>
-              <div className="flex items-center gap-2 font-sans">
+            {/* Code modal footer */}
+            <div className="px-5 py-3 border-t border-[var(--nova-border)] bg-[var(--nova-surface)] flex items-center justify-between">
+              <span className="font-mono text-[10px] text-[var(--nova-text-muted)]">
+                TypeScript · Grounded in {selectedSpec?.key}
+              </span>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsSandboxOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-md shadow-emerald-600/30 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-success-subtle)] hover:bg-[rgba(16,185,129,0.18)] border border-[var(--nova-success-border)] text-[var(--nova-success-text)] rounded text-[12px] font-medium transition-colors duration-150 cursor-pointer"
                 >
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>Run in Sandbox</span>
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  Run in Sandbox
                 </button>
                 <button
                   onClick={() => setGeneratedCode(null)}
-                  className="px-3 py-1 rounded bg-white/10 hover:bg-white/15 text-white text-xs"
+                  className="px-3 py-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded text-[12px] transition-colors duration-150 cursor-pointer"
                 >
-                  Close Code Reader
+                  Close
                 </button>
               </div>
             </div>
@@ -577,7 +673,7 @@ export default function SpecsPage() {
         </div>
       )}
 
-      {/* Interactive Code Execution Sandbox Modal */}
+      {/* ── Interactive Code Execution Sandbox Modal ── */}
       <CodeSandboxModal
         isOpen={isSandboxOpen}
         onClose={() => setIsSandboxOpen(false)}

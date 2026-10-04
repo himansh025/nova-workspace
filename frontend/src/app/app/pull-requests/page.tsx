@@ -87,7 +87,6 @@ export default function PullRequestsPage() {
     return () => window.removeEventListener("nova:realtime_sync", fetchPRs);
   }, []);
 
-
   const handleRunAIReview = async () => {
     if (!selectedPR) return;
     setIsReviewing(true);
@@ -153,86 +152,98 @@ export default function PullRequestsPage() {
     return <PullRequestsSkeleton />;
   }
 
+  const getPRStatusBadge = (status: string) => {
+    if (status === "merged") {
+      return "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]";
+    }
+    if (status === "draft") {
+      return "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]";
+    }
+    if (status === "closed") {
+      return "bg-[var(--nova-danger-subtle)] text-[var(--nova-danger-text)] border border-[var(--nova-danger-border)]";
+    }
+    return "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]";
+  };
+
   return (
-    <div className="flex flex-col h-full bg-[#111216] text-neutral-200">
-      {/* Top Header */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+    <div className="flex flex-col h-full bg-[var(--nova-bg)]">
+      {/* ── Page Header ── */}
+      <div className="px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] text-[var(--nova-text-primary)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-semibold text-white">Pull Requests & AI Review</h1>
-            <span className="text-xs font-mono text-purple-400 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              AI AUDIT ENGINE
+          <div className="flex items-center gap-2">
+            <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)]">
+              Pull Requests
+            </h1>
+            {/* AI badge */}
+            <span className="flex items-center gap-1 bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded px-1.5 py-0.5 text-[10px] font-medium font-mono uppercase tracking-widest">
+              <Sparkles className="w-2.5 h-2.5" />
+              AI Audit
             </span>
+            {/* GitHub live indicator */}
             {integration?.configured && (
-              <span className="text-xs font-mono text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1.5 ml-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="flex items-center gap-1 bg-[var(--nova-success-subtle)] border border-[var(--nova-success-border)] text-[var(--nova-success-text)] rounded px-1.5 py-0.5 text-[10px] font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--nova-success)] animate-pulse" />
                 {integration.repository}
               </span>
             )}
           </div>
-          <p className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
+          <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
             Continuous static analysis, cryptographic validation checks, and unified git diff review.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           {/* GitHub Sync Button */}
           {integration?.configured && (
             <button
               onClick={handleSyncGitHub}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#161820] border border-white/10 text-neutral-300 text-xs font-medium hover:bg-white/5 hover:text-white transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-3 py-1.5 text-[12px] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-400" : ""}`} />
-              <span>{isSyncing ? "Syncing..." : "Sync GitHub PRs"}</span>
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin text-[var(--nova-success-text)]" : "text-[var(--nova-text-secondary)]"}`} />
+              <span className="text-[12px]">{isSyncing ? "Syncing…" : "Sync GitHub"}</span>
             </button>
           )}
 
-          {/* Filter Pills */}
-          <div className="flex bg-[#161820] border border-white/10 rounded-lg p-0.5 text-xs">
-            <button
-              onClick={() => setFilter("all")}
-              className={`px-3 py-1 rounded-md transition-colors ${
-                filter === "all" ? "bg-white/10 text-white font-medium" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              All ({pullRequests.length})
-            </button>
-            <button
-              onClick={() => setFilter("open")}
-              className={`px-3 py-1 rounded-md transition-colors ${
-                filter === "open" ? "bg-indigo-600 text-white font-medium shadow-sm" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              Open ({pullRequests.filter((p) => p.status === "open").length})
-            </button>
-            <button
-              onClick={() => setFilter("merged")}
-              className={`px-3 py-1 rounded-md transition-colors ${
-                filter === "merged" ? "bg-purple-600 text-white font-medium shadow-sm" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              Merged ({pullRequests.filter((p) => p.status === "merged").length})
-            </button>
+          {/* Status filter tabs */}
+          <div className="flex items-center bg-[var(--nova-bg)] border border-[var(--nova-border-muted)] rounded p-0.5 gap-0.5">
+            {(["all", "open", "merged"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-2.5 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150 cursor-pointer ${
+                  filter === f
+                    ? "bg-[var(--nova-deep)] text-[var(--nova-text-primary)] border border-[var(--nova-border)]"
+                    : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-secondary)]"
+                }`}
+              >
+                {f === "all"
+                  ? `All (${pullRequests.length})`
+                  : f === "open"
+                  ? `Open (${pullRequests.filter((p) => p.status === "open").length})`
+                  : `Merged (${pullRequests.filter((p) => p.status === "merged").length})`}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-
+      {/* ── Empty State ── */}
       {pullRequests.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0A0B0D]">
-          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10">
-            <Github className="w-8 h-8 text-neutral-400" />
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 bg-[var(--nova-bg)]">
+          <div className="w-14 h-14 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] flex items-center justify-center shadow-xs">
+            <Github className="w-6 h-6 text-[var(--nova-text-muted)]" />
           </div>
-          <h2 className="text-lg font-semibold text-white mb-2">No Pull Requests Found</h2>
-          <p className="text-sm text-neutral-400 max-w-sm text-center mb-6 leading-relaxed">
-            Connect your GitHub repository to synchronize live pull requests, run AI audits, and auto-update tasks on merge.
-          </p>
+          <div className="text-center">
+            <h2 className="text-[15px] font-semibold text-[var(--nova-text-primary)] mb-1">No Pull Requests Found</h2>
+            <p className="text-[12px] text-[var(--nova-text-secondary)] max-w-xs leading-relaxed">
+              Connect your GitHub repository to synchronize live pull requests, run AI audits, and auto-update tasks on merge.
+            </p>
+          </div>
           {!integration?.configured ? (
             <Link
               href="/app/settings"
-              className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+              className="bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150"
             >
               Configure GitHub Integration
             </Link>
@@ -240,279 +251,323 @@ export default function PullRequestsPage() {
             <button
               onClick={handleSyncGitHub}
               disabled={isSyncing}
-              className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+              className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 disabled:opacity-50 cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
-              <span>{isSyncing ? "Synchronizing..." : "Sync Repository"}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              <span>{isSyncing ? "Synchronizing…" : "Sync Repository"}</span>
             </button>
           )}
         </div>
       ) : (
-        <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-white/10">
-          {/* Left: PR Directory List */}
-          <div className="w-full lg:w-96 flex flex-col shrink-0 bg-[#0B0C0E] overflow-y-auto no-scrollbar">
-          <div className="p-3 border-b border-white/5 bg-black/20 text-[11px] font-mono text-neutral-400 uppercase tracking-wider">
-            Active Pull Requests ({filtered.length})
-          </div>
-          <div className="divide-y divide-white/5">
-            {filtered.map((pr) => {
-              const isSelected = selectedPR?.id === pr.id;
-              return (
-                <div
-                  key={pr.id}
-                  onClick={() => setSelectedPR(pr)}
-                  className={`p-4 cursor-pointer transition-colors ${
-                    isSelected ? "bg-white/[0.06] border-l-2 border-indigo-500" : "hover:bg-white/[0.02]"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <GitPullRequest
-                        className={`w-4 h-4 ${
-                          pr.status === "merged"
-                            ? "text-purple-400"
-                            : "text-emerald-400"
-                        }`}
-                      />
-                      <span className="text-xs font-semibold text-white">#{pr.number}</span>
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded uppercase ${
-                          pr.status === "merged"
-                            ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                        }`}
-                      >
-                        {pr.status}
-                      </span>
-                    </div>
-                    {pr.linkedIssueKey && (
-                      <span className="text-[10px] font-mono text-neutral-500 bg-white/5 px-1.5 py-0.5 rounded">
-                        {pr.linkedIssueKey}
-                      </span>
-                    )}
-                  </div>
+        /* ── Main Two-Column Layout ── */
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-[var(--nova-border-muted)]">
 
-                  <h3 className="text-xs font-medium text-neutral-200 line-clamp-2 mb-2">
-                    {pr.title}
-                  </h3>
+          {/* ── Left: PR List ── */}
+          <div className="w-full lg:w-[340px] flex flex-col shrink-0 bg-[var(--nova-surface)] overflow-y-auto nova-scroll">
+            {/* List sub-header */}
+            <div className="px-4 py-2 border-b border-[var(--nova-border-muted)] bg-[var(--nova-bg)] flex items-center justify-between shrink-0">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)]">
+                Pull Requests
+              </span>
+              <span className="font-mono text-[10px] text-[var(--nova-text-muted)]">
+                {filtered.length} shown
+              </span>
+            </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-neutral-400 font-mono pt-1">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-4 h-4 rounded-full bg-indigo-600/50 flex items-center justify-center text-[9px] text-white">
-                        {pr.author.initials}
-                      </div>
-                      <span>{pr.author.name.split(" ")[0]}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-emerald-400">+{pr.additions}</span>
-                      <span className="text-rose-400">-{pr.deletions}</span>
-                      {pr.aiReview && (
-                        <span className="text-[10px] px-1 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                          {pr.aiReview.score}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right: PR Inspection & Diff Viewer */}
-        {selectedPR ? (
-          <div className="flex-1 flex flex-col min-h-0 bg-[#0A0B0D] overflow-y-auto">
-            {/* PR Header & Controls */}
-            <div className="p-6 border-b border-white/10 bg-[#0E1015]">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1">
-                    <span className="font-mono text-white font-semibold">PR #{selectedPR.number}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1 font-mono text-neutral-300 bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                      <GitBranch className="w-3 h-3 text-sky-400" />
-                      {selectedPR.branch}
-                      <ArrowRight className="w-2.5 h-2.5 text-neutral-500" />
-                      {selectedPR.targetBranch}
-                    </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {selectedPR.createdAt}
-                    </span>
-                  </div>
-                  <h2 className="text-lg font-semibold text-white">{selectedPR.title}</h2>
-                  <p className="text-xs text-neutral-400 mt-1 max-w-2xl leading-relaxed">
-                    {selectedPR.description}
-                  </p>
-                </div>
-
-                {/* Primary Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={handleRunAIReview}
-                    disabled={isReviewing}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-medium transition-all shadow-sm"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    <span>{isReviewing ? "Analyzing Diff..." : "Run AI Review"}</span>
-                  </button>
-
-                  <button
-                    onClick={handleMergePR}
-                    disabled={isMerging || selectedPR.status === "merged"}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all shadow-md ${
-                      selectedPR.status === "merged"
-                        ? "bg-purple-700/50 text-neutral-400 cursor-not-allowed border border-purple-500/20"
-                        : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30"
+            {/* PR rows */}
+            <div className="divide-y divide-[var(--nova-border-muted)]">
+              {filtered.map((pr) => {
+                const isSelected = selectedPR?.id === pr.id;
+                return (
+                  <div
+                    key={pr.id}
+                    onClick={() => setSelectedPR(pr)}
+                    className={`px-4 py-3 cursor-pointer transition-colors duration-150 flex items-start gap-3 group border-b border-[var(--nova-border-muted)] ${
+                      isSelected
+                        ? "border-l-2 border-[#6366F1] bg-[rgba(99,102,241,0.08)]"
+                        : "border-l-2 border-transparent hover:bg-[var(--nova-deep)]"
                     }`}
                   >
-                    {selectedPR.status === "merged" ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Merged</span>
-                      </>
-                    ) : (
-                      <>
-                        <GitPullRequest className="w-3.5 h-3.5" />
-                        <span>{isMerging ? "Merging..." : "Merge Pull Request"}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
+                    {/* Status icon */}
+                    <div className="mt-0.5 shrink-0">
+                      <GitPullRequest
+                        className={`w-3.5 h-3.5 ${
+                          pr.status === "merged"
+                            ? "text-[var(--nova-ai)]"
+                            : pr.status === "draft"
+                            ? "text-[var(--nova-text-muted)]"
+                            : "text-[var(--nova-success)]"
+                        }`}
+                      />
+                    </div>
 
-            {/* AI Review Diagnostics Banner */}
-            {selectedPR.aiReview && (
-              <div className="p-6 border-b border-white/10 bg-[#12141C]">
-                <div className="flex items-center justify-between gap-4 mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-md bg-purple-500/20 border border-purple-500/30 text-purple-400">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-white flex items-center gap-2">
-                        <span>Nova AI Review Report</span>
-                        <span className="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[10px]">
-                          SCORE: {selectedPR.aiReview.score}/100
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-neutral-400">{selectedPR.aiReview.summary}</p>
-                    </div>
-                  </div>
-
-                  <div className="hidden sm:flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/5 text-[11px] font-mono text-emerald-400">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>{selectedPR.aiReview.securityStatus}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/5 text-[11px] font-mono text-amber-400">
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>{selectedPR.aiReview.performanceImpact}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Findings List */}
-                {selectedPR.aiReview.findings.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {selectedPR.aiReview.findings.map((f) => (
-                      <div
-                        key={f.id}
-                        className="p-3 rounded-lg bg-black/30 border border-white/5 flex flex-col gap-1 text-xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-neutral-200 flex items-center gap-1.5">
-                            {f.type === "performance" ? (
-                              <Zap className="w-3.5 h-3.5 text-amber-400" />
-                            ) : (
-                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                            )}
-                            {f.title}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* PR number + status badge + linked issue */}
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[var(--nova-accent)] font-mono text-[11px] font-semibold">
+                            #{pr.number}
                           </span>
-                          <span className="text-[10px] font-mono text-neutral-500">
-                            {f.filename}:{f.lineNumber}
+                          {/* Status badge */}
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium border ${getPRStatusBadge(pr.status)}`}
+                          >
+                            {pr.status}
                           </span>
                         </div>
-                        <p className="text-[11px] text-neutral-400">{f.message}</p>
-                        {f.suggestion && (
-                          <pre className="p-2 rounded bg-black/50 border border-white/5 font-mono text-[10px] text-emerald-400 overflow-x-auto mt-1">
-                            {f.suggestion}
-                          </pre>
+                        {pr.linkedIssueKey && (
+                          <span className="text-[var(--nova-accent)] font-mono text-[10px] bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] px-1.5 py-0.5 rounded">
+                            {pr.linkedIssueKey}
+                          </span>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
-            {/* Unified Git Diff Viewer */}
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between text-xs text-neutral-400 font-mono">
-                <span className="flex items-center gap-1.5">
-                  <FileCode className="w-4 h-4 text-indigo-400" />
-                  Files Changed ({selectedPR.diff.length})
-                </span>
-                <span className="text-[11px] text-neutral-500">Unified Unified Diff Syntax</span>
-              </div>
+                      {/* PR title */}
+                      <p className="text-[12px] font-medium text-[var(--nova-text-primary)] line-clamp-2 leading-snug mb-1.5">
+                        {pr.title}
+                      </p>
 
-              {selectedPR.diff.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-white/10 bg-[#0B0C0E] overflow-hidden shadow-lg"
-                >
-                  {/* File Header */}
-                  <div className="px-4 py-2.5 bg-[#14161D] border-b border-white/10 flex items-center justify-between text-xs font-mono">
-                    <span className="text-white font-medium">{file.filename}</span>
-                    <span className="text-[10px] text-neutral-500">{file.newPath}</span>
-                  </div>
-
-                  {/* Diff Chunks */}
-                  <div className="p-2 overflow-x-auto font-mono text-xs leading-relaxed">
-                    {file.chunks.map((chunk, cIdx) => (
-                      <div key={cIdx}>
-                        <div className="px-3 py-1 text-[10px] text-neutral-500 bg-white/[0.02] select-none">
-                          {chunk.header}
+                      {/* Meta row */}
+                      <div className="flex items-center justify-between text-[10px] text-[var(--nova-text-muted)]">
+                        <div className="flex items-center gap-1">
+                          <GitBranch className="w-2.5 h-2.5" />
+                          <span className="font-mono truncate max-w-[100px] text-[var(--nova-text-secondary)]">{pr.branch}</span>
+                          <span className="mx-0.5">·</span>
+                          <div className="w-3.5 h-3.5 rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center text-[8px] text-[var(--nova-accent-text)] font-bold shrink-0">
+                            {pr.author.initials}
+                          </div>
+                          <span>{pr.author.name.split(" ")[0]}</span>
                         </div>
-                        <div className="divide-y divide-white/[0.02]">
-                          {chunk.lines.map((line, lIdx) => (
-                            <div
-                              key={lIdx}
-                              className={`flex items-start px-3 py-0.5 ${
-                                line.type === "add"
-                                  ? "bg-emerald-500/10 text-emerald-300"
-                                  : line.type === "del"
-                                  ? "bg-rose-500/10 text-rose-300 line-through opacity-80"
-                                  : "text-neutral-300"
-                              }`}
-                            >
-                              <span className="w-8 select-none text-[10px] text-neutral-600 shrink-0">
-                                {line.newLine || line.oldLine || ""}
-                              </span>
-                              <span className="w-4 select-none font-bold shrink-0">
-                                {line.type === "add" ? "+" : line.type === "del" ? "-" : " "}
-                              </span>
-                              <span className="flex-1 whitespace-pre">{line.content.replace(/^[+-]/, "")}</span>
-                            </div>
-                          ))}
+
+                        {/* Diff stats + AI score */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[var(--nova-success-text)]">+{pr.additions}</span>
+                          <span className="text-[var(--nova-danger-text)]">-{pr.deletions}</span>
+                          {pr.aiReview && (
+                            <span className="bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded px-1 py-0.5 text-[10px] font-mono">
+                              {pr.aiReview.score}%
+                            </span>
+                          )}
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 p-8 text-center">
-            <GitPullRequest className="w-10 h-10 opacity-30 mb-2" />
-            <p className="text-xs">Select a pull request on the left to inspect git diff and run AI code review.</p>
-          </div>
-        )}
-      </div>
+
+          {/* ── Right: PR Detail / Diff Viewer ── */}
+          {selectedPR ? (
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto nova-scroll bg-[var(--nova-bg)] border-l border-[var(--nova-border)]">
+
+              {/* Detail Header */}
+              <div className="px-5 py-4 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    {/* PR meta row */}
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[11px] text-[var(--nova-text-muted)] mb-1.5">
+                      <span className="text-[var(--nova-accent)] font-mono font-semibold">PR #{selectedPR.number}</span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1 font-mono bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] rounded px-1.5 py-0.5">
+                        <GitBranch className="w-2.5 h-2.5 text-[var(--nova-info)]" />
+                        {selectedPR.branch}
+                        <ArrowRight className="w-2 h-2 text-[var(--nova-text-muted)]" />
+                        {selectedPR.targetBranch}
+                      </span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {selectedPR.createdAt}
+                      </span>
+                    </div>
+                    <h2 className="text-[14px] font-semibold text-[var(--nova-text-primary)] leading-snug">
+                      {selectedPR.title}
+                    </h2>
+                    {selectedPR.description && (
+                      <p className="text-[12px] text-[var(--nova-text-secondary)] mt-1 leading-relaxed max-w-2xl">
+                        {selectedPR.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* AI Review */}
+                    <button
+                      onClick={handleRunAIReview}
+                      disabled={isReviewing}
+                      className="flex items-center gap-1.5 bg-[var(--nova-ai-subtle)] hover:bg-[rgba(139,92,246,0.18)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>{isReviewing ? "Analyzing…" : "AI Review"}</span>
+                    </button>
+
+                    {/* Merge */}
+                    <button
+                      onClick={handleMergePR}
+                      disabled={isMerging || selectedPR.status === "merged"}
+                      className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 cursor-pointer ${
+                        selectedPR.status === "merged"
+                          ? "bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] cursor-not-allowed opacity-60"
+                          : "bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white disabled:opacity-50"
+                      }`}
+                    >
+                      {selectedPR.status === "merged" ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          <span>Merged</span>
+                        </>
+                      ) : (
+                        <>
+                          <GitPullRequest className="w-3 h-3" />
+                          <span>{isMerging ? "Merging…" : "Merge PR"}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── AI Review Diagnostics Banner ── */}
+              {selectedPR.aiReview && (
+                <div className="mx-5 mt-4 bg-[var(--nova-surface)] border border-[var(--nova-ai-border)] rounded-lg overflow-hidden shadow-xs">
+                  {/* Banner header — violet left accent */}
+                  <div className="px-4 py-3 border-b border-[var(--nova-border-muted)] border-l-2 border-l-[var(--nova-ai)] flex items-center justify-between gap-4 bg-[var(--nova-ai-subtle)]">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-[var(--nova-ai)]" />
+                      <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">Nova AI Review Report</span>
+                      <span className="bg-[var(--nova-success-subtle)] border border-[var(--nova-success-border)] text-[var(--nova-success-text)] rounded px-1.5 py-0.5 text-[10px] font-mono">
+                        Score {selectedPR.aiReview.score}/100
+                      </span>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-2">
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-[var(--nova-success-text)] bg-[var(--nova-success-subtle)] border border-[var(--nova-success-border)] rounded px-2 py-0.5">
+                        <ShieldCheck className="w-3 h-3" />
+                        {selectedPR.aiReview.securityStatus}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-[var(--nova-warning-text)] bg-[var(--nova-warning-subtle)] border border-[var(--nova-warning-border)] rounded px-2 py-0.5">
+                        <Zap className="w-3 h-3" />
+                        {selectedPR.aiReview.performanceImpact}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="px-4 py-2.5">
+                    <p className="text-[12px] text-[var(--nova-text-secondary)] leading-relaxed">{selectedPR.aiReview.summary}</p>
+                  </div>
+
+                  {/* Findings */}
+                  {selectedPR.aiReview.findings.length > 0 && (
+                    <div className="px-4 pb-4 space-y-2">
+                      {selectedPR.aiReview.findings.map((f) => (
+                        <div
+                          key={f.id}
+                          className="bg-[var(--nova-elevated)] border border-[var(--nova-border)] rounded-lg p-3 shadow-xs"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[12px] font-medium text-[var(--nova-text-primary)] flex items-center gap-1.5">
+                              {f.type === "performance" ? (
+                                <Zap className="w-3 h-3 text-[var(--nova-warning-text)]" />
+                              ) : (
+                                <ShieldCheck className="w-3 h-3 text-[var(--nova-success-text)]" />
+                              )}
+                              {f.title}
+                            </span>
+                            <span className="font-mono text-[10px] text-[var(--nova-text-muted)]">
+                              {f.filename}:{f.lineNumber}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--nova-text-secondary)] leading-relaxed">{f.message}</p>
+                          {f.suggestion && (
+                            <pre className="mt-2 px-3 py-2 rounded bg-[var(--nova-bg)] border border-[var(--nova-border)] font-mono text-[10px] text-[var(--nova-success-text)] overflow-x-auto">
+                              {f.suggestion}
+                            </pre>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Unified Git Diff Viewer ── */}
+              <div className="p-5 space-y-4">
+                {/* Section label */}
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)]">
+                    <FileCode className="w-3 h-3" />
+                    Files Changed ({selectedPR.diff.length})
+                  </span>
+                  <span className="text-[11px] text-[var(--nova-text-muted)]">Unified diff syntax</span>
+                </div>
+
+                {selectedPR.diff.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg overflow-hidden"
+                  >
+                    {/* File header */}
+                    <div className="px-4 py-2 bg-[var(--nova-elevated)] border-b border-[var(--nova-border)] flex items-center justify-between">
+                      <span className="font-mono text-[12px] font-medium text-[var(--nova-text-primary)]">
+                        {file.filename}
+                      </span>
+                      <span className="font-mono text-[10px] text-[var(--nova-text-muted)]">{file.newPath}</span>
+                    </div>
+
+                    {/* Diff chunks */}
+                    <div className="overflow-x-auto font-mono text-[12px] leading-relaxed">
+                      {file.chunks.map((chunk, cIdx) => (
+                        <div key={cIdx}>
+                          {/* Chunk header */}
+                          <div className="px-4 py-1 text-[10px] text-[var(--nova-text-muted)] bg-[var(--nova-deep)] select-none">
+                            {chunk.header}
+                          </div>
+                          {/* Lines */}
+                          <div>
+                            {chunk.lines.map((line, lIdx) => (
+                              <div
+                                key={lIdx}
+                                className={`flex items-start px-4 py-px ${
+                                  line.type === "add"
+                                    ? "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)]"
+                                    : line.type === "del"
+                                    ? "bg-[var(--nova-danger-subtle)] text-[var(--nova-danger-text)] line-through opacity-75"
+                                    : "text-[var(--nova-text-secondary)]"
+                                }`}
+                              >
+                                {/* Line number */}
+                                <span className="w-7 shrink-0 select-none text-[10px] text-[var(--nova-text-muted)]">
+                                  {line.newLine || line.oldLine || ""}
+                                </span>
+                                {/* Sigil */}
+                                <span className="w-4 shrink-0 font-bold select-none">
+                                  {line.type === "add" ? "+" : line.type === "del" ? "-" : " "}
+                                </span>
+                                {/* Content */}
+                                <span className="flex-1 whitespace-pre">{line.content.replace(/^[+-]/, "")}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* ── No PR selected ── */
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--nova-text-muted)] p-8 text-center bg-[var(--nova-bg)]">
+              <GitPullRequest className="w-8 h-8 opacity-20" />
+              <p className="text-[12px]">
+                Select a pull request to inspect the git diff and run AI code review.
+              </p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -48,29 +48,33 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200">
+    <div className="min-h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] p-4 rounded-lg shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-semibold text-white">Engineering Telemetry</h1>
-            <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--nova-text-primary)]">
+              Engineering Telemetry
+            </h1>
+            <span className="text-xs font-mono text-[var(--nova-success-text)] bg-[var(--nova-success-subtle)] border border-[var(--nova-success-border)] px-2 py-0.5 rounded font-medium">
               P99 SIGNALS NORMAL
             </span>
           </div>
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-xs text-[var(--nova-text-secondary)] mt-0.5">
             Continuous cycle computation, throughput metrics, and SLA monitoring
           </p>
         </div>
 
         {/* Time range selector */}
-        <div className="flex bg-[#161820] border border-white/10 rounded-md p-0.5 text-xs">
+        <div className="flex bg-[var(--nova-deep)] border border-[var(--nova-border)] rounded-md p-0.5 text-xs">
           {(["7d", "30d", "90d"] as const).map((r) => (
             <button
               key={r}
               onClick={() => setTimeRange(r)}
-              className={`px-3 py-1 rounded uppercase font-mono text-[11px] ${
-                timeRange === r ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
+              className={`px-3 py-1 rounded uppercase font-mono text-[11px] font-medium transition-colors ${
+                timeRange === r
+                  ? "bg-[var(--nova-accent)] text-white shadow-xs"
+                  : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
               }`}
             >
               {r}
@@ -81,88 +85,98 @@ export default function InsightsPage() {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Cycle Time</span>
-            <Clock className="w-4 h-4 text-sky-400" />
+        <div className="p-4 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-[var(--nova-text-muted)]">
+            <span className="text-xs font-mono uppercase tracking-wider font-medium">Cycle Time</span>
+            <Clock className="w-4 h-4 text-[var(--nova-info)]" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono">
+          <div className="text-2xl font-bold text-[var(--nova-text-primary)] font-mono">
             {data?.cycleTimeDays || 1.4}d
           </div>
-          <div className="text-[11px] text-emerald-400 font-mono">
+          <div className="text-[11px] text-[var(--nova-success-text)] font-mono font-medium">
             {data?.cycleTimeDelta || "-42% reduction"}
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Sprint Velocity</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+        <div className="p-4 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-[var(--nova-text-muted)]">
+            <span className="text-xs font-mono uppercase tracking-wider font-medium">Sprint Velocity</span>
+            <TrendingUp className="w-4 h-4 text-[var(--nova-success)]" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono">
+          <div className="text-2xl font-bold text-[var(--nova-text-primary)] font-mono">
             {data?.velocitySprintDelta || "+24% ahead"}
           </div>
-          <div className="text-[11px] text-emerald-400 font-mono">
+          <div className="text-[11px] text-[var(--nova-success-text)] font-mono font-medium">
             Sub-3hr SLA sustained
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Review Latency</span>
-            <CheckCircle2 className="w-4 h-4 text-[var(--color-accent)]" />
+        <div className="p-4 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-[var(--nova-text-muted)]">
+            <span className="text-xs font-mono uppercase tracking-wider font-medium">Review Latency</span>
+            <CheckCircle2 className="w-4 h-4 text-[var(--nova-accent)]" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono">
+          <div className="text-2xl font-bold text-[var(--nova-text-primary)] font-mono">
             {data?.reviewLatencyHours || 2.1}h
           </div>
-          <div className="text-[11px] text-neutral-400 font-mono">
+          <div className="text-[11px] text-[var(--nova-text-secondary)] font-mono">
             Target SLA: &lt; 4.0 hours
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
-            <span className="text-xs font-mono uppercase tracking-wider">Throughput</span>
-            <BarChart3 className="w-4 h-4 text-amber-400" />
+        <div className="p-4 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-[var(--nova-text-muted)]">
+            <span className="text-xs font-mono uppercase tracking-wider font-medium">Throughput</span>
+            <BarChart3 className="w-4 h-4 text-[var(--nova-warning)]" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono">
+          <div className="text-2xl font-bold text-[var(--nova-text-primary)] font-mono">
             {data?.throughputPerSprint || 48}
           </div>
-          <div className="text-[11px] text-neutral-400 font-mono">
+          <div className="text-[11px] text-[var(--nova-text-secondary)] font-mono">
             Tasks completed per sprint
           </div>
         </div>
       </div>
 
       {/* Main Interactive SVG Chart */}
-      <div className="p-5 sm:p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-5">
+      <div className="p-4 sm:p-6 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-white">Velocity & Throughput Progression</h3>
-            <p className="text-xs text-neutral-400">Daily closed issues and delivery velocity trend</p>
+            <h3 className="text-sm font-semibold text-[var(--nova-text-primary)]">
+              Velocity &amp; Throughput Progression
+            </h3>
+            <p className="text-xs text-[var(--nova-text-secondary)]">
+              Daily closed issues and delivery velocity trend
+            </p>
           </div>
 
-          <div className="flex bg-[#1B1E28] border border-white/10 rounded-md p-0.5 text-xs">
+          <div className="flex bg-[var(--nova-deep)] border border-[var(--nova-border)] rounded-md p-0.5 text-xs">
             <button
               onClick={() => setMetricKey("completed")}
-              className={`px-3 py-1 rounded transition-colors ${
-                metricKey === "completed" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
+              className={`px-3 py-1 rounded transition-colors font-medium ${
+                metricKey === "completed"
+                  ? "bg-[var(--nova-accent)] text-white shadow-xs"
+                  : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
               }`}
             >
               Completed
             </button>
             <button
               onClick={() => setMetricKey("velocity")}
-              className={`px-3 py-1 rounded transition-colors ${
-                metricKey === "velocity" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
+              className={`px-3 py-1 rounded transition-colors font-medium ${
+                metricKey === "velocity"
+                  ? "bg-[var(--nova-accent)] text-white shadow-xs"
+                  : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
               }`}
             >
               Velocity
             </button>
             <button
               onClick={() => setMetricKey("throughput")}
-              className={`px-3 py-1 rounded transition-colors ${
-                metricKey === "throughput" ? "bg-[var(--color-accent)] text-white" : "text-neutral-400 hover:text-white"
+              className={`px-3 py-1 rounded transition-colors font-medium ${
+                metricKey === "throughput"
+                  ? "bg-[var(--nova-accent)] text-white shadow-xs"
+                  : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
               }`}
             >
               Throughput
@@ -174,15 +188,15 @@ export default function InsightsPage() {
         <div className="h-64 w-full relative pt-4">
           <svg className="w-full h-full overflow-visible" viewBox="0 0 700 200" preserveAspectRatio="none">
             {/* Grid lines */}
-            <line x1="0" y1="40" x2="700" y2="40" stroke="rgba(255,255,255,0.06)" strokeDasharray="3,3" />
-            <line x1="0" y1="90" x2="700" y2="90" stroke="rgba(255,255,255,0.06)" strokeDasharray="3,3" />
-            <line x1="0" y1="140" x2="700" y2="140" stroke="rgba(255,255,255,0.06)" strokeDasharray="3,3" />
+            <line x1="0" y1="40" x2="700" y2="40" stroke="rgba(0,0,0,0.06)" strokeDasharray="3,3" />
+            <line x1="0" y1="90" x2="700" y2="90" stroke="rgba(0,0,0,0.06)" strokeDasharray="3,3" />
+            <line x1="0" y1="140" x2="700" y2="140" stroke="rgba(0,0,0,0.06)" strokeDasharray="3,3" />
 
             {/* Gradient area */}
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#5E43F3" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#5E43F3" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#6366F1" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#6366F1" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -205,7 +219,7 @@ export default function InsightsPage() {
             {/* Chart Primary Line */}
             <polyline
               fill="none"
-              stroke="#5E43F3"
+              stroke="#6366F1"
               strokeWidth="2.5"
               points={chartPoints
                 .map((p, i) => {
@@ -228,7 +242,7 @@ export default function InsightsPage() {
                     cx={x}
                     cy={y}
                     r={isHovered ? "6" : "4"}
-                    fill="#5E43F3"
+                    fill="#6366F1"
                     stroke="#ffffff"
                     strokeWidth="2"
                   />
@@ -236,10 +250,11 @@ export default function InsightsPage() {
                     <text
                       x={x}
                       y={y - 12}
-                      fill="#ffffff"
+                      fill="var(--nova-text-primary)"
                       fontSize="10"
                       textAnchor="middle"
                       fontFamily="monospace"
+                      fontWeight="bold"
                     >
                       {p[metricKey]} pts
                     </text>
@@ -250,7 +265,7 @@ export default function InsightsPage() {
           </svg>
 
           {/* X Axis Labels */}
-          <div className="flex justify-between mt-2 pt-2 border-t border-white/5 text-[10px] font-mono text-neutral-400">
+          <div className="flex justify-between mt-2 pt-2 border-t border-[var(--nova-border-muted)] text-[10px] font-mono text-[var(--nova-text-muted)]">
             {chartPoints.map((p, i) => (
               <span key={i}>{p.label}</span>
             ))}
@@ -261,21 +276,21 @@ export default function InsightsPage() {
       {/* Task Distribution Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* By Status */}
-        <div className="p-5 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
-          <h3 className="text-sm font-semibold text-white">Issues by Lifecycle Status</h3>
+        <div className="p-4 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-4">
+          <h3 className="text-sm font-semibold text-[var(--nova-text-primary)]">Issues by Lifecycle Status</h3>
           <div className="space-y-2.5">
             {data?.tasksByStatus &&
               Object.entries(data.tasksByStatus).map(([status, count]) => (
                 <div key={status} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="font-mono text-neutral-300 uppercase text-[11px]">
+                    <span className="font-mono text-[var(--nova-text-secondary)] uppercase text-[11px]">
                       {status.replace("_", " ")}
                     </span>
-                    <span className="font-mono text-white font-medium">{count} tasks</span>
+                    <span className="font-mono text-[var(--nova-text-primary)] font-medium">{count} tasks</span>
                   </div>
-                  <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-[var(--color-accent)] h-full rounded-full"
+                      className="bg-[var(--nova-accent)] h-full rounded-full"
                       style={{ width: `${(count / 10) * 100}%` }}
                     />
                   </div>
@@ -285,26 +300,26 @@ export default function InsightsPage() {
         </div>
 
         {/* By Priority */}
-        <div className="p-5 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
-          <h3 className="text-sm font-semibold text-white">Issues by Priority SLA</h3>
+        <div className="p-4 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-4">
+          <h3 className="text-sm font-semibold text-[var(--nova-text-primary)]">Issues by Priority SLA</h3>
           <div className="space-y-2.5">
             {data?.tasksByPriority &&
               Object.entries(data.tasksByPriority).map(([priority, count]) => (
                 <div key={priority} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="font-mono text-neutral-300 uppercase text-[11px]">
+                    <span className="font-mono text-[var(--nova-text-secondary)] uppercase text-[11px]">
                       {priority}
                     </span>
-                    <span className="font-mono text-white font-medium">{count} tasks</span>
+                    <span className="font-mono text-[var(--nova-text-primary)] font-medium">{count} tasks</span>
                   </div>
-                  <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] rounded-full h-1.5 overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
                         priority === "urgent"
-                          ? "bg-rose-500"
+                          ? "bg-[var(--nova-danger)]"
                           : priority === "high"
-                          ? "bg-amber-500"
-                          : "bg-blue-500"
+                          ? "bg-[var(--nova-warning)]"
+                          : "bg-[var(--nova-info)]"
                       }`}
                       style={{ width: `${(count / 10) * 100}%` }}
                     />

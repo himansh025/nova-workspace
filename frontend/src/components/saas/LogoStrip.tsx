@@ -11,9 +11,9 @@ export const LogoStrip: React.FC = () => {
   ];
 
   return (
-    <section className="py-14 md:py-18 border-y border-[var(--color-border)] bg-[var(--color-background)]">
+    <section className="py-14 md:py-18 border-y border-[var(--landing-border)] bg-[var(--landing-surface-muted)]">
       <div className="container-site">
-        <h2 className="text-center text-[11px] font-mono tracking-widest uppercase text-[var(--color-muted)] mb-8">
+        <h2 className="text-center text-[11px] font-mono tracking-widest uppercase text-[var(--landing-text-muted)] mb-8">
           POWERING TEAMS BUILDING THE FUTURE
         </h2>
 
@@ -21,7 +21,7 @@ export const LogoStrip: React.FC = () => {
           {logos.map((logo) => (
             <div
               key={logo.name}
-              className="text-sm md:text-base font-semibold tracking-wider text-neutral-400 hover:text-[var(--color-foreground)] transition-colors duration-200 select-none cursor-default font-mono"
+              className="text-sm md:text-base font-semibold tracking-wider text-[var(--landing-text-muted)] hover:text-[var(--landing-text)] transition-colors duration-200 select-none cursor-default font-mono"
             >
               {logo.mark}
             </div>

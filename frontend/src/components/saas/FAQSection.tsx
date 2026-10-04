@@ -16,7 +16,7 @@ export const FAQSection: React.FC = () => {
   return (
     <section
       id="faq"
-      className="section-spacing bg-[var(--color-surface)] border-t border-[var(--color-border)]"
+      className="section-spacing bg-[var(--landing-surface-muted)] border-t border-[var(--landing-border)]"
     >
       <div className="container-site">
         <div className="max-w-2xl mx-auto text-center mb-16">
@@ -24,14 +24,14 @@ export const FAQSection: React.FC = () => {
             <SectionLabel tag="11">QUESTIONS & ANSWERS</SectionLabel>
           </Reveal>
           <Reveal delay={0.1}>
-            <h2 className="section-title text-[var(--color-foreground)] uppercase mt-4">
+            <h2 className="section-title text-[var(--landing-text)] uppercase mt-4">
               FREQUENTLY ASKED
               <br />
-              <span className="text-[var(--color-accent)]">QUESTIONS.</span>
+              <span className="text-[var(--landing-primary)]">QUESTIONS.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.2}>
-            <p className="mt-4 text-base text-[var(--color-muted)] leading-relaxed">
+            <p className="mt-4 text-base text-[var(--landing-text-muted)] leading-relaxed">
               Clear answers to common questions about NOVA Workspace, architectural
               context, and security boundaries.
             </p>
@@ -39,7 +39,7 @@ export const FAQSection: React.FC = () => {
         </div>
 
         {/* Accordion list */}
-        <div className="max-w-3xl mx-auto divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+        <div className="max-w-3xl mx-auto divide-y divide-[var(--landing-border)] border-y border-[var(--landing-border)]">
           {faqList.map((item, idx) => {
             const isOpen = openIndex === idx;
             return (
@@ -50,18 +50,18 @@ export const FAQSection: React.FC = () => {
                     aria-expanded={isOpen}
                     className="w-full flex items-center justify-between text-left group gap-4 cursor-pointer focus-visible:outline-none"
                   >
-                    <span className="text-base md:text-lg font-medium text-[var(--color-foreground)] group-hover:text-[var(--color-accent)] transition-colors">
+                    <span className="text-base md:text-lg font-medium text-[var(--landing-text)] group-hover:text-[var(--landing-primary)] transition-colors">
                       {item.question}
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 text-[var(--color-muted)] transition-transform duration-200 shrink-0 ${
-                        isOpen ? "rotate-180 text-[var(--color-accent)]" : ""
+                      className={`w-4 h-4 text-[var(--landing-text-muted)] transition-transform duration-200 shrink-0 ${
+                        isOpen ? "rotate-180 text-[var(--landing-primary)]" : ""
                       }`}
                     />
                   </button>
 
                   {isOpen && (
-                    <div className="mt-3 pr-8 text-sm text-[var(--color-muted)] leading-relaxed animate-in fade-in duration-200">
+                    <div className="mt-3 pr-8 text-sm text-[var(--landing-text-muted)] leading-relaxed animate-in fade-in duration-200">
                       {item.answer}
                     </div>
                   )}

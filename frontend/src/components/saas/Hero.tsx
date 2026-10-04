@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import Button from "@/components/ui/Button";
+import Link from "next/link";
 import ProductPreview from "./ProductPreview";
 import { initGsap, gsap } from "@/lib/animations/gsap";
 import { animateHeroLoad, prefersReducedMotion } from "@/lib/animations/reveal";
-import { Play } from "lucide-react";
+import { Play, ArrowRight } from "lucide-react";
 
 export const Hero: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,24 +49,20 @@ export const Hero: React.FC = () => {
     <section
       ref={containerRef}
       id="hero"
-      className="relative pt-32 md:pt-40 pb-20 md:pb-28 overflow-hidden bg-[var(--color-background)] tech-grid"
+      className="relative pt-32 md:pt-40 pb-20 md:pb-28 overflow-hidden bg-[var(--landing-bg)] tech-grid"
     >
       <div className="container-site flex flex-col items-center text-center">
-        {/* Subtle Tech Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[var(--color-border)] text-xs font-mono text-[var(--color-foreground)] mb-6 shadow-xs">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
-          <span>NOVA 2.0 WORKSPACE ARCHITECTURE</span>
-        </div>
 
-        {/* Hero Heading: Large, tight, confident clamp(52px, 7vw, 108px) */}
+
+        {/* Hero Heading: Strong charcoal typography, warm terracotta accent phrase */}
         <h1
           ref={headlineRef}
           data-hero-headline
-          className="hero-title text-[var(--color-foreground)] max-w-4xl tracking-tight uppercase"
+          className="hero-title text-[var(--landing-text)] max-w-4xl tracking-tight uppercase"
         >
           BUILD WHAT
           <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-foreground)] via-[var(--color-foreground)] to-[var(--color-accent)]">
+          <span className="text-[var(--landing-primary)]">
             MATTERS.
           </span>
         </h1>
@@ -75,10 +71,10 @@ export const Hero: React.FC = () => {
         <p
           ref={subRef}
           data-hero-sub
-          className="mt-6 text-base md:text-xl text-[var(--color-muted)] max-w-2xl font-normal leading-relaxed"
+          className="mt-6 text-base md:text-xl text-[var(--landing-text-muted)] max-w-2xl font-normal leading-relaxed"
         >
           NOVA brings planning, AI-assisted execution, and product intelligence
-          into one focused workspace.
+          into one focused workspace built for engineering velocity.
         </p>
 
         {/* Action CTAs */}
@@ -87,18 +83,20 @@ export const Hero: React.FC = () => {
           data-hero-cta
           className="mt-8 flex flex-wrap items-center justify-center gap-4"
         >
-          <Button href="/app" variant="primary" size="lg" withArrow>
-            START BUILDING
-          </Button>
-          <Button
-            href="#product-story"
-            variant="outline"
-            size="lg"
-            className="gap-2"
+          <Link
+            href="/app"
+            className="inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 text-base px-6.5 py-3.5 rounded-xl bg-[var(--landing-primary)] hover:bg-[var(--landing-primary-hover)] text-white shadow-xs active:scale-[0.99]"
           >
-            <Play className="w-4 h-4 fill-current" />
+            <span>START BUILDING</span>
+            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+          </Link>
+          <Link
+            href="#product-story"
+            className="inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 text-base px-6.5 py-3.5 rounded-xl bg-[var(--landing-surface)] border border-[var(--landing-border)] text-[var(--landing-text)] hover:bg-[var(--landing-surface-muted)] active:scale-[0.99]"
+          >
+            <Play className="w-4 h-4 fill-current text-[var(--landing-text-muted)]" />
             <span>WATCH DEMO</span>
-          </Button>
+          </Link>
         </div>
 
         {/* Product Interface Preview */}

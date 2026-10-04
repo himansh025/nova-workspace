@@ -10,24 +10,55 @@ import {
   Github,
   GitBranch,
   Key,
-  Bell,
   Radio,
   Zap,
-  ExternalLink
+  Palette,
+  Sparkles,
+  LayoutGrid,
+  Layers,
+  Sliders,
+  Check,
+  Sun
 } from "lucide-react";
 
 import { useToast } from "@/components/workspace/ToastProvider";
 import AISettingsPanel from "@/components/workspace/AISettingsPanel";
 import ThirdPartyCredentialsPanel from "@/components/workspace/ThirdPartyCredentialsPanel";
+import {
+  useTheme,
+  THEME_PRESETS,
+  ThemePresetKey,
+  SidebarStyle,
+  BorderStrength,
+  RadiusOption,
+  deriveSemanticTokens,
+} from "@/context/ThemeContext";
 
 export default function SettingsPage() {
   const { addToast } = useToast();
+  const {
+    themePreset,
+    brandColors,
+    interfaceCustomization,
+    setThemePreset,
+    setCustomBrand,
+    setCustomInterface,
+    resetToDefault,
+    applyTheme,
+    isDirty,
+    derivedTokens,
+  } = useTheme();
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<string>("appearance");
+  const [showAdvancedHex, setShowAdvancedHex] = useState(false);
+
+  // General Org state
   const [workspaceName, setWorkspaceName] = useState("Nova Engineering Labs");
   const [slug, setSlug] = useState("nova-core");
   const [defaultBranch, setDefaultBranch] = useState("main");
   const [githubSync, setGithubSync] = useState(false);
   const [gitlabSync, setGitlabSync] = useState(false);
-  const [linearSync, setLinearSync] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -44,6 +75,18 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    fetch("/api/org")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.organization) {
+          setWorkspaceName(data.organization.name || "Nova Engineering Labs");
+          setSlug(data.organization.slug || "nova-core");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetchOutgoingWebhooks();
     fetch("/api/integrations")
       .then((res) => res.json())
@@ -54,6 +97,24 @@ export default function SettingsPage() {
       })
       .catch(() => {});
   }, []);
+
+  const handleApplyTheme = () => {
+    applyTheme();
+    addToast({
+      title: "Workspace Theme Updated",
+      message: `Active theme preset applied: ${themePreset.toUpperCase()}`,
+      type: "accent",
+    });
+  };
+
+  const handleResetTheme = () => {
+    resetToDefault();
+    addToast({
+      title: "Reset to Default Theme",
+      message: "Workspace theme restored to Default Electric Indigo.",
+      type: "success",
+    });
+  };
 
   const handleTestOutgoingWebhook = async (id: string) => {
     setTestingWebhookId(id);
@@ -86,14 +147,14 @@ export default function SettingsPage() {
       const res = await fetch("/api/webhooks/github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event, commitSha: randomSha, branch: defaultBranch })
+        body: JSON.stringify({ event, commitSha: randomSha, branch: defaultBranch }),
       });
       const data = await res.json();
       if (data.message) {
         addToast({
           title: `GitHub Webhook (${event})`,
           message: data.message,
-          type: event === "ci_passed" ? "success" : "commit"
+          type: event === "ci_passed" ? "success" : "commit",
         });
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("task-saved"));
@@ -106,10 +167,46 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    try {
+      const res = await fetch("/api/org", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: workspaceName, slug: slug }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 3000);
+        addToast({ title: "Settings Saved", message: "Organization updated.", type: "success" });
+        if (typeof window !== "undefined") {
+          window.location.reload();
+        }
+      } else {
+        addToast({ title: "Update Failed", message: data.error, type: "warning" });
+      }
+    } catch (err) {
+      addToast({ title: "Update Failed", message: "Network error", type: "warning" });
+    }
+  };
+
+  const handleDeleteOrganization = async () => {
+    if (!confirm(`Are you absolutely sure you want to delete ${workspaceName}? This action cannot be undone.`)) return;
+    try {
+      const res = await fetch("/api/org", { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("nova_active_org_id");
+          window.location.reload();
+        }
+      } else {
+        addToast({ title: "Delete Failed", message: data.error || "Could not delete organization", type: "warning" });
+      }
+    } catch (err) {
+      addToast({ title: "Delete Failed", message: "Network error", type: "warning" });
+    }
   };
 
   const handleResetData = async () => {
@@ -129,258 +226,526 @@ export default function SettingsPage() {
     }
   };
 
+  const tabs = [
+    { id: "appearance", label: "Appearance & Theme", icon: Palette },
+    { id: "general", label: "General & Org", icon: Settings },
+    { id: "ai", label: "AI Copilot", icon: Sparkles },
+    { id: "credentials", label: "Credentials & Keys", icon: Key },
+    { id: "integrations", label: "Git & Webhooks", icon: GitBranch },
+    { id: "danger", label: "Danger Zone", icon: AlertTriangle },
+    { id: "all", label: "All Settings", icon: Sliders },
+  ];
+
+  const presetList: { key: ThemePresetKey; name: string; subtitle: string }[] = [
+    { key: "nova", name: "Nova", subtitle: "Electric Indigo" },
+    { key: "professional", name: "Professional", subtitle: "Cool Slate" },
+    { key: "ocean", name: "Ocean", subtitle: "Sky & Cyan" },
+    { key: "forest", name: "Forest", subtitle: "Emerald & Sage" },
+    { key: "violet", name: "Violet", subtitle: "Lavender & Violet" },
+  ];
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto text-neutral-200">
-      {/* Top Header */}
-      <div className="pb-4 border-b border-white/10">
-        <h1 className="text-xl sm:text-2xl font-semibold text-white">Workspace Settings</h1>
-        <p className="text-xs text-neutral-400 mt-0.5">
-          Configure repository links, team synchronization, and database state
-        </p>
-      </div>
-
-      {savedSuccess && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>Workspace configuration saved successfully.</span>
-        </div>
-      )}
-
-      {resetMessage && (
-        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{resetMessage}</span>
-        </div>
-      )}
-
-      {/* General Settings Form */}
-      <form onSubmit={handleSaveSettings} className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-5">
-        <h3 className="text-sm font-semibold text-white">General Information</h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-neutral-400 text-[11px] mb-1">Workspace Name</label>
-            <input
-              type="text"
-              value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
-              className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs focus:outline-hidden focus:border-[var(--color-accent)]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-neutral-400 text-[11px] mb-1">Organization Slug</label>
-            <input
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)]"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-neutral-400 text-[11px] mb-1">Default Git Branch</label>
-          <input
-            type="text"
-            value={defaultBranch}
-            onChange={(e) => setDefaultBranch(e.target.value)}
-            className="w-full px-3 py-2 rounded-md bg-[#1B1E28] border border-white/10 text-white text-xs font-mono focus:outline-hidden focus:border-[var(--color-accent)] max-w-xs"
-          />
-        </div>
-
-        <div className="pt-2 flex justify-end">
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-medium transition-colors"
-          >
-            Save Changes
-          </button>
-        </div>
-      </form>
-
-      {/* AI Copilot & Custom LLM Provider Configuration */}
-      <AISettingsPanel />
-
-      {/* Third-Party Service Credentials (SMTP Email & GitHub OAuth/Webhooks) */}
-      <ThirdPartyCredentialsPanel />
-
-      {/* Git & Tool Integrations */}
-      <div className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-5">
-        <h3 className="text-sm font-semibold text-white">Git Providers & Sync</h3>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3.5 rounded-lg bg-[#1B1E28] border border-white/5">
-            <div className="flex items-center gap-3">
-              <Github className="w-5 h-5 text-white" />
-              <div>
-                <div className="text-xs font-medium text-white">GitHub Enterprise Sync</div>
-                <div className="text-[11px] text-neutral-400">
-                  Continuous webhook ingestion for issues, PR reviews, and commit SHAs
-                </div>
-              </div>
+    <div className="min-h-screen bg-[var(--nova-bg)] text-[var(--nova-text-primary)] transition-colors duration-150">
+      {/* Top Header & Navigation Tabs */}
+      <div className="border-b border-[var(--nova-border)] bg-[var(--nova-surface)]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
+            <div>
+              <h1 className="text-[15px] sm:text-lg font-semibold tracking-tight text-[var(--nova-text-primary)] flex items-center gap-2">
+                <Settings className="w-5 h-5 text-[var(--nova-accent)]" />
+                <span>Workspace Settings</span>
+              </h1>
+              <p className="text-[12px] text-[var(--nova-text-muted)] mt-0.5">
+                Customize workspace appearance, manage API credentials, repository sync, and workspace state
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (!githubSync) {
-                  addToast({
-                    title: "GitHub Credentials Required",
-                    message: "Configure your GitHub Client ID & Secret in the panel below to activate live sync.",
-                    type: "warning",
-                  });
-                } else {
-                  setGithubSync(false);
-                }
-              }}
-              className={`px-3 py-1 rounded text-xs font-mono transition-colors ${
-                githubSync ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-neutral-400 border border-white/10"
-              }`}
-            >
-              {githubSync ? "Connected" : "Disconnected"}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-3.5 rounded-lg bg-[#1B1E28] border border-white/5">
-            <div className="flex items-center gap-3">
-              <GitBranch className="w-5 h-5 text-orange-400" />
-              <div>
-                <div className="text-xs font-medium text-white">GitLab Self-Managed</div>
-                <div className="text-[11px] text-neutral-400">
-                  Pipelines and merge request bidirectional state triggers
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono px-2.5 py-1 rounded-full border bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border-[var(--nova-accent-border)]">
+                Active Preset: {themePreset.toUpperCase()}
+              </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setGitlabSync(!gitlabSync)}
-              className={`px-3 py-1 rounded text-xs font-mono ${
-                gitlabSync ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-neutral-400"
-              }`}
-            >
-              {gitlabSync ? "Connected" : "Disconnected"}
-            </button>
           </div>
-        </div>
 
-        {/* Live Webhook Simulation Testing Panel */}
-        <div className="pt-3 border-t border-white/5 space-y-3">
-          <div className="text-xs font-medium text-white flex items-center gap-2">
-            <Github className="w-4 h-4 text-[var(--color-accent)]" />
-            <span>Interactive Live Webhook Simulator</span>
-          </div>
-          <p className="text-[11px] text-neutral-400">
-            Simulate real-time git pushes, PR merges, and CI passes to test live state mutations on the Kanban board:
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleSimulateWebhook("push")}
-              disabled={isSimulatingWebhook}
-              className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-neutral-200 transition-colors"
-            >
-              ⚡ Simulate Git Push
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSimulateWebhook("pull_request_merged")}
-              disabled={isSimulatingWebhook}
-              className="px-3 py-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-mono text-emerald-300 transition-colors"
-            >
-              🔀 Simulate PR Merge
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSimulateWebhook("ci_passed")}
-              disabled={isSimulatingWebhook}
-              className="px-3 py-1.5 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-xs font-mono text-blue-300 transition-colors"
-            >
-              🛡️ Simulate CI Suite Passed
-            </button>
+          {/* Navigation Tabs Bar */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3 py-2 text-[12px] whitespace-nowrap transition-colors duration-150 border-b-2 ${
+                    isActive
+                      ? "border-b-2 border-[var(--nova-accent)] text-[var(--nova-text-primary)] font-medium bg-[var(--nova-accent-subtle)]/40 rounded-t-md"
+                      : "border-transparent text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[var(--nova-accent)]" : ""}`} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Outgoing Webhook Integrations Hub */}
-      <div className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-400" />
-              <span>Outgoing Webhook Integrations</span>
-            </h3>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              Dispatch realtime workspace events (deployments, spec approvals, PR merges) to external services
-            </p>
+      {/* Main Content Area */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {savedSuccess && (
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>Workspace configuration saved successfully.</span>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded w-fit">
-            HMAC-SHA256 SIGNED
-          </span>
-        </div>
+        )}
 
-        <div className="space-y-3">
-          {outgoingWebhooks.map((hook) => (
-            <div
-              key={hook.id}
-              className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-[#1B1E28] border border-white/5 gap-3"
-            >
-              <div className="space-y-1 min-w-0">
+        {resetMessage && (
+          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{resetMessage}</span>
+          </div>
+        )}
+
+        {/* ─── TAB 1: Appearance & Theme Customization ────────────────────────── */}
+        {(activeTab === "appearance" || activeTab === "all") && (
+          <div className="space-y-6">
+            <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl p-6 space-y-6 shadow-sm">
+              {/* Header Bar with Action Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--nova-border)]">
+                <div>
+                  <h3 className="text-[14px] font-semibold text-[var(--nova-text-primary)] flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-[var(--nova-accent)]" />
+                    <span>Appearance & Accent Customization</span>
+                  </h3>
+                  <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
+                    Select a theme preset or customize your workspace accent color while maintaining optimal dark mode contrast.
+                  </p>
+                </div>
+
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-white text-xs">{hook.name}</span>
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-white/5 text-neutral-400 border border-white/5">
-                    {hook.target}
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    {hook.status}
-                  </span>
-                </div>
-                <div className="text-[11px] font-mono text-neutral-400 truncate max-w-md">
-                  {hook.url}
-                </div>
-                <div className="flex items-center gap-3 text-[10px] text-neutral-500 font-mono pt-1">
-                  <span>Last delivery: {hook.lastDelivery || "N/A"}</span>
-                  <span>•</span>
-                  <span className="text-emerald-400">{hook.deliverySuccessRate}% Success SLA</span>
+                  {isDirty && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      Unsaved Changes
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleResetTheme}
+                    className="px-3 py-1.5 rounded-lg border border-[var(--nova-border)] bg-[var(--nova-bg)] hover:bg-[var(--nova-elevated)] text-[var(--nova-text-primary)] text-[12px] font-medium transition-colors cursor-pointer"
+                  >
+                    Reset to Default
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApplyTheme}
+                    className="px-4 py-1.5 rounded-lg bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white text-[12px] font-medium transition-colors shadow-sm cursor-pointer"
+                  >
+                    Apply Theme
+                  </button>
                 </div>
               </div>
 
+              {/* Clean Single Panel Layout */}
+              <div className="space-y-6 max-w-4xl">
+                {/* 1. Theme Presets Grid */}
+                <div className="space-y-3">
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[var(--nova-text-muted)]">
+                    Theme Presets
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {presetList.map((p) => {
+                      const isSelected = themePreset === p.key;
+                      const presetDef = THEME_PRESETS[p.key === "custom" ? "nova" : p.key] || THEME_PRESETS.nova;
+
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => setThemePreset(p.key)}
+                          className={`p-3.5 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between space-y-2.5 relative cursor-pointer ${
+                            isSelected
+                              ? "bg-[var(--nova-accent-subtle)] border-[var(--nova-accent)] shadow-sm"
+                              : "bg-[var(--nova-bg)] border-[var(--nova-border)] hover:border-[var(--nova-border-strong)]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12px] font-semibold text-[var(--nova-text-primary)]">
+                              {p.name}
+                            </span>
+                            {isSelected && (
+                              <Check className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+                            )}
+                          </div>
+
+                          <div className="text-[10px] text-[var(--nova-text-muted)]">
+                            {p.subtitle}
+                          </div>
+
+                          {/* Swatch preview */}
+                          <div className="flex items-center gap-1.5 pt-1">
+                            <span className="w-3.5 h-3.5 rounded-full border border-white/10 shadow-xs" style={{ backgroundColor: presetDef.brand.primary }} title="Primary Color" />
+                            <span className="w-3.5 h-3.5 rounded-full border border-white/10 shadow-xs" style={{ backgroundColor: presetDef.brand.accent }} title="Accent Color" />
+                            <span className="w-3.5 h-3.5 rounded-full border border-white/10 shadow-xs" style={{ backgroundColor: presetDef.brand.ai }} title="AI Copilot Color" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Brand Accent Customization */}
+                <div className="space-y-3 pt-4 border-t border-[var(--nova-border)]">
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[var(--nova-text-muted)]">
+                    Primary Brand Color
+                  </label>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Quick Swatch Options */}
+                    {[
+                      { name: "Indigo", color: "#6366F1" },
+                      { name: "Blue", color: "#3B82F6" },
+                      { name: "Teal", color: "#0D9488" },
+                      { name: "Emerald", color: "#10B981" },
+                      { name: "Amber", color: "#F59E0B" },
+                      { name: "Violet", color: "#8B5CF6" },
+                      { name: "Rose", color: "#F43F5E" },
+                    ].map((swatch) => (
+                      <button
+                        key={swatch.color}
+                        type="button"
+                        onClick={() => setCustomBrand({ primary: swatch.color })}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-medium flex items-center gap-2 transition-all cursor-pointer ${
+                          brandColors.primary.toLowerCase() === swatch.color.toLowerCase()
+                            ? "border-[var(--nova-accent)] bg-[var(--nova-accent-subtle)] text-[var(--nova-text-primary)]"
+                            : "border-[var(--nova-border)] bg-[var(--nova-bg)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)]"
+                        }`}
+                      >
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: swatch.color }} />
+                        <span>{swatch.name}</span>
+                      </button>
+                    ))}
+
+                    {/* Custom Hex Picker */}
+                    <div className="flex items-center gap-2 ml-auto">
+                      <input
+                        type="color"
+                        value={brandColors.primary}
+                        onChange={(e) => setCustomBrand({ primary: e.target.value })}
+                        className="w-7 h-7 rounded-md border border-[var(--nova-border)] cursor-pointer bg-transparent shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={brandColors.primary}
+                        onChange={(e) => setCustomBrand({ primary: e.target.value })}
+                        className="w-24 px-2.5 py-1 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-[11px] font-mono focus:border-[var(--nova-accent)] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Live Context Preview Bar */}
+                <div className="p-4 rounded-xl bg-[var(--nova-bg)] border border-[var(--nova-border)] space-y-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--nova-text-muted)] flex items-center justify-between">
+                    <span>Live Accent Preview</span>
+                    <span className="text-[var(--nova-accent)] font-semibold">Active Token: var(--nova-accent)</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-lg bg-[var(--nova-accent)] text-white text-[12px] font-medium shadow-xs"
+                    >
+                      Primary Action Button
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] text-[var(--nova-accent-text)] text-[12px] font-medium"
+                    >
+                      Soft Accent Badge
+                    </button>
+                    <span className="text-[12px] font-medium underline text-[var(--nova-accent)] cursor-pointer">
+                      Interactive Link Text
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)] ml-auto">
+                      Status: Healthy
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB 2: General & Organization Settings ────────────────────────── */}
+        {(activeTab === "general" || activeTab === "all") && (
+          <form
+            onSubmit={handleSaveSettings}
+            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-5 space-y-5"
+          >
+            <div className="pb-3 border-b border-[var(--nova-border)] flex items-center justify-between">
+              <h3 className="text-[13px] font-medium text-[var(--nova-text-primary)]">General Information</h3>
+              <span className="text-[11px] text-[var(--nova-text-muted)] font-mono">Organization details</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-muted)] mb-1">
+                  Workspace Name
+                </label>
+                <input
+                  type="text"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-[12px] focus:outline-none focus:border-[var(--nova-accent)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-muted)] mb-1">
+                  Organization Slug
+                </label>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-[12px] font-mono focus:outline-none focus:border-[var(--nova-accent)]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-[var(--nova-text-muted)] mb-1">
+                Default Git Branch
+              </label>
+              <input
+                type="text"
+                value={defaultBranch}
+                onChange={(e) => setDefaultBranch(e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-[12px] font-mono focus:outline-none focus:border-[var(--nova-accent)] max-w-xs"
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end gap-3 border-t border-[var(--nova-border)]">
               <button
                 type="button"
-                onClick={() => handleTestOutgoingWebhook(hook.id)}
-                disabled={testingWebhookId === hook.id}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-medium transition-all shrink-0 disabled:opacity-50"
+                onClick={handleDeleteOrganization}
+                className="px-3 py-1.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[12px] font-medium border border-rose-500/20 transition-colors"
               >
-                <Radio className={`w-3.5 h-3.5 ${testingWebhookId === hook.id ? "animate-pulse" : ""}`} />
-                <span>{testingWebhookId === hook.id ? "Sending..." : "Send Test Payload"}</span>
+                Delete Organization
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-1.5 rounded-md bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white text-[12px] font-medium transition-colors"
+              >
+                Save Changes
               </button>
             </div>
-          ))}
-        </div>
-      </div>
+          </form>
+        )}
 
-      {/* Danger Zone: Reset Data */}
-      <div className="p-6 rounded-xl bg-rose-500/5 border border-rose-500/20 space-y-4">
-        <div className="flex items-center gap-2 text-rose-400">
-          <AlertTriangle className="w-4 h-4" />
-          <h3 className="text-sm font-semibold">Demo State Management</h3>
-        </div>
+        {/* ─── TAB 3: AI Copilot Settings ────────────────────────────────────── */}
+        {(activeTab === "ai" || activeTab === "all") && <AISettingsPanel />}
 
-        <p className="text-xs text-neutral-400 leading-relaxed">
-          Reset all task statuses, newly created issues, architecture specs, and release traffic sliders back to the pristine enterprise demo baseline.
-        </p>
+        {/* ─── TAB 4: Credentials & Keys ─────────────────────────────────────── */}
+        {(activeTab === "credentials" || activeTab === "all") && <ThirdPartyCredentialsPanel />}
 
-        <button
-          type="button"
-          onClick={handleResetData}
-          disabled={isResetting}
-          className="flex items-center gap-2 px-4 py-2 rounded-md bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-200 text-xs font-medium transition-colors disabled:opacity-50"
-        >
-          <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin" : ""}`} />
-          <span>{isResetting ? "Resetting Demo State..." : "Reset to Demo Data"}</span>
-        </button>
+        {/* ─── TAB 5: Git Providers & Webhooks Hub ───────────────────────────── */}
+        {(activeTab === "integrations" || activeTab === "all") && (
+          <div className="space-y-6">
+            {/* Git Providers */}
+            <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-5 space-y-5">
+              <h3 className="text-[13px] font-medium text-[var(--nova-text-primary)]">Git Providers & Sync</h3>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3.5 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)]">
+                  <div className="flex items-center gap-3">
+                    <Github className="w-5 h-5 text-[var(--nova-text-primary)]" />
+                    <div>
+                      <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">
+                        GitHub Enterprise Sync
+                      </div>
+                      <div className="text-[11px] text-[var(--nova-text-muted)]">
+                        Continuous webhook ingestion for issues, PR reviews, and commit SHAs
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!githubSync) {
+                        addToast({
+                          title: "GitHub Credentials Required",
+                          message: "Configure your GitHub Client ID & Secret in Credentials tab to activate live sync.",
+                          type: "warning",
+                        });
+                      } else {
+                        setGithubSync(false);
+                      }
+                    }}
+                    className={`px-3 py-1 rounded text-[11px] font-mono transition-colors ${
+                      githubSync
+                        ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                        : "bg-[var(--nova-surface)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]"
+                    }`}
+                  >
+                    {githubSync ? "Connected" : "Disconnected"}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)]">
+                  <div className="flex items-center gap-3">
+                    <GitBranch className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">
+                        GitLab Self-Managed
+                      </div>
+                      <div className="text-[11px] text-[var(--nova-text-muted)]">
+                        Pipelines and merge request bidirectional state triggers
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGitlabSync(!gitlabSync)}
+                    className={`px-3 py-1 rounded text-[11px] font-mono transition-colors ${
+                      gitlabSync
+                        ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                        : "bg-[var(--nova-surface)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]"
+                    }`}
+                  >
+                    {gitlabSync ? "Connected" : "Disconnected"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Webhook Simulator */}
+              <div className="pt-3 border-t border-[var(--nova-border)] space-y-3">
+                <div className="text-[12px] font-medium text-[var(--nova-text-primary)] flex items-center gap-2">
+                  <Github className="w-4 h-4 text-[var(--nova-accent)]" />
+                  <span>Interactive Live Webhook Simulator</span>
+                </div>
+                <p className="text-[11px] text-[var(--nova-text-muted)]">
+                  Simulate real-time git pushes, PR merges, and CI passes to test live state mutations on Kanban board:
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSimulateWebhook("push")}
+                    disabled={isSimulatingWebhook}
+                    className="px-3 py-1.5 rounded bg-[var(--nova-bg)] hover:bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[12px] font-mono text-[var(--nova-text-primary)] transition-colors"
+                  >
+                    ⚡ Simulate Git Push
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSimulateWebhook("pull_request_merged")}
+                    disabled={isSimulatingWebhook}
+                    className="px-3 py-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[12px] font-mono text-emerald-600 dark:text-emerald-300 transition-colors"
+                  >
+                    🔀 Simulate PR Merge
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSimulateWebhook("ci_passed")}
+                    disabled={isSimulatingWebhook}
+                    className="px-3 py-1.5 rounded bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[12px] font-mono text-blue-600 dark:text-blue-300 transition-colors"
+                  >
+                    🛡️ Simulate CI Suite Passed
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Outgoing Webhooks Hub */}
+            <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-5 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-[13px] font-medium text-[var(--nova-text-primary)] flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    <span>Outgoing Webhook Integrations</span>
+                  </h3>
+                  <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
+                    Dispatch realtime workspace events (deployments, spec approvals, PR merges) to external services
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded w-fit">
+                  HMAC-SHA256 SIGNED
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {outgoingWebhooks.map((hook) => (
+                  <div
+                    key={hook.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] gap-3"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-[var(--nova-text-primary)] text-[12px]">
+                          {hook.name}
+                        </span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-[var(--nova-surface)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]">
+                          {hook.target}
+                        </span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          {hook.status}
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-mono text-[var(--nova-text-muted)] truncate max-w-md">
+                        {hook.url}
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-[var(--nova-text-muted)] font-mono pt-0.5">
+                        <span>Last delivery: {hook.lastDelivery || "N/A"}</span>
+                        <span>•</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          {hook.deliverySuccessRate}% Success SLA
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleTestOutgoingWebhook(hook.id)}
+                      disabled={testingWebhookId === hook.id}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--nova-accent-subtle)] hover:bg-[var(--nova-accent-subtle)]/80 border border-[var(--nova-accent-border)] text-[var(--nova-accent-text)] text-[12px] font-medium transition-all shrink-0 disabled:opacity-50"
+                    >
+                      <Radio className={`w-3.5 h-3.5 ${testingWebhookId === hook.id ? "animate-pulse" : ""}`} />
+                      <span>{testingWebhookId === hook.id ? "Sending..." : "Send Test Payload"}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB 6: Danger Zone / Reset State ───────────────────────────────── */}
+        {(activeTab === "danger" || activeTab === "all") && (
+          <div className="bg-[var(--nova-surface)] border border-rose-500/30 rounded-lg p-5 space-y-4">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="w-4 h-4" />
+              <h3 className="text-[13px] font-medium">Demo State Management (Danger Zone)</h3>
+            </div>
+
+            <p className="text-[12px] text-[var(--nova-text-muted)] leading-relaxed">
+              Reset all task statuses, newly created issues, architecture specs, and release traffic sliders back to the pristine enterprise demo baseline.
+            </p>
+
+            <button
+              type="button"
+              onClick={handleResetData}
+              disabled={isResetting}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-[12px] font-medium transition-colors disabled:opacity-50"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin" : ""}`} />
+              <span>{isResetting ? "Resetting Demo State..." : "Reset to Demo Data"}</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

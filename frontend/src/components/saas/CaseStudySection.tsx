@@ -12,30 +12,30 @@ export const CaseStudySection: React.FC = () => {
   return (
     <section
       id="case-study"
-      className="section-spacing bg-[var(--color-surface)] border-t border-[var(--color-border)]"
+      className="section-spacing bg-[var(--landing-bg)] border-t border-[var(--landing-border)]"
     >
       <div className="container-site">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-8 md:p-14 relative overflow-hidden">
+        <div className="rounded-3xl border border-[var(--landing-border)] bg-[var(--landing-surface)] p-8 md:p-14 relative overflow-hidden shadow-xs">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             {/* Story narrative */}
             <div className="lg:col-span-7 space-y-6">
               <Reveal>
                 <div className="flex items-center gap-3">
                   <SectionLabel tag="SAMPLE">CASE STUDY</SectionLabel>
-                  <span className="text-xs font-mono text-[var(--color-muted)]">
+                  <span className="text-xs font-mono text-[var(--landing-text-muted)]">
                     {"// Demonstration"}
                   </span>
                 </div>
               </Reveal>
 
               <Reveal delay={0.1}>
-                <h3 className="section-title text-[var(--color-foreground)] tracking-tight">
+                <h3 className="section-title text-[var(--landing-text)] tracking-tight">
                   How Northstar reduced product handoff friction by 64%.
                 </h3>
               </Reveal>
 
               <Reveal delay={0.2}>
-                <p className="text-sm md:text-base text-[var(--color-muted)] leading-relaxed">
+                <p className="text-sm md:text-base text-[var(--landing-text-muted)] leading-relaxed">
                   As Northstar expanded from 12 to 85 engineers across three
                   continents, specification drift and fragmented task tracking
                   tripled cycle times. By consolidating engineering specs, issues,
@@ -55,16 +55,16 @@ export const CaseStudySection: React.FC = () => {
             <div className="lg:col-span-5 space-y-4">
               {caseStudy.metrics.map((m, idx) => (
                 <Reveal key={m.label} delay={0.15 * idx}>
-                  <div className="p-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col justify-between">
+                  <div className="p-5 rounded-2xl border border-[var(--landing-border)] bg-[var(--landing-surface-muted)] flex flex-col justify-between">
                     <div className="flex items-baseline justify-between mb-1">
-                      <span className="text-xs font-mono text-[var(--color-muted)] uppercase">
+                      <span className="text-xs font-mono text-[var(--landing-text-muted)] uppercase">
                         {m.label}
                       </span>
-                      <span className="text-2xl font-bold font-mono text-[var(--color-accent)]">
+                      <span className="text-2xl font-bold font-mono text-[var(--landing-primary)]">
                         {m.value}
                       </span>
                     </div>
-                    <span className="text-xs text-[var(--color-muted)]">
+                    <span className="text-xs text-[var(--landing-text-muted)]">
                       {m.change}
                     </span>
                   </div>

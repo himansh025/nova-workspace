@@ -76,6 +76,54 @@ export const organizationController = {
     }
   },
 
+  async update(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId;
+      const { name, slug } = req.body;
+      
+      const updateData: any = {};
+      if (name && name.trim().length > 0) updateData.name = name.trim();
+      if (slug && slug.trim().length > 0) updateData.slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
+
+      const org = await OrganizationModel.findOneAndUpdate(
+        { id: orgId, deletedAt: null },
+        { $set: updateData },
+        { new: true }
+      );
+
+      if (!org) {
+        return res.status(404).json({ success: false, error: "Organization not found." });
+      }
+
+      return res.json({ success: true, organization: org });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  },
+
+  async deleteOrg(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId;
+
+      const org = await OrganizationModel.findOneAndUpdate(
+        { id: orgId, deletedAt: null },
+        { $set: { deletedAt: new Date() } },
+        { new: true }
+      );
+
+      if (!org) {
+        return res.status(404).json({ success: false, error: "Organization not found." });
+      }
+
+      // Optionally, you could also soft delete related items like team members, projects, etc.
+      // But for a SaaS, just deleting the org and dropping access is often enough if queries strictly filter by org ID.
+
+      return res.json({ success: true, message: "Organization deleted successfully." });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  },
+
   async listMembers(req: Request, res: Response) {
     try {
       const orgId = (req as any).organizationId;

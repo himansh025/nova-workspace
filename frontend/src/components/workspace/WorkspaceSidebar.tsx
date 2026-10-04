@@ -16,8 +16,7 @@ import {
   Users,
   FolderKanban,
   Settings,
-  ArrowLeft,
-  LogOut
+  LogOut,
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { UserProfileModal } from "./UserProfileModal";
@@ -28,9 +27,28 @@ interface WorkspaceSidebarProps {
   onCloseMobile?: () => void;
 }
 
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  exact?: boolean;
+  /** Show a neutral count badge */
+  count?: number;
+  /** Show a tiny accent dot instead of a text badge */
+  isNew?: boolean;
+  /** Override icon color class (for AI accent, etc.) */
+  iconClass?: string;
+}
+
+interface NavSection {
+  /** Section header label — undefined means no header rendered */
+  header?: string;
+  items: NavItem[];
+}
+
 export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   className = "",
-  onCloseMobile
+  onCloseMobile,
 }) => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -61,160 +79,229 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       .catch(() => {});
   }, [pathname]);
 
-  interface NavItem {
-    label: string;
-    href: string;
-    icon: React.ReactNode;
-    exact?: boolean;
-    count?: number;
-    badge?: string;
-  }
-
-  const navLinks: NavItem[] = [
+  /** Organized nav sections per design spec */
+  const navSections: NavSection[] = [
     {
-      label: "Overview",
-      href: "/app",
-      icon: <LayoutDashboard className="w-4 h-4" />,
-      exact: true
+      // Section 1 — ENGINEERING (primary, no header label)
+      items: [
+        {
+          label: "Overview",
+          href: "/app",
+          icon: <LayoutDashboard size={14} />,
+          exact: true,
+        },
+        {
+          label: "Tasks & Board",
+          href: "/app/tasks",
+          icon: <CheckSquare size={14} />,
+          count: counts.tasks,
+        },
+        {
+          label: "Sprint Planning",
+          href: "/app/sprints",
+          icon: <Zap size={14} />,
+        },
+        {
+          label: "Pull Requests",
+          href: "/app/pull-requests",
+          icon: <GitPullRequest size={14} />,
+        },
+      ],
     },
     {
-      label: "Tasks & Board",
-      href: "/app/tasks",
-      icon: <CheckSquare className="w-4 h-4" />,
-      count: counts.tasks
+      // Section 2 — ARCHITECTURE
+      header: "Architecture",
+      items: [
+        {
+          label: "Architecture Specs",
+          href: "/app/specs",
+          icon: <FileCode2 size={14} />,
+          count: counts.specs,
+        },
+        {
+          label: "Service Mesh",
+          href: "/app/architecture",
+          icon: <Network size={14} />,
+        },
+      ],
     },
     {
-      label: "Sprint Planning",
-      href: "/app/sprints",
-      icon: <Zap className="w-4 h-4 text-amber-400" />
+      // Section 3 — INTELLIGENCE (AI gets violet icon text-[var(--nova-ai)])
+      header: "Intelligence",
+      items: [
+        {
+          label: "AI Copilot",
+          href: "/app/ai",
+          icon: <Sparkles size={14} />,
+          iconClass: "text-[var(--nova-ai)]",
+        },
+        {
+          label: "Telemetry & Signals",
+          href: "/app/insights",
+          icon: <TrendingUp size={14} />,
+        },
+      ],
     },
     {
-      label: "Pull Requests",
-      href: "/app/pull-requests",
-      icon: <GitPullRequest className="w-4 h-4 text-purple-400" />
+      // Section 4 — OPERATIONS
+      header: "Operations",
+      items: [
+        {
+          label: "Releases & Canary",
+          href: "/app/releases",
+          icon: <Rocket size={14} />,
+        },
+        {
+          label: "Projects",
+          href: "/app/projects",
+          icon: <FolderKanban size={14} />,
+        },
+        {
+          label: "Team Directory",
+          href: "/app/team",
+          icon: <Users size={14} />,
+          count: counts.team,
+        },
+      ],
     },
-    {
-      label: "Architecture Specs",
-      href: "/app/specs",
-      icon: <FileCode2 className="w-4 h-4" />,
-      count: counts.specs
-    },
-    {
-      label: "Service Mesh",
-      href: "/app/architecture",
-      icon: <Network className="w-4 h-4 text-emerald-400" />
-    },
-    {
-      label: "AI Copilot",
-      href: "/app/ai",
-      icon: <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
-    },
-    {
-      label: "Telemetry & Signals",
-      href: "/app/insights",
-      icon: <TrendingUp className="w-4 h-4" />
-    },
-    {
-      label: "Releases & Canary",
-      href: "/app/releases",
-      icon: <Rocket className="w-4 h-4 text-emerald-400" />
-    },
-    {
-      label: "Team Directory",
-      href: "/app/team",
-      icon: <Users className="w-4 h-4" />,
-      count: counts.team
-    },
-    {
-      label: "Projects",
-      href: "/app/projects",
-      icon: <FolderKanban className="w-4 h-4" />
-    },
-    {
-      label: "Settings",
-      href: "/app/settings",
-      icon: <Settings className="w-4 h-4" />
-    }
   ];
+
+  /** Determine if a nav item is active */
+  const isItemActive = (item: NavItem) =>
+    item.exact ? pathname === item.href : pathname.startsWith(item.href);
+
+  /** Render a single nav row */
+  const NavRow = ({ item }: { item: NavItem }) => {
+    const active = isItemActive(item);
+    return (
+      <Link
+        href={item.href}
+        onClick={onCloseMobile}
+        className={`relative flex items-center justify-between px-3 py-[7px] rounded transition-all duration-150 group ${
+          active
+            ? "border-l-2 border-[var(--nova-accent)] bg-[var(--nova-accent-subtle)] text-[var(--nova-text-primary)] font-medium pl-[10px]"
+            : "border-l-2 border-transparent text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] pl-[10px]"
+        }`}
+      >
+        {/* Icon + Label */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className={`shrink-0 transition-colors duration-150 ${
+              item.iconClass
+                ? item.iconClass
+                : active
+                ? "text-[var(--nova-accent)]"
+                : "text-[var(--nova-text-muted)] group-hover:text-[var(--nova-text-primary)]"
+            }`}
+          >
+            {item.icon}
+          </span>
+          <span
+            className={`text-[11px] truncate transition-colors duration-150 ${
+              active
+                ? "text-[var(--nova-text-primary)] font-medium"
+                : "text-[var(--nova-text-secondary)] group-hover:text-[var(--nova-text-primary)]"
+            }`}
+          >
+            {item.label}
+          </span>
+        </div>
+
+        {/* Right-side decorators */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Accent dot for 'new' items */}
+          {item.isNew && (
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--nova-accent)] shrink-0" />
+          )}
+          {/* Neutral count badge */}
+          {item.count !== undefined && (
+            <span className="font-mono text-[10px] bg-[var(--nova-deep)] text-[var(--nova-text-muted)] px-1.5 py-0.5 rounded leading-none">
+              {item.count}
+            </span>
+          )}
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <aside
-      className={`w-64 bg-[#0B0C0E] border-r border-white/10 flex flex-col justify-between select-none text-neutral-300 text-xs font-sans shrink-0 h-full overflow-y-auto no-scrollbar ${className}`}
+      className={`w-[240px] bg-[var(--nova-sidebar)] border-r border-[var(--nova-border)] flex flex-col select-none shrink-0 h-full overflow-y-auto no-scrollbar ${className}`}
     >
-      <div className="p-3">
-        {/* Multi-Tenant Organization Switcher */}
+      {/* ── Brand Logo & OrgSwitcher Header ── */}
+      <div className="px-3 pt-3 space-y-2">
+        <Link href="/" className="flex items-center px-1 py-1 group">
+          <img
+            src="/brand/logo-mark.png"
+            alt="Nova Workspace Logo"
+            className="h-7 w-auto object-contain transition-transform group-hover:scale-[1.05]"
+          />
+        </Link>
         <OrgSwitcher />
-
-        {/* Navigation Group */}
-        <div className="space-y-1">
-          <div className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-            Lifecycle Modules
-          </div>
-
-          {navLinks.map((item) => {
-            const isActive = item.exact
-              ? pathname === item.href
-              : pathname.startsWith(item.href);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onCloseMobile}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-all ${
-                  isActive
-                    ? "bg-[var(--color-accent)]/20 text-white font-medium border border-[var(--color-accent)]/40 shadow-xs"
-                    : "hover:bg-white/5 text-neutral-400 hover:text-white"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className={isActive ? "text-[var(--color-accent)]" : "text-neutral-400"}>
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                </div>
-                {item.badge && (
-                  <span className="px-1.5 py-0.5 text-[9px] font-mono bg-[var(--color-accent)]/20 text-[var(--color-accent)] rounded border border-[var(--color-accent)]/30">
-                    {item.badge}
-                  </span>
-                )}
-                {item.count !== undefined && (
-                  <span className="text-[10px] font-mono text-neutral-500 bg-white/5 px-1.5 py-0.5 rounded">
-                    {item.count}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Bottom Profile & Exit to Marketing */}
-      <div className="p-3 border-t border-white/10 bg-[#0E1015] space-y-2">
+      {/* ── Main nav ── (grows to fill space) */}
+      <nav className="flex-1 px-2 pb-2 space-y-4 overflow-y-auto no-scrollbar">
+        {navSections.map((section, si) => (
+          <div key={si}>
+            {/* Section header */}
+            {section.header && (
+              <div className="px-3 pt-1 pb-1">
+                <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--nova-text-muted)]">
+                  {section.header}
+                </span>
+              </div>
+            )}
+            {/* Section items */}
+            <div className="space-y-px">
+              {section.items.map((item) => (
+                <NavRow key={item.href} item={item} />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Divider before Settings */}
+        <div className="border-t border-[var(--nova-border)] pt-1">
+          <NavRow
+            item={{
+              label: "Settings",
+              href: "/app/settings",
+              icon: <Settings size={14} />,
+            }}
+          />
+        </div>
+      </nav>
+
+      {/* ── Bottom: user area (pinned) ── */}
+      <div className="bg-[var(--nova-deep)] border-t border-[var(--nova-border)] px-2 py-2 space-y-1 shrink-0">
+        {/* Sign Out — ghost danger treatment */}
         <button
           type="button"
           onClick={() => void logout()}
-          className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors text-[11px]"
+          className="w-full flex items-center gap-2 px-3 py-1.5 rounded text-[11px] text-[var(--nova-text-muted)] hover:text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-all duration-150"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut size={13} />
           <span>Sign Out</span>
         </button>
 
-        {/* Interactive User Persona Trigger */}
+        {/* User profile trigger */}
         <button
+          type="button"
           onClick={() => setIsProfileModalOpen(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md  hover:bg-white/10  text-left transition-colors group cursor-pointer"
           title="Manage User Profile & Identity"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded hover:bg-[var(--nova-sidebar)] text-left transition-all duration-150 group cursor-pointer"
         >
-          <div className="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[11px] font-bold text-indigo-400 shrink-0">
+          {/* Avatar initial — rounded-lg with initials in accent color bg var(--nova-accent-subtle) text var(--nova-accent) */}
+          <div className="w-6 h-6 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center text-[11px] font-bold text-[var(--nova-accent)] shrink-0">
             {user?.initials || "U"}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[11px] font-medium text-white truncate group-hover:text-indigo-400 transition-colors">
+            <span className="text-[11px] font-medium text-[var(--nova-text-primary)] truncate group-hover:text-[var(--nova-accent)] transition-colors duration-150">
               {user?.name || "Workspace Member"}
             </span>
-            <span className="text-[9px] font-mono text-neutral-400 truncate">
-              {(user?.role || "Engineer")}
+            <span className="text-[10px] font-mono text-[var(--nova-text-muted)] truncate">
+              {user?.role || "Engineer"}
             </span>
           </div>
         </button>

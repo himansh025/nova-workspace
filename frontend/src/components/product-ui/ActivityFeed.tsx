@@ -29,7 +29,7 @@ export const ActivityFeed: React.FC = () => {
   ];
 
   return (
-    <div className="bg-[#111216] border border-white/10 rounded-lg p-3 text-xs text-neutral-300">
+    <div className="bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg p-3 text-xs text-[var(--nova-text-primary)]">
       <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 mb-2.5">
         Live Activity Stream
       </div>
@@ -38,7 +38,7 @@ export const ActivityFeed: React.FC = () => {
           <div key={idx} className="flex items-start gap-2.5 text-[11px]">
             <div className="mt-0.5 shrink-0">{e.icon}</div>
             <div className="flex-1 leading-snug">
-              <span className="font-medium text-white">{e.user}</span>{" "}
+              <span className="font-medium text-[var(--nova-text-primary)]">{e.user}</span>{" "}
               <span className="text-neutral-400">{e.action}</span>{" "}
               <span className="text-neutral-200 font-mono text-[10px]">{e.target}</span>
             </div>

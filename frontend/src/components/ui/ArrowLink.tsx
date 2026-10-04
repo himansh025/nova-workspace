@@ -17,7 +17,7 @@ export const ArrowLink: React.FC<ArrowLinkProps> = ({
 }) => {
   const content = (
     <span
-      className={`group inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] transition-colors duration-150 ${className}`}
+      className={`group inline-flex items-center gap-1.5 text-sm font-medium text-[var(--landing-primary)] hover:text-[var(--landing-primary-hover)] transition-colors duration-150 ${className}`}
     >
       <span>{children}</span>
       <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />

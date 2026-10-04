@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { organizationController } from "../controllers/organizationController";
-import { authGuard, requirePermission } from "../middlewares/auth";
+import { authGuard, requirePermission, requireOrg } from "../middlewares/auth";
 
 const router = Router();
 
@@ -8,6 +8,8 @@ const router = Router();
 router.use(authGuard);
 
 router.get("/", organizationController.getActive);
+router.patch("/", requireOrg, requirePermission("organization:manage"), organizationController.update);
+router.delete("/", requireOrg, requirePermission("organization:manage"), organizationController.deleteOrg);
 router.get("/list", organizationController.listUserOrgs);
 router.post("/", organizationController.create);
 router.get("/members", organizationController.listMembers);

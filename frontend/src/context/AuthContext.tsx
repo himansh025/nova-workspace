@@ -14,6 +14,27 @@ export interface User {
   createdAt?: string;
 }
 
+if (typeof window !== "undefined") {
+  const originalFetch = window.fetch;
+  window.fetch = async (...args) => {
+    let [resource, config] = args;
+    const activeOrgId = localStorage.getItem("nova_active_org_id");
+    
+    // Only apply x-organization-id to internal /api routes
+    if (activeOrgId && typeof resource === "string" && resource.startsWith("/api")) {
+      if (!config) config = {};
+      if (!config.headers) config.headers = {};
+      if (config.headers instanceof Headers) {
+        config.headers.set("x-organization-id", activeOrgId);
+      } else {
+        (config.headers as Record<string, string>)["x-organization-id"] = activeOrgId;
+      }
+    }
+    return originalFetch(resource, config);
+  };
+}
+
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;

@@ -8,7 +8,7 @@ export interface ITeamMemberDocument extends Omit<TeamMember, "id">, Document {
 
 const TeamMemberSchema = new Schema<ITeamMemberDocument>(
   {
-    id: { type: String, required: true, unique: true, index: true },
+    id: { type: String, required: true, index: true },
     organizationId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     email: { type: String, required: true, index: true, lowercase: true },
@@ -25,6 +25,7 @@ const TeamMemberSchema = new Schema<ITeamMemberDocument>(
   { timestamps: true }
 );
 
+TeamMemberSchema.index({ organizationId: 1, id: 1 }, { unique: true });
 TeamMemberSchema.index({ organizationId: 1, email: 1 });
 
 export const TeamMemberModel: Model<ITeamMemberDocument> =

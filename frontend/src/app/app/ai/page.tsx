@@ -10,7 +10,6 @@ import {
   RefreshCw
 } from "lucide-react";
 import Link from "next/link";
-import { Skeleton } from "@/components/workspace/Skeletons";
 
 interface ChatMessage {
   id: string;
@@ -131,90 +130,101 @@ export default function AIPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#111216] text-neutral-200">
-      {/* Header Bar */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-        <div>
+    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
+      {/* ── Header ── */}
+      <div className="px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-md bg-[var(--color-accent)]/20 border border-[var(--color-accent)]/40 flex items-center justify-center text-[var(--color-accent)]">
-              <Sparkles className="w-3 h-3" />
+            {/* AI icon badge */}
+            <div className="w-6 h-6 bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] rounded-md flex items-center justify-center shrink-0">
+              <Sparkles className="w-[13px] h-[13px] text-[var(--nova-ai)]" />
             </div>
-            <h1 className="text-xl font-semibold text-white">NOVA Context Engine</h1>
+            <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)]">
+              NOVA Context Engine
+            </h1>
           </div>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Realtime multi-repo semantic graph • Grounded in open issues, specs, and telemetry
+          <p className="text-[12px] text-[var(--nova-text-muted)] pl-8">
+            Realtime multi-repo semantic graph · Grounded in open issues, specs &amp; telemetry
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Vector Context Live: main@4f81c9a</span>
+        {/* Status badge — right */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)] rounded text-[10px] font-mono shrink-0">
+          <span className="w-[5px] h-[5px] rounded-full bg-[var(--nova-success)] animate-pulse shrink-0" />
+          <span>Context Live: main@4f81c9a</span>
         </div>
       </div>
 
-      {/* Main Conversation Stream */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-4xl mx-auto w-full no-scrollbar">
+      {/* ── Conversation stream ── */}
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 max-w-3xl mx-auto w-full nova-scroll">
         {messages.map((msg, idx) => (
-          <div key={`${msg.id}-${idx}`} className="space-y-2">
+          <div key={`${msg.id}-${idx}`}>
             {msg.sender === "user" ? (
-              /* User Bubble */
+              /* ── User bubble ── */
               <div className="flex items-start justify-end gap-2.5">
-                <div className="bg-[var(--color-accent)] text-white px-4 py-2.5 rounded-xl rounded-tr-xs text-xs max-w-lg shadow-sm">
+                <div className="bg-[var(--nova-accent)] text-white px-3.5 py-2 rounded-lg rounded-br-sm text-[12px] max-w-lg shadow-xs leading-relaxed">
                   {msg.promptLabel}
                 </div>
-                <div className="w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5">
-                  ER
+                {/* User avatar */}
+                <div className="w-6 h-6 rounded-full bg-[var(--nova-surface)] border border-[var(--nova-border)] flex items-center justify-center text-[9px] font-bold text-[var(--nova-text-secondary)] shrink-0 mt-0.5">
+                  ME
                 </div>
               </div>
             ) : (
-              /* AI Response Bubble */
+              /* ── AI response ── */
               <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-[var(--color-accent)]/20 border border-[var(--color-accent)]/40 flex items-center justify-center text-[var(--color-accent)] shrink-0 mt-1">
-                  <Sparkles className="w-3.5 h-3.5" />
+                {/* AI icon badge */}
+                <div className="w-7 h-7 bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] rounded-md flex items-center justify-center shrink-0 mt-1">
+                  <Sparkles className="w-[13px] h-[13px] text-[var(--nova-ai)]" />
                 </div>
 
-                <div className="flex-1 bg-[#161822] border border-white/10 rounded-xl p-4 sm:p-5 space-y-3.5 shadow-sm text-xs text-neutral-200">
-                  {/* Summary Statement */}
-                  <div className="text-white font-medium leading-relaxed text-xs sm:text-sm">
-                    {msg.summary}
-                  </div>
+                {/* Content card */}
+                <div className="flex-1 bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-4 space-y-3">
+                  {/* Summary */}
+                  {msg.summary && (
+                    <p className="text-[12px] text-[var(--nova-text-primary)] leading-relaxed">
+                      {msg.summary}
+                    </p>
+                  )}
 
-                  {/* Bullet Insights */}
+                  {/* Bullet insights */}
                   {msg.bullets && msg.bullets.length > 0 && (
-                    <div className="space-y-2 pt-1 border-t border-white/5">
-                      {msg.bullets.map((bullet, idx) => (
-                        <div key={idx} className="flex items-start gap-2.5 text-neutral-300">
-                          <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="border-t border-[var(--nova-border-muted)] pt-2.5 space-y-1.5">
+                      {msg.bullets.map((bullet, bIdx) => (
+                        <div key={bIdx} className="flex items-start gap-2 text-[11px] text-[var(--nova-text-secondary)]">
+                          <CheckCircle className="w-3 h-3 text-[var(--nova-success)] shrink-0 mt-0.5" />
                           <span className="leading-snug">{bullet}</span>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Action Required Block */}
+                  {/* Action required block */}
                   {msg.actionRequired && (
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-2.5 text-amber-300 text-xs">
-                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="bg-[var(--nova-warning-subtle)] border-l-2 border-[var(--nova-warning)] rounded-r-md p-3 flex items-start gap-2 text-[var(--nova-warning-text)]">
+                      <AlertTriangle className="w-[13px] h-[13px] text-[var(--nova-warning)] shrink-0 mt-0.5" />
                       <div>
-                        <span className="font-semibold block mb-0.5 text-amber-200">
+                        <p className="text-[11px] font-medium text-[var(--nova-warning-text)] mb-0.5">
                           Recommended Action
-                        </span>
-                        <span className="leading-relaxed">{msg.actionRequired}</span>
+                        </p>
+                        <p className="text-[11px] text-[var(--nova-text-secondary)] leading-relaxed">
+                          {msg.actionRequired}
+                        </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Citations / Links to Real Issues */}
+                  {/* Citations footer */}
                   {msg.citations && msg.citations.length > 0 && (
-                    <div className="pt-2 border-t border-white/5 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-mono text-neutral-500 mr-1">
-                        Indexed Issues:
+                    <div className="border-t border-[var(--nova-border-muted)] pt-2.5 flex flex-wrap gap-1.5 items-center">
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--nova-text-muted)] mr-0.5">
+                        Sources:
                       </span>
                       {msg.citations.map((c) => (
                         <Link
                           key={c.key}
                           href="/app/tasks"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-[var(--color-accent)] transition-colors"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--nova-deep)] border border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] hover:bg-[var(--nova-accent-subtle)] text-[var(--nova-accent)] rounded font-mono text-[10px] transition-colors duration-150"
                         >
                           <span>{c.key}</span>
                           <ArrowUpRight className="w-2.5 h-2.5 opacity-60" />
@@ -228,25 +238,23 @@ export default function AIPage() {
           </div>
         ))}
 
-        {/* Thinking Indicator */}
+        {/* ── Thinking indicator ── */}
         {isThinking && (
-          <div className="flex items-start gap-3 animate-fadeIn">
-            <div className="w-7 h-7 rounded-lg bg-[var(--color-accent)]/20 border border-[var(--color-accent)]/40 flex items-center justify-center text-[var(--color-accent)] shrink-0 mt-1">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--color-accent)]" />
+          <div className="flex items-start gap-3">
+            <div className="w-7 h-7 bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] rounded-md flex items-center justify-center shrink-0 mt-1">
+              <Sparkles className="w-[13px] h-[13px] text-[var(--nova-ai)]" />
             </div>
-            <div className="flex-1 bg-[#161822] border border-white/10 rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
-              <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-accent)]">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Synthesizing repository graph, open issues, and pull requests...</span>
+            <div className="flex-1 bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-3 shadow-xs">
+              {/* Synthesizing status */}
+              <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--nova-ai)]">
+                <RefreshCw className="w-3 h-3 animate-spin text-[var(--nova-ai)]" />
+                <span>Synthesizing...</span>
               </div>
-              <div className="space-y-2 pt-1">
-                <Skeleton className="h-4 w-11/12" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-3/5" />
-              </div>
-              <div className="pt-2 border-t border-white/5 flex gap-2">
-                <Skeleton className="h-5 w-20 rounded" />
-                <Skeleton className="h-5 w-24 rounded" />
+              {/* Skeleton lines */}
+              <div className="space-y-2">
+                <div className="bg-[var(--nova-border-muted)] rounded h-3 w-full animate-pulse" />
+                <div className="bg-[var(--nova-border-muted)] rounded h-3 w-4/5 animate-pulse" />
+                <div className="bg-[var(--nova-border-muted)] rounded h-3 w-3/5 animate-pulse" />
               </div>
             </div>
           </div>
@@ -255,42 +263,40 @@ export default function AIPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Bottom Preset Inquiries & Custom Input */}
-      <div className="p-4 sm:p-5 border-t border-white/10 bg-[#0E1015] shrink-0 space-y-3 max-w-4xl mx-auto w-full">
-        {/* Preset Prompt Pills */}
+      {/* ── Bottom input area ── */}
+      <div className="px-5 py-4 border-t border-[var(--nova-border)] bg-[var(--nova-surface)] shrink-0 space-y-3 max-w-3xl mx-auto w-full">
+        {/* Quick prompt pills */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-mono uppercase text-neutral-500 mr-1">
-            Quick Inquiries:
+          <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--nova-text-muted)]">
+            Quick Prompts
           </span>
           {initialPrompts.map((p) => (
             <button
               key={p.id}
               onClick={() => handlePresetQuery(p.id, p.label)}
-              className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-[11px] text-neutral-300 hover:text-white transition-all flex items-center gap-1"
+              disabled={isThinking}
+              className="bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-ai-text)] hover:bg-[var(--nova-ai-subtle)] rounded px-2.5 py-1 text-[11px] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <span>{p.label}</span>
-              <ArrowUpRight className="w-2.5 h-2.5 opacity-50" />
+              {p.label}
             </button>
           ))}
         </div>
 
-        {/* Custom Input Bar */}
+        {/* Custom input form */}
         <form onSubmit={handleSendCustom} className="flex items-center gap-2">
-          <div className="flex-1 relative flex items-center">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask NOVA about issues, PRs, architecture, or code..."
-              className="w-full px-4 py-2.5 rounded-lg bg-[#161820] border border-white/10 text-white placeholder-neutral-500 text-xs focus:outline-hidden focus:border-[var(--color-accent)] pr-10"
-            />
-          </div>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Ask NOVA about issues, PRs, architecture, or code..."
+            className="flex-1 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] focus:border-[var(--nova-accent)] rounded-md px-3.5 py-2 text-[12px] placeholder-[var(--nova-text-muted)] outline-none transition-colors duration-150"
+          />
           <button
             type="submit"
             disabled={!inputValue.trim() || isThinking}
-            className="p-2.5 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white disabled:opacity-40 transition-colors shrink-0"
+            className="bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed p-2 rounded text-white transition-colors duration-150 shrink-0"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-[14px] h-[14px]" />
           </button>
         </form>
       </div>

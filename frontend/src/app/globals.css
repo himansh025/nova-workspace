@@ -4,17 +4,30 @@
 @theme inline {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  
-  --color-background: var(--color-background);
-  --color-surface: var(--color-surface);
-  --color-surface-muted: var(--color-surface-muted);
-  --color-foreground: var(--color-foreground);
-  --color-muted: var(--color-muted);
-  --color-muted-subtle: var(--color-muted-subtle);
-  --color-border: var(--color-border);
-  --color-accent: var(--color-accent);
-  --color-accent-foreground: var(--color-accent-foreground);
-  --color-dark: var(--color-dark);
+
+  /* Surface hierarchy */
+  --color-background: var(--nova-bg);
+  --color-surface: var(--nova-surface);
+  --color-surface-muted: var(--nova-elevated);
+  --color-surface-elevated: var(--nova-deep);
+
+  /* Text */
+  --color-foreground: var(--nova-text-primary);
+  --color-muted: var(--nova-text-secondary);
+  --color-muted-subtle: var(--nova-text-muted);
+
+  /* Borders */
+  --color-border: var(--nova-border);
+  --color-border-subtle: var(--nova-border-muted);
+  --color-border-strong: var(--nova-border-strong);
+
+  /* Accent */
+  --color-accent: var(--nova-accent);
+  --color-accent-hover: var(--nova-accent-hover);
+  --color-accent-foreground: var(--nova-accent-text);
+
+  /* Dark compat */
+  --color-dark: var(--nova-bg);
 }
 
 * {
@@ -23,8 +36,8 @@
 
 html {
   scroll-behavior: smooth;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  background-color: var(--nova-bg);
+  color: var(--nova-text-primary);
   text-rendering: optimizeLegibility;
 }
 
@@ -35,8 +48,8 @@ html, body {
 
 body {
   margin: 0;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  background-color: var(--nova-bg);
+  color: var(--nova-text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -88,31 +101,31 @@ body {
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--nova-text-muted);
 }
 
-/* Subtle technical grid background */
+/* Barely visible warm subtle grid for landing page */
 .tech-grid {
-  background-size: 40px 40px;
-  background-image: 
-    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-image:
+    linear-gradient(to right, rgba(23, 23, 23, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(23, 23, 23, 0.025) 1px, transparent 1px);
 }
 
 .dark-tech-grid {
   background-size: 40px 40px;
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
 
 /* Thin border utility */
 .border-subtle {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--nova-border);
 }
 
 .border-dark-subtle {
-  border: 1px solid var(--color-dark-border);
+  border: 1px solid var(--nova-border-muted);
 }
 
 /* Scrollbar styling */
@@ -143,36 +156,116 @@ body {
   }
 }
 
-/* Skeleton Shimmer Keyframes */
+/* =========================================
+   NOVA WORKSPACE UTILITY CLASSES
+   ========================================= */
+
+/* Surface hierarchy helpers */
+.nova-surface {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+}
+
+.nova-elevated {
+  background: var(--nova-elevated);
+  border: 1px solid var(--nova-border);
+  box-shadow: var(--shadow-card);
+}
+
+.nova-card {
+  background: var(--nova-surface);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* Form input */
+.nova-input {
+  background: var(--nova-bg);
+  border: 1px solid var(--nova-border);
+  border-radius: var(--radius-md);
+  color: var(--nova-text-primary);
+  font-size: 12px;
+  padding: 6px 10px;
+  transition: border-color var(--transition-base);
+  outline: none;
+}
+.nova-input:focus {
+  border-color: var(--nova-accent);
+  box-shadow: var(--shadow-accent-glow);
+}
+.nova-input::placeholder {
+  color: var(--nova-text-placeholder);
+}
+
+/* Status dot indicators */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot-success { background: var(--nova-success); }
+.status-dot-warning { background: var(--nova-warning); }
+.status-dot-danger  { background: var(--nova-danger); }
+.status-dot-info    { background: var(--nova-info); }
+.status-dot-muted   { background: var(--nova-text-muted); }
+.status-dot-ai      { background: var(--nova-ai); }
+
+/* Sidebar nav active state treatment */
+.nova-nav-active {
+  border-left: 2px solid var(--nova-accent);
+  background: var(--nova-accent-subtle);
+  color: var(--nova-text-primary);
+  padding-left: calc(12px - 2px);
+}
+.nova-nav-inactive {
+  border-left: 2px solid transparent;
+  color: var(--nova-text-secondary);
+  padding-left: 12px;
+}
+.nova-nav-inactive:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--nova-text-primary);
+}
+
+/* Slim scrollbar for workspace panels */
+.nova-scroll::-webkit-scrollbar { width: 4px; }
+.nova-scroll::-webkit-scrollbar-track { background: transparent; }
+.nova-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+.nova-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+
+/* Separator */
+.nova-sep {
+  height: 1px;
+  background: var(--nova-border-muted);
+  margin: 4px 0;
+}
+
+/* Skeleton shimmer — calibrated for dark surfaces */
 @keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .skeleton-shimmer {
   position: relative;
   overflow: hidden;
-  background-color: rgba(255, 255, 255, 0.04);
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
 }
-
 .skeleton-shimmer::after {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.03) 20%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  animation: shimmer 1.8s infinite ease-in-out;
   content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.04) 40%,
+    rgba(255,255,255,0.07) 50%,
+    rgba(255,255,255,0.04) 60%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite ease-in-out;
 }

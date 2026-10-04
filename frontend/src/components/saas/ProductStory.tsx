@@ -53,23 +53,23 @@ export const ProductStory: React.FC = () => {
   return (
     <section
       id="product-story"
-      className="relative bg-[#07080A] text-white border-t border-white/10"
+      className="relative bg-[var(--landing-bg)] text-[var(--landing-text)] border-t border-[var(--landing-border)]"
     >
       {/* 11. PRODUCT INTRO HEADER */}
       <div className="pt-24 md:pt-32 pb-16 container-site text-center">
-        <SectionLabel isDark className="mb-5">
+        <SectionLabel className="mb-5">
           ✦ SIGNATURE WORKSPACE ARCHITECTURE
         </SectionLabel>
 
-        <h2 className="section-title text-white uppercase max-w-3xl mx-auto tracking-tight">
+        <h2 className="section-title text-[var(--landing-text)] uppercase max-w-3xl mx-auto tracking-tight">
           ONE WORKSPACE.
           <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-[var(--color-accent)]">
+          <span className="text-[var(--landing-primary)]">
             LESS FRICTION.
           </span>
         </h2>
 
-        <p className="mt-5 text-base md:text-lg text-neutral-400 max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-5 text-base md:text-lg text-[var(--landing-text-muted)] max-w-2xl mx-auto leading-relaxed">
           From the first idea to the final release, NOVA keeps your product work
           connected and visible. Scroll to explore the end-to-end lifecycle.
         </p>
@@ -84,8 +84,8 @@ export const ProductStory: React.FC = () => {
               onClick={() => setActiveStep(idx)}
               className={`px-4 py-2 rounded-full text-xs font-mono tracking-wider shrink-0 transition-all ${
                 activeStep === idx
-                  ? "bg-[var(--color-accent)] text-white font-semibold"
-                  : "bg-white/10 text-neutral-400 hover:text-white"
+                  ? "bg-[var(--landing-primary)] text-white font-semibold"
+                  : "bg-[var(--landing-surface)] text-[var(--landing-text-muted)] border border-[var(--landing-border)] hover:text-[var(--landing-text)]"
               }`}
             >
               {stage.step} {stage.tab}
@@ -93,19 +93,19 @@ export const ProductStory: React.FC = () => {
           ))}
         </div>
 
-        <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-accent)]">
+        <div className="mb-6 p-5 rounded-2xl bg-[var(--landing-surface)] border border-[var(--landing-border)] shadow-xs">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--landing-primary)] font-semibold">
             {productStoryStages[activeStep].badge}
           </span>
-          <h3 className="text-lg font-medium text-white mt-1">
+          <h3 className="text-lg font-medium text-[var(--landing-text)] mt-1">
             {productStoryStages[activeStep].title}
           </h3>
-          <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+          <p className="text-xs text-[var(--landing-text-muted)] mt-1 leading-relaxed">
             {productStoryStages[activeStep].description}
           </p>
         </div>
 
-        <div className="h-[520px]">
+        <div className="h-[520px] w-full relative drop-shadow-xl">
           <WorkspaceDemo currentStepIndex={activeStep} />
         </div>
       </div>
@@ -114,12 +114,12 @@ export const ProductStory: React.FC = () => {
       <div ref={containerRef} className="hidden lg:block relative w-full">
         <div
           ref={stickyWrapperRef}
-          className="relative w-full h-screen flex flex-col justify-between pt-16 pb-8 px-6 md:px-12 overflow-hidden bg-[#07080A]"
+          className="relative w-full h-screen flex flex-col justify-between pt-16 pb-8 px-6 md:px-12 overflow-hidden bg-[var(--landing-bg)]"
         >
           {/* Stage Navigation Tabs & Progress Tracker */}
           <div className="max-w-6xl mx-auto w-full mb-4">
-            <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--landing-border)] pb-3">
+              <div className="flex items-center gap-2 md:gap-4 flex-wrap">
                 {productStoryStages.map((stage, idx) => (
                   <button
                     key={stage.id}
@@ -128,32 +128,32 @@ export const ProductStory: React.FC = () => {
                     }}
                     className={`px-3 md:px-4 py-1.5 rounded-md text-xs font-mono uppercase tracking-wider transition-all duration-200 ${
                       idx === 0
-                        ? "bg-white/15 text-white font-semibold border border-white/20 active-tab"
-                        : "text-neutral-400 hover:text-white"
+                        ? "bg-[var(--landing-primary)] text-white font-semibold active-tab"
+                        : "text-neutral-500 hover:text-neutral-900"
                     }`}
                   >
-                    <span className="opacity-50 mr-1.5">{stage.step}</span>
+                    <span className="opacity-70 mr-1.5 font-bold">{stage.step}</span>
                     <span>{stage.tab}</span>
                   </button>
                 ))}
               </div>
 
-              <span className="hidden md:inline-block text-[11px] font-mono text-neutral-500">
+              <span className="hidden md:inline-block text-[11px] font-mono text-[var(--landing-text-muted)]">
                 SCROLL TO TRANSFORM INTERFACE ↓
               </span>
             </div>
 
             {/* Progress bar scrub indicator */}
-            <div className="w-full h-0.5 bg-white/10 mt-1 rounded-full overflow-hidden">
+            <div className="w-full h-1 bg-[var(--landing-border)] mt-2 rounded-full overflow-hidden">
               <div
                 ref={progressBarRef}
-                className="h-full bg-[var(--color-accent)] origin-left scale-x-0"
+                className="h-full bg-[var(--landing-primary)] origin-left scale-x-0"
               />
             </div>
           </div>
 
           {/* Transforming Workspace Component */}
-          <div className="flex-1 w-full flex items-center justify-center min-h-0">
+          <div className="flex-1 w-full flex items-center justify-center min-h-0 drop-shadow-2xl">
             <WorkspaceDemo />
           </div>
         </div>

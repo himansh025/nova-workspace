@@ -21,6 +21,17 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
+/** Returns the appropriate status badge classes for task/spec status values */
+function getStatusBadgeClass(status: string): string {
+  const s = status.toLowerCase().replace(/\s/g, "_");
+  if (s === "in_progress") return "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]";
+  if (s === "done")        return "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]";
+  if (s === "review")      return "bg-[var(--nova-warning-subtle)] text-[var(--nova-warning-text)] border border-[var(--nova-warning-border)]";
+  if (s === "blocked" || s === "urgent")
+                           return "bg-[var(--nova-danger-subtle)] text-[var(--nova-danger-text)] border border-[var(--nova-danger-border)]";
+  /* todo / default */     return "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]";
+}
+
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isOpen,
   onClose
@@ -62,14 +73,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   if (!isOpen) return null;
 
   const quickNav = [
-    { label: "Overview Dashboard", href: "/app", icon: <ArrowRight className="w-3.5 h-3.5" /> },
-    { label: "Tasks & Kanban Board", href: "/app/tasks", icon: <CheckSquare className="w-3.5 h-3.5" /> },
-    { label: "Architecture Specs (Plan)", href: "/app/specs", icon: <FileCode2 className="w-3.5 h-3.5" /> },
-    { label: "AI Copilot Context Engine", href: "/app/ai", icon: <Sparkles className="w-3.5 h-3.5 text-[var(--color-accent)]" /> },
-    { label: "Engineering Telemetry", href: "/app/insights", icon: <TrendingUp className="w-3.5 h-3.5" /> },
-    { label: "Releases & Canary Deployments", href: "/app/releases", icon: <Rocket className="w-3.5 h-3.5 text-emerald-400" /> },
-    { label: "Team Directory", href: "/app/team", icon: <Users className="w-3.5 h-3.5" /> },
-    { label: "Workspace Settings", href: "/app/settings", icon: <Settings className="w-3.5 h-3.5" /> }
+    { label: "Overview Dashboard",            href: "/app",          icon: <ArrowRight className="w-3.5 h-3.5" />,  ai: false },
+    { label: "Tasks & Kanban Board",           href: "/app/tasks",    icon: <CheckSquare className="w-3.5 h-3.5" />, ai: false },
+    { label: "Architecture Specs (Plan)",      href: "/app/specs",    icon: <FileCode2 className="w-3.5 h-3.5" />,   ai: false },
+    { label: "AI Copilot Context Engine",      href: "/app/ai",       icon: <Sparkles className="w-3.5 h-3.5" />,    ai: true  },
+    { label: "Engineering Telemetry",          href: "/app/insights", icon: <TrendingUp className="w-3.5 h-3.5" />,  ai: false },
+    { label: "Releases & Canary Deployments",  href: "/app/releases", icon: <Rocket className="w-3.5 h-3.5" />,      ai: false },
+    { label: "Team Directory",                 href: "/app/team",     icon: <Users className="w-3.5 h-3.5" />,       ai: false },
+    { label: "Workspace Settings",             href: "/app/settings", icon: <Settings className="w-3.5 h-3.5" />,    ai: false }
   ];
 
   const filteredNav = quickNav.filter((n) =>
@@ -93,132 +104,162 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-xs">
-      <div
-        className="fixed inset-0"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-xl bg-[#12141A] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col z-10 text-neutral-200 text-xs">
-        {/* Search Input Bar */}
-        <div className="flex items-center px-4 py-3 border-b border-white/10 bg-[#161820]">
-          <Search className="w-4 h-4 text-neutral-400 shrink-0 mr-2.5" />
-          <input
-            autoFocus
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or search issues, specs, navigation..."
-            className="flex-1 bg-transparent border-none outline-hidden text-sm text-white placeholder-neutral-500 font-sans"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="p-1 text-neutral-500 hover:text-neutral-300"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <kbd className="px-1.5 py-0.5 text-[9px] font-mono bg-white/10 text-neutral-400 rounded ml-2">
-            ESC
-          </kbd>
-        </div>
+  const hasResults =
+    filteredNav.length > 0 || filteredTasks.length > 0 || filteredSpecs.length > 0;
 
-        {/* Results List */}
-        <div className="max-h-96 overflow-y-auto p-2 space-y-3 no-scrollbar">
-          {/* Quick Navigation Targets */}
-          {filteredNav.length > 0 && (
-            <div>
-              <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                Navigation
-              </div>
-              <div className="space-y-0.5 mt-1">
+  return (
+    /* Overlay */
+    <div className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.4)] backdrop-blur-xs">
+      {/* Dismiss on backdrop click */}
+      <div className="fixed inset-0" onClick={onClose} />
+
+      {/* Centered panel */}
+      <div className="relative flex justify-center pt-24 px-4">
+        <div className="w-full max-w-lg flex flex-col bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.12)] overflow-hidden">
+
+          {/* ── Search bar ── */}
+          <div className="border-b border-[var(--nova-border)] px-4 py-3 bg-[var(--nova-bg)] flex items-center gap-2.5">
+            <img src="/brand/logo-mark.png" alt="Nova Mark" className="w-4 h-4 object-contain shrink-0" />
+            <Search className="w-[14px] h-[14px] text-[var(--nova-text-muted)] shrink-0" />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Type a command or search issues, specs, navigation..."
+              className="flex-1 bg-transparent border-none outline-none text-[13px] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-placeholder)] font-sans"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] transition-colors duration-150"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <kbd className="font-mono text-[9px] bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-muted)] rounded px-1.5 py-0.5 ml-1">
+              ESC
+            </kbd>
+          </div>
+
+          {/* ── Results area ── */}
+          <div className="max-h-80 overflow-y-auto px-2 py-2 space-y-1 nova-scroll">
+
+            {/* Quick Navigation */}
+            {filteredNav.length > 0 && (
+              <div>
+                <div className="px-2 py-1 text-[9px] font-mono uppercase tracking-[0.12em] text-[var(--nova-text-muted)] mb-0.5">
+                  Navigation
+                </div>
                 {filteredNav.map((n) => (
                   <button
                     key={n.href}
                     onClick={() => handleSelect(n.href)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-md hover:bg-white/5 text-neutral-300 hover:text-white transition-colors text-left"
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-md hover:bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] text-left transition-colors duration-100 group"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-neutral-400">{n.icon}</span>
-                      <span>{n.label}</span>
+                      <span
+                        className={
+                          n.ai
+                            ? "text-[var(--nova-ai)]"
+                            : "text-[var(--nova-text-muted)] group-hover:text-[var(--nova-text-secondary)] transition-colors duration-100"
+                        }
+                      >
+                        {n.icon}
+                      </span>
+                      <span
+                        className={
+                          n.ai
+                            ? "text-[12px] text-[var(--nova-ai-text)]"
+                            : "text-[12px] text-[var(--nova-text-secondary)] group-hover:text-[var(--nova-text-primary)] transition-colors duration-100"
+                        }
+                      >
+                        {n.label}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-mono text-neutral-500">
+                    <span className="text-[10px] font-mono text-[var(--nova-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-100">
                       Jump →
                     </span>
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Tasks & Issues */}
-          {filteredTasks.length > 0 && (
-            <div>
-              <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                Issues ({filteredTasks.length})
-              </div>
-              <div className="space-y-0.5 mt-1">
+            {/* Tasks & Issues */}
+            {filteredTasks.length > 0 && (
+              <div>
+                <div className="px-2 py-1 text-[9px] font-mono uppercase tracking-[0.12em] text-[var(--nova-text-muted)] mb-0.5">
+                  Issues ({filteredTasks.length})
+                </div>
                 {filteredTasks.slice(0, 5).map((t) => (
                   <button
                     key={t.id}
                     onClick={() => handleSelect(`/app/tasks`)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-md hover:bg-white/5 text-neutral-300 hover:text-white transition-colors text-left"
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-md hover:bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] text-left transition-colors duration-100 group"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <span className="font-mono text-[var(--color-accent)] font-medium shrink-0">
+                      <span className="font-mono text-[10px] text-[var(--nova-accent)] font-medium shrink-0">
                         {t.key}
                       </span>
-                      <span className="truncate">{t.title}</span>
+                      <span className="text-[12px] text-[var(--nova-text-secondary)] group-hover:text-[var(--nova-text-primary)] transition-colors duration-100 truncate">
+                        {t.title}
+                      </span>
                     </div>
-                    <span className="text-[9px] font-mono uppercase text-neutral-400 bg-white/5 px-1.5 py-0.5 rounded shrink-0 ml-2">
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ml-2 ${getStatusBadgeClass(t.status)}`}
+                    >
                       {t.status.replace("_", " ")}
                     </span>
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Architecture Specs */}
-          {filteredSpecs.length > 0 && (
-            <div>
-              <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                Specifications ({filteredSpecs.length})
-              </div>
-              <div className="space-y-0.5 mt-1">
+            {/* Architecture Specs */}
+            {filteredSpecs.length > 0 && (
+              <div>
+                <div className="px-2 py-1 text-[9px] font-mono uppercase tracking-[0.12em] text-[var(--nova-text-muted)] mb-0.5">
+                  Specifications ({filteredSpecs.length})
+                </div>
                 {filteredSpecs.slice(0, 4).map((s) => (
                   <button
                     key={s.id}
                     onClick={() => handleSelect(`/app/specs`)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-md hover:bg-white/5 text-neutral-300 hover:text-white transition-colors text-left"
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-md hover:bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] text-left transition-colors duration-100 group"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <span className="font-mono text-sky-400 font-medium shrink-0">
+                      <span className="font-mono text-[10px] text-[var(--nova-info-text)] font-medium shrink-0">
                         {s.key}
                       </span>
-                      <span className="truncate">{s.title}</span>
+                      <span className="text-[12px] text-[var(--nova-text-secondary)] group-hover:text-[var(--nova-text-primary)] transition-colors duration-100 truncate">
+                        {s.title}
+                      </span>
                     </div>
-                    <span className="text-[9px] font-mono uppercase text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded shrink-0 ml-2">
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ml-2 ${getStatusBadgeClass(s.status)}`}
+                    >
                       {s.status}
                     </span>
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {filteredNav.length === 0 && filteredTasks.length === 0 && filteredSpecs.length === 0 && (
-            <div className="py-8 text-center text-neutral-500 text-xs">
-              No matching results found for &ldquo;{query}&rdquo;
-            </div>
-          )}
-        </div>
+            {/* Empty state */}
+            {!hasResults && (
+              <div className="py-8 text-center text-[11px] text-[var(--nova-text-muted)]">
+                No matching results found for &ldquo;{query}&rdquo;
+              </div>
+            )}
+          </div>
 
-        {/* Footer info */}
-        <div className="px-4 py-2 border-t border-white/10 bg-[#0E1015] flex items-center justify-between text-[10px] text-neutral-500 font-mono">
-          <span>Navigate with mouse or keyboard</span>
-          <span>NOVA 2.0 Command System</span>
+          {/* ── Footer ── */}
+          <div className="px-4 py-2 bg-[var(--nova-deep)] border-t border-[var(--nova-border)] text-[var(--nova-text-muted)] flex items-center justify-between">
+            <span className="text-[9px] font-mono text-[var(--nova-text-muted)]">↑↓ navigate&nbsp;&nbsp;⏎ select</span>
+            <span className="text-[9px] font-mono text-[var(--nova-text-muted)]">NOVA Command</span>
+          </div>
+
         </div>
       </div>
     </div>

@@ -7,14 +7,14 @@ export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Base atomic skeleton block with shimmer animation.
+ * Base atomic skeleton block with shimmer animation calibrated for light theme.
  */
 export function Skeleton({ className = "", ...props }: SkeletonProps) {
   return (
     <div
       role="status"
       aria-label="Loading..."
-      className={`skeleton-shimmer rounded-md ${className}`}
+      className={`skeleton-shimmer bg-[rgba(0,0,0,0.06)] rounded-md ${className}`}
       {...props}
     />
   );
@@ -27,15 +27,15 @@ export function Skeleton({ className = "", ...props }: SkeletonProps) {
 export function KanbanSkeleton() {
   const columns = [
     { title: "BACKLOG", dot: "bg-neutral-400" },
-    { title: "IN PROGRESS", dot: "bg-sky-400" },
-    { title: "IN REVIEW", dot: "bg-amber-400" },
-    { title: "DONE", dot: "bg-emerald-400" },
+    { title: "IN PROGRESS", dot: "bg-sky-500" },
+    { title: "IN REVIEW", dot: "bg-amber-500" },
+    { title: "DONE", dot: "bg-emerald-500" },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[#111216] text-neutral-200 animate-fadeIn">
+    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] animate-fadeIn">
       {/* Top Controls Header */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+      <div className="p-4 sm:px-6 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Skeleton className="h-6 w-48" />
@@ -59,13 +59,13 @@ export function KanbanSkeleton() {
           {columns.map((col) => (
             <div
               key={col.title}
-              className="flex flex-col rounded-xl bg-[#14161D]/80 border border-white/10 p-3 min-h-[560px]"
+              className="flex flex-col rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] p-3 min-h-[560px]"
             >
               {/* Column Header */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/5">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--nova-border)]">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${col.dot} opacity-60 animate-pulse`} />
-                  <span className="text-xs font-mono font-semibold text-neutral-400 tracking-wider">
+                  <span className="text-xs font-mono font-semibold text-[var(--nova-text-secondary)] tracking-wider">
                     {col.title}
                   </span>
                   <Skeleton className="h-4 w-6 rounded-full" />
@@ -78,7 +78,7 @@ export function KanbanSkeleton() {
                 {[0, 1, 2].map((cardIdx) => (
                   <div
                     key={cardIdx}
-                    className="p-3.5 rounded-lg bg-[#1B1E28] border border-white/5 space-y-3 shadow-xs"
+                    className="p-3.5 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] space-y-3 shadow-xs"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ export function KanbanSkeleton() {
                       <Skeleton className="h-3.5 w-3/5" />
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--nova-border)]">
                       <div className="flex items-center gap-1.5">
                         <Skeleton className="h-5 w-5 rounded-full" />
                         <Skeleton className="h-3 w-16" />
@@ -118,7 +118,7 @@ export function OverviewSkeleton() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto animate-fadeIn">
       {/* Top Welcome Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--nova-border)]">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Skeleton className="h-4 w-28 rounded" />
@@ -136,7 +136,7 @@ export function OverviewSkeleton() {
       {/* 4 KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-3">
+          <div key={i} className="p-4 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-3 shadow-xs">
             <div className="flex items-center justify-between">
               <Skeleton className="h-3.5 w-24" />
               <Skeleton className="h-4 w-4 rounded-full" />
@@ -149,7 +149,7 @@ export function OverviewSkeleton() {
 
       {/* 2-Column Split: Active Sprint + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
+        <div className="lg:col-span-2 p-6 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-4 shadow-xs">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-4 w-24" />
@@ -166,11 +166,11 @@ export function OverviewSkeleton() {
           </div>
         </div>
 
-        <div className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
+        <div className="p-6 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-4 shadow-xs">
           <Skeleton className="h-5 w-32" />
           <div className="space-y-3">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-[#1B1E28]/50">
+              <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)]">
                 <Skeleton className="h-8 w-8 rounded-full shrink-0" />
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <Skeleton className="h-3.5 w-3/4" />
@@ -191,9 +191,9 @@ export function OverviewSkeleton() {
  */
 export function SprintSkeleton() {
   return (
-    <div className="flex-1 bg-[#0B0C0E] text-white flex flex-col overflow-y-auto no-scrollbar animate-fadeIn">
+    <div className="flex-1 bg-[var(--nova-bg)] text-[var(--nova-text-primary)] flex flex-col overflow-y-auto no-scrollbar animate-fadeIn">
       {/* Top Banner Header */}
-      <div className="border-b border-white/10 bg-[#101216] px-6 py-5">
+      <div className="border-b border-[var(--nova-border)] bg-[var(--nova-surface)] px-6 py-5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -223,8 +223,8 @@ export function SprintSkeleton() {
             "Team Velocity",
             "Burndown Pace"
           ].map((title, i) => (
-            <div key={i} className="p-4 rounded-xl bg-[#12141A] border border-white/5 space-y-2">
-              <div className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider">
+            <div key={i} className="p-4 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-2 shadow-xs">
+              <div className="text-[11px] font-mono text-[var(--nova-text-secondary)] uppercase tracking-wider">
                 {title}
               </div>
               <Skeleton className="h-7 w-20" />
@@ -234,7 +234,7 @@ export function SprintSkeleton() {
         </div>
 
         {/* Interactive Burndown Chart Card */}
-        <div className="p-5 rounded-2xl bg-[#12141A] border border-white/10 shadow-xl space-y-4">
+        <div className="p-5 rounded-2xl bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -253,12 +253,12 @@ export function SprintSkeleton() {
           </div>
 
           {/* SVG Canvas Shimmer Placeholder */}
-          <div className="relative w-full h-56 rounded-xl bg-[#0E1015]/60 border border-white/5 p-4 flex flex-col justify-between overflow-hidden">
+          <div className="relative w-full h-56 rounded-xl bg-[var(--nova-bg)] border border-[var(--nova-border)] p-4 flex flex-col justify-between overflow-hidden">
             <div className="space-y-8">
-              <Skeleton className="h-px w-full bg-white/5" />
-              <Skeleton className="h-px w-full bg-white/5" />
-              <Skeleton className="h-px w-full bg-white/5" />
-              <Skeleton className="h-px w-full bg-white/5" />
+              <Skeleton className="h-px w-full bg-[var(--nova-border)]" />
+              <Skeleton className="h-px w-full bg-[var(--nova-border)]" />
+              <Skeleton className="h-px w-full bg-[var(--nova-border)]" />
+              <Skeleton className="h-px w-full bg-[var(--nova-border)]" />
             </div>
             {/* Shimmering diagonal trajectory guideline */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -270,8 +270,8 @@ export function SprintSkeleton() {
         {/* Dual Columns: Active Sprint Scope vs Backlog Grooming */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Column 1 */}
-          <div className="p-5 rounded-2xl bg-[#12141A] border border-white/10 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+          <div className="p-5 rounded-2xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-4 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--nova-border)]">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-4 w-4 rounded-full" />
                 <Skeleton className="h-4 w-40" />
@@ -280,7 +280,7 @@ export function SprintSkeleton() {
             </div>
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="p-3.5 rounded-xl bg-[#181B22] border border-white/5 space-y-2">
+                <div key={i} className="p-3.5 rounded-xl bg-[var(--nova-bg)] border border-[var(--nova-border)] space-y-2">
                   <div className="flex items-center justify-between">
                     <Skeleton className="h-4 w-16" />
                     <Skeleton className="h-4 w-12 rounded-full" />
@@ -296,8 +296,8 @@ export function SprintSkeleton() {
           </div>
 
           {/* Column 2 */}
-          <div className="p-5 rounded-2xl bg-[#12141A] border border-white/10 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+          <div className="p-5 rounded-2xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-4 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--nova-border)]">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-4 w-4 rounded-full" />
                 <Skeleton className="h-4 w-36" />
@@ -306,7 +306,7 @@ export function SprintSkeleton() {
             </div>
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="p-3.5 rounded-xl bg-[#181B22] border border-white/5 space-y-2">
+                <div key={i} className="p-3.5 rounded-xl bg-[var(--nova-bg)] border border-[var(--nova-border)] space-y-2">
                   <div className="flex items-center justify-between">
                     <Skeleton className="h-4 w-16" />
                     <Skeleton className="h-4 w-12 rounded-full" />
@@ -332,9 +332,9 @@ export function SprintSkeleton() {
  */
 export function PullRequestsSkeleton() {
   return (
-    <div className="flex flex-col h-full bg-[#111216] text-neutral-200 animate-fadeIn">
+    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] animate-fadeIn">
       {/* Top Header */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+      <div className="p-4 sm:px-6 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2.5">
             <Skeleton className="h-6 w-52" />
@@ -344,7 +344,7 @@ export function PullRequestsSkeleton() {
         </div>
 
         {/* Filter Pills */}
-        <div className="flex gap-1.5 p-0.5 bg-[#161820] border border-white/10 rounded-lg">
+        <div className="flex gap-1.5 p-0.5 bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg">
           <Skeleton className="h-7 w-16 rounded-md" />
           <Skeleton className="h-7 w-20 rounded-md" />
           <Skeleton className="h-7 w-20 rounded-md" />
@@ -352,17 +352,17 @@ export function PullRequestsSkeleton() {
       </div>
 
       {/* Main Split Body */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-[var(--nova-border)]">
         {/* Left: PR List */}
         <div className="w-full lg:w-96 shrink-0 p-3 space-y-2 overflow-y-auto">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="p-3.5 rounded-xl bg-[#161822] border border-white/5 space-y-2.5">
+            <div key={i} className="p-3.5 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-2.5 shadow-xs">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-14 rounded-full" />
               </div>
               <Skeleton className="h-4 w-5/6" />
-              <div className="flex items-center justify-between pt-1 border-t border-white/5">
+              <div className="flex items-center justify-between pt-1 border-t border-[var(--nova-border)]">
                 <Skeleton className="h-3 w-24" />
                 <Skeleton className="h-3 w-16" />
               </div>
@@ -400,9 +400,9 @@ export function PullRequestsSkeleton() {
  */
 export function SpecsSkeleton() {
   return (
-    <div className="flex flex-col h-full bg-[#111216] text-neutral-200 animate-fadeIn">
+    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] animate-fadeIn">
       {/* Top Bar */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+      <div className="p-4 sm:px-6 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Skeleton className="h-6 w-56" />
@@ -418,11 +418,11 @@ export function SpecsSkeleton() {
       </div>
 
       {/* Main Split Body */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-[var(--nova-border)]">
         {/* Left: Spec List */}
         <div className="w-full lg:w-80 shrink-0 p-3 space-y-2 overflow-y-auto">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="p-3.5 rounded-xl bg-[#161822] border border-white/5 space-y-2">
+            <div key={i} className="p-3.5 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-2 shadow-xs">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-4 w-16 rounded-full" />
@@ -462,9 +462,9 @@ export function SpecsSkeleton() {
  */
 export function ReleasesSkeleton() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200 animate-fadeIn">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-[var(--nova-text-primary)] animate-fadeIn">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--nova-border)]">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Skeleton className="h-7 w-64" />
@@ -480,7 +480,7 @@ export function ReleasesSkeleton() {
       </div>
 
       {/* Main Release Status Card */}
-      <div className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-6">
+      <div className="p-6 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Skeleton className="w-10 h-10 rounded-xl" />
@@ -515,7 +515,7 @@ export function ReleasesSkeleton() {
       <div className="space-y-3">
         <Skeleton className="h-5 w-44" />
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="p-4 rounded-xl bg-[#14161D] border border-white/5 flex items-center justify-between">
+          <div key={i} className="p-4 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-3">
               <Skeleton className="w-5 h-5 rounded-full" />
               <div className="space-y-1">
@@ -536,8 +536,8 @@ export function ReleasesSkeleton() {
  */
 export function TeamSkeleton() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-[var(--nova-text-primary)] animate-fadeIn">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--nova-border)]">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Skeleton className="h-7 w-48" />
@@ -550,7 +550,7 @@ export function TeamSkeleton() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="p-4 rounded-xl bg-[#14161D] border border-white/10 flex items-center gap-3">
+          <div key={i} className="p-4 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] flex items-center gap-3 shadow-xs">
             <Skeleton className="h-10 w-10 rounded-full shrink-0" />
             <div className="space-y-1.5 flex-1 min-w-0">
               <Skeleton className="h-4 w-32" />
@@ -569,8 +569,8 @@ export function TeamSkeleton() {
  */
 export function ProjectsSkeleton() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-[var(--nova-text-primary)] animate-fadeIn">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--nova-border)]">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Skeleton className="h-7 w-48" />
@@ -583,13 +583,13 @@ export function ProjectsSkeleton() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
+          <div key={i} className="p-6 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-4 w-16" />
             </div>
             <Skeleton className="h-10 w-full" />
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--nova-border)]">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
@@ -606,9 +606,9 @@ export function ProjectsSkeleton() {
  */
 export function MeshSkeleton() {
   return (
-    <div className="flex flex-col h-full bg-[#0A0B0D] text-neutral-200 animate-fadeIn">
+    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] animate-fadeIn">
       {/* Top Header & Stats Bar */}
-      <div className="p-4 sm:px-6 border-b border-white/10 bg-[#0E1015] flex flex-col gap-4 shrink-0">
+      <div className="p-4 sm:px-6 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col gap-4 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">
@@ -622,7 +622,7 @@ export function MeshSkeleton() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="p-3 rounded-xl bg-[#14161D] border border-white/5 space-y-1">
+            <div key={i} className="p-3 rounded-xl bg-[var(--nova-bg)] border border-[var(--nova-border)] space-y-1">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-6 w-24" />
             </div>
@@ -631,11 +631,11 @@ export function MeshSkeleton() {
       </div>
 
       {/* Main Split Body */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-[var(--nova-border)]">
         {/* Left: Service Nodes */}
         <div className="w-full lg:w-96 shrink-0 p-4 space-y-3 overflow-y-auto">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2">
+            <div key={i} className="p-4 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-2 shadow-xs">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-28" />
                 <Skeleton className="h-3 w-14 rounded-full" />
@@ -660,8 +660,8 @@ export function MeshSkeleton() {
  */
 export function InsightsSkeleton() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-neutral-200 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto text-[var(--nova-text-primary)] animate-fadeIn">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--nova-border)]">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Skeleton className="h-7 w-56" />
@@ -675,7 +675,7 @@ export function InsightsSkeleton() {
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-3">
+          <div key={i} className="p-4 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-3 shadow-xs">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-8 w-20" />
             <Skeleton className="h-3 w-32" />
@@ -684,7 +684,7 @@ export function InsightsSkeleton() {
       </div>
 
       {/* Chart Canvas Card */}
-      <div className="p-6 rounded-xl bg-[#14161D] border border-white/10 space-y-4">
+      <div className="p-6 rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] space-y-4 shadow-xs">
         <div className="flex items-center justify-between">
           <Skeleton className="h-5 w-44" />
           <Skeleton className="h-4 w-32" />

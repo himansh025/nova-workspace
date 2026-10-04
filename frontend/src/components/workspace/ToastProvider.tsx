@@ -54,27 +54,27 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="pointer-events-auto p-3.5 rounded-xl bg-[#161822]/95 backdrop-blur-md border border-white/15 shadow-2xl flex items-start justify-between gap-3 text-xs text-neutral-200 animate-in fade-in slide-in-from-bottom-3 duration-300"
+            className="pointer-events-auto p-3.5 rounded-xl bg-[var(--nova-surface)] backdrop-blur-md border border-[var(--nova-border)] shadow-[0_12px_32px_rgba(0,0,0,0.08)] flex items-start justify-between gap-3 text-xs text-[var(--nova-text-primary)] animate-in fade-in slide-in-from-bottom-3 duration-300"
           >
             <div className="flex items-start gap-2.5">
-              {t.type === "success" && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
-              {t.type === "warning" && <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />}
-              {t.type === "accent" && <Sparkles className="w-4 h-4 text-[var(--color-accent)] shrink-0 mt-0.5" />}
-              {t.type === "commit" && <GitCommit className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />}
-              {t.type === "release" && <Rocket className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
+              {t.type === "success" && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />}
+              {t.type === "warning" && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />}
+              {t.type === "accent" && <Sparkles className="w-4 h-4 text-[var(--nova-accent)] shrink-0 mt-0.5" />}
+              {t.type === "commit" && <GitCommit className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />}
+              {t.type === "release" && <Rocket className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />}
 
               <div>
-                <div className="font-semibold text-white flex items-center gap-1.5">
+                <div className="font-semibold text-[var(--nova-text-primary)] flex items-center gap-1.5">
                   <span>{t.title}</span>
-                  <span className="text-[9px] font-mono text-neutral-500">• {t.timestamp}</span>
+                  <span className="text-[9px] font-mono text-[var(--nova-text-muted)]">• {t.timestamp}</span>
                 </div>
-                <p className="text-[11px] text-neutral-300 mt-0.5 leading-snug">{t.message}</p>
+                <p className="text-[11px] text-[var(--nova-text-secondary)] mt-0.5 leading-snug">{t.message}</p>
               </div>
             </div>
 
             <button
               onClick={() => removeToast(t.id)}
-              className="p-1 text-neutral-500 hover:text-white rounded"
+              className="p-1 text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] rounded hover:bg-[var(--nova-deep)] transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>

@@ -28,25 +28,25 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false
 }) => {
   const baseClasses =
-    "group inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]";
+    "group inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--landing-primary)]";
 
   const sizeClasses = {
-    sm: "text-xs px-3.5 py-1.5 rounded-[var(--radius-sm)] gap-1.5",
-    md: "text-sm px-4.5 py-2.5 rounded-[var(--radius-md)] gap-2",
-    lg: "text-base px-6 py-3.5 rounded-[var(--radius-lg)] gap-2.5 font-medium"
+    sm: "text-xs px-3.5 py-1.5 rounded-lg gap-1.5",
+    md: "text-sm px-4.5 py-2.5 rounded-xl gap-2",
+    lg: "text-base px-6 py-3.5 rounded-xl gap-2.5 font-medium"
   }[size];
 
   const variantClasses = {
     primary:
-      "bg-[var(--color-foreground)] text-[var(--color-background)] hover:bg-[#20232A] shadow-sm active:scale-[0.99]",
+      "bg-[var(--landing-primary)] text-white hover:bg-[var(--landing-primary-hover)] shadow-xs active:scale-[0.99]",
     secondary:
-      "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] shadow-sm active:scale-[0.99]",
+      "bg-[var(--landing-primary)] text-white hover:bg-[var(--landing-primary-hover)] shadow-xs active:scale-[0.99]",
     outline:
-      "bg-transparent text-[var(--color-foreground)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-muted)]",
+      "bg-[var(--landing-surface)] text-[var(--landing-text)] border border-[var(--landing-border)] hover:bg-[var(--landing-surface-muted)]",
     dark:
       "bg-white text-black hover:bg-neutral-200 border border-white/10 active:scale-[0.99]",
     ghost:
-      "bg-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-black/5"
+      "bg-transparent text-[var(--landing-text-muted)] hover:text-[var(--landing-text)] hover:bg-black/5"
   }[variant];
 
   const combinedClasses = `${baseClasses} ${sizeClasses} ${variantClasses} ${className} ${

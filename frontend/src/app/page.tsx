@@ -10,17 +10,17 @@ import AnalyticsSection from "@/components/saas/AnalyticsSection";
 import IntegrationsSection from "@/components/saas/IntegrationsSection";
 import CaseStudySection from "@/components/saas/CaseStudySection";
 import SecuritySection from "@/components/saas/SecuritySection";
-import PricingSection from "@/components/saas/PricingSection";
+// import PricingSection from "@/components/saas/PricingSection";
 import FAQSection from "@/components/saas/FAQSection";
 import FinalCTA from "@/components/saas/FinalCTA";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-[var(--landing-bg)] text-[var(--landing-text)]">
       {/* 4. HEADER */}
       <Header />
 
-      <main className="flex-1">
+      <main className="flex-1 bg-[var(--landing-bg)]">
         {/* 5, 6, 7, 8, 9. HERO & PRODUCT PREVIEW */}
         <Hero />
 
@@ -48,8 +48,8 @@ export default function HomePage() {
         {/* 21, 22. DEVELOPER PLATFORM & SECURITY BY DEFAULT */}
         <SecuritySection />
 
-        {/* 23. PRICING TIERS */}
-        <PricingSection />
+        {/* 23. PRICING TIERS (Temporarily commented out) */}
+        {/* <PricingSection /> */}
 
         {/* 24. FREQUENTLY ASKED QUESTIONS */}
         <FAQSection />
@@ -58,7 +58,7 @@ export default function HomePage() {
         <FinalCTA />
       </main>
 
-      {/* 26. DARK FOOTER */}
+      {/* 26. FOOTER */}
       <Footer />
     </div>
   );
