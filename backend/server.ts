@@ -10,6 +10,7 @@ export async function startServer() {
   } catch {
     console.warn("[Express Server] MongoDB unavailable. Operating in resilient persistent fallback mode.");
   }
+  
 
   const server = await new Promise<any>((resolve) => {
     const s = app.listen(ENV.PORT, () => {
