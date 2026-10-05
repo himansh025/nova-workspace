@@ -7,7 +7,6 @@ import { broadcastEvent } from "../services/events";
 import { githubService } from "../services/githubService";
 import { aiService } from "../services/aiService";
 import { aiSettingsService } from "../services/aiSettingsService";
-import { INITIAL_PULL_REQUESTS } from "../services/prData";
 
 export const prController = {
   async getPullRequests(req: Request, res: Response) {
@@ -18,22 +17,9 @@ export const prController = {
       // Check current PR count in MongoDB
       let count = await PullRequestModel.countDocuments({ organizationId: orgId });
 
-      // If no PRs exist in DB yet:
-      if (count === 0) {
-        // If a real GitHub repo is configured, attempt live sync first
-        if (config.configured && config.repository) {
-          await githubService.syncPullRequestsFromGitHub(orgId);
-          count = await PullRequestModel.countDocuments({ organizationId: orgId });
-        }
-
-        // If still 0, seed persistent baseline records once directly into MongoDB
-        if (count === 0) {
-          const baselineDocs = INITIAL_PULL_REQUESTS.map((p) => ({
-            ...p,
-            organizationId: orgId,
-          }));
-          await PullRequestModel.insertMany(baselineDocs);
-        }
+      // If a real GitHub repo is configured and no PRs exist in DB yet, attempt live sync
+      if (count === 0 && config.configured && config.repository) {
+        await githubService.syncPullRequestsFromGitHub(orgId);
       }
 
       // Query real PRs from MongoDB
@@ -151,7 +137,7 @@ export const prController = {
 
   async reviewPullRequest(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || "org-default";
+      let orgId = (req as any).organizationId || (req.headers["x-organization-id"] as string) || "org-default";
       const { prId } = req.body;
 
       const num = Number(prId);
@@ -162,17 +148,8 @@ export const prController = {
       let pr = await PullRequestModel.findOne(prQuery);
 
       if (!pr) {
-        // Fallback search across org or seed baseline
-        const count = await PullRequestModel.countDocuments({ organizationId: orgId });
-        if (count === 0) {
-          const baselineDocs = INITIAL_PULL_REQUESTS.map((p) => ({ ...p, organizationId: orgId }));
-          await PullRequestModel.insertMany(baselineDocs);
-        }
-        const fallbackQuery = !isNaN(num)
-          ? { $or: [{ id: prId }, { number: num }, { id: "pr-1" }] }
-          : { $or: [{ id: prId }, { id: "pr-1" }] };
-
-        pr = await PullRequestModel.findOne(fallbackQuery);
+        // Fallback search by unique PR id or number across database
+        pr = await PullRequestModel.findOne(!isNaN(num) ? { $or: [{ id: prId }, { number: num }] } : { id: prId });
       }
 
       if (!pr) {
@@ -304,6 +281,44 @@ Respond ONLY with valid JSON in this exact structure:
         success: true,
         review: aiReview,
         pullRequest: pr,
+      });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  },
+
+  async deletePullRequest(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId || (req.query.orgId as string) || "org-default";
+      const id = req.params.id || req.body?.id || (req.query.id as string);
+
+      if (!id) {
+        return res.status(400).json({ success: false, error: "Missing pull request id" });
+      }
+
+      const num = Number(id);
+      const query = !isNaN(num)
+        ? { organizationId: orgId, $or: [{ id }, { number: num }] }
+        : { organizationId: orgId, id };
+
+      const deleted = await PullRequestModel.findOneAndDelete(query);
+      if (!deleted) {
+        return res.status(404).json({ success: false, error: "Pull request not found" });
+      }
+
+      broadcastEvent({
+        type: "git_webhook",
+        category: "git",
+        title: `PR #${deleted.number} Deleted`,
+        message: `Pull Request #${deleted.number} was removed from workspace.`,
+        link: "/app/pull-requests",
+        meta: { prId: deleted.id, prNumber: deleted.number, organizationId: orgId },
+      });
+
+      return res.json({
+        success: true,
+        message: `Pull request #${deleted.number} (${deleted.title}) deleted successfully.`,
+        deletedId: deleted.id,
       });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error.message });

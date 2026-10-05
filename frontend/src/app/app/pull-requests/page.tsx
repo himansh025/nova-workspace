@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Github,
   Search,
+  Trash2,
 } from "lucide-react";
 import { PullRequest } from "@/types";
 import { useToast } from "@/components/workspace/ToastProvider";
@@ -142,6 +143,40 @@ export default function PullRequestsPage() {
       console.error("Failed to merge PR", err);
     } finally {
       setIsMerging(false);
+    }
+  };
+
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeletePR = async () => {
+    if (!selectedPR) return;
+    if (!confirm(`Are you sure you want to delete PR #${selectedPR.number}?`)) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/pull-requests/${selectedPR.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast({
+          title: `PR #${selectedPR.number} Deleted`,
+          message: "Pull request removed from workspace.",
+          type: "commit",
+        });
+        const remaining = pullRequests.filter((p) => p.id !== selectedPR.id);
+        setPullRequests(remaining);
+        setSelectedPR(remaining.length > 0 ? remaining[0] : null);
+      } else {
+        addToast({
+          title: "Delete Failed",
+          message: data.error || "Could not delete PR",
+          type: "warning",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to delete PR", err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -445,6 +480,17 @@ export default function PullRequestsPage() {
                           <span>{isMerging ? "Merging…" : "Merge PR"}</span>
                         </>
                       )}
+                    </button>
+
+                    {/* Delete PR */}
+                    <button
+                      onClick={handleDeletePR}
+                      disabled={isDeleting}
+                      title="Delete Pull Request from workspace"
+                      className="flex items-center gap-1.5 border border-[var(--nova-danger-border)] bg-[var(--nova-danger-subtle)] hover:bg-[rgba(239,68,68,0.2)] text-[var(--nova-danger-text)] rounded px-2.5 py-1.5 text-[12px] font-medium transition-colors duration-150 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span className="hidden sm:inline">{isDeleting ? "Deleting…" : "Delete"}</span>
                     </button>
                   </div>
                 </div>
