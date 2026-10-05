@@ -45,12 +45,12 @@ export const taskService = {
     }
 
     const [tasks, total] = await Promise.all([
-      TaskModel.find(query).sort({ updatedAt: -1 }).skip(skip).limit(limit),
+      TaskModel.find(query).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
       TaskModel.countDocuments(query),
     ]);
 
     return {
-      tasks,
+      tasks: tasks as any,
       pagination: {
         page,
         limit,
@@ -64,7 +64,7 @@ export const taskService = {
     return TaskModel.findOne({
       organizationId,
       $or: [{ id: idOrKey }, { key: idOrKey }],
-    });
+    }).lean() as any;
   },
 
   async createTask(input: {

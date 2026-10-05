@@ -206,6 +206,9 @@ export default function SettingsPage() {
         if (data.success && data.organization) {
           setWorkspaceName(data.organization.name || "Nova Engineering Labs");
           setSlug(data.organization.slug || "nova-core");
+          if (data.organization.defaultBranch) {
+            setDefaultBranch(data.organization.defaultBranch);
+          }
         }
       })
       .catch(() => {});
@@ -269,10 +272,25 @@ export default function SettingsPage() {
     setIsSimulatingWebhook(true);
     try {
       const randomSha = Math.random().toString(36).substring(2, 9);
+      const payload: any = {
+        event,
+        commitSha: randomSha,
+        branch: defaultBranch,
+      };
+
+      if (event === "pull_request_merged" || event === "pull_request") {
+        payload.taskKey = "NV-851";
+        payload.title = "NV-851 Add security headers & edge protection";
+        payload.head = "NV-851-edge-headers";
+        payload.base = defaultBranch;
+        payload.prId = 104;
+        payload.prNumber = 104;
+      }
+
       const res = await fetch("/api/webhooks/github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event, commitSha: randomSha, branch: defaultBranch }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.message) {
@@ -283,6 +301,7 @@ export default function SettingsPage() {
         });
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("task-saved"));
+          window.dispatchEvent(new Event("nova:realtime_sync"));
         }
       }
     } catch (err) {
@@ -298,15 +317,15 @@ export default function SettingsPage() {
       const res = await fetch("/api/org", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: workspaceName, slug: slug }),
+        body: JSON.stringify({ name: workspaceName, slug: slug, defaultBranch: defaultBranch }),
       });
       const data = await res.json();
       if (data.success) {
         setSavedSuccess(true);
         setTimeout(() => setSavedSuccess(false), 3000);
-        addToast({ title: "Settings Saved", message: "Organization updated.", type: "success" });
+        addToast({ title: "Settings Saved", message: `Organization updated. Default branch: ${defaultBranch}`, type: "success" });
         if (typeof window !== "undefined") {
-          window.location.reload();
+          window.dispatchEvent(new Event("nova:realtime_sync"));
         }
       } else {
         addToast({ title: "Update Failed", message: data.error, type: "warning" });

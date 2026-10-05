@@ -19,15 +19,29 @@ if (typeof window !== "undefined") {
   window.fetch = async (...args) => {
     let [resource, config] = args;
     const activeOrgId = localStorage.getItem("nova_active_org_id");
-    
-    // Only apply x-organization-id to internal /api routes
-    if (activeOrgId && typeof resource === "string" && resource.startsWith("/api")) {
+    const token = localStorage.getItem("nova_token");
+
+    // Only apply to internal /api routes
+    if (typeof resource === "string" && resource.startsWith("/api")) {
       if (!config) config = {};
+      if (!config.credentials) config.credentials = "include";
       if (!config.headers) config.headers = {};
+
       if (config.headers instanceof Headers) {
-        config.headers.set("x-organization-id", activeOrgId);
+        if (activeOrgId && !config.headers.has("x-organization-id")) {
+          config.headers.set("x-organization-id", activeOrgId);
+        }
+        if (token && !config.headers.has("authorization")) {
+          config.headers.set("authorization", `Bearer ${token}`);
+        }
       } else {
-        (config.headers as Record<string, string>)["x-organization-id"] = activeOrgId;
+        const headers = config.headers as Record<string, string>;
+        if (activeOrgId && !headers["x-organization-id"]) {
+          headers["x-organization-id"] = activeOrgId;
+        }
+        if (token && !headers["authorization"] && !headers["Authorization"]) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
       }
     }
     return originalFetch(resource, config);

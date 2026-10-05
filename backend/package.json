@@ -8,7 +8,7 @@
     "dev": "tsx watch server.ts",
     "start": "tsx server.ts",
     "seed": "tsx seed.ts",
-    "test": "tsx tests/verify-express-api.ts && tsx tests/verify-user-model.ts && tsx tests/verify-security.ts"
+    "test": "tsx tests/verify-express-api.ts && tsx tests/verify-user-model.ts && tsx tests/verify-security.ts && tsx tests/verify-github-workflow.ts"
   },
   "dependencies": {
     "@types/jsonwebtoken": "^9.0.10",

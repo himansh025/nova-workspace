@@ -7,6 +7,7 @@ export interface IOrganization {
   name: string;
   slug: string;
   plan: "free" | "pro" | "enterprise";
+  defaultBranch: string;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date | null;
@@ -30,6 +31,10 @@ const OrganizationSchema = new Schema<IOrganizationDocument>(
       type: String,
       enum: ["free", "pro", "enterprise"],
       default: "free",
+    },
+    defaultBranch: {
+      type: String,
+      default: "main",
     },
     deletedAt: { type: Date, default: null },
   },

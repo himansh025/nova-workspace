@@ -1,6 +1,7 @@
 import { UserModel, IUserDocument } from "../models/User";
 import { TeamMemberModel } from "../models/TeamMember";
 import { SessionModel } from "../models/Session";
+import { OrganizationModel } from "../models/Organization";
 import { EmailVerificationTokenModel, PasswordResetTokenModel } from "../models/AuthTokens";
 import { hashPassword, verifyPassword, generateTokenWithHash, hashToken } from "./cryptoService";
 import { ensureDefaultOrganization, getUserOrganizations } from "./organizationService";
@@ -69,9 +70,35 @@ export async function createSession(
   return rawToken;
 }
 
+interface CachedSession {
+  data: {
+    user: SafeUser;
+    organizationId?: string;
+    sessionId: string;
+  };
+  expiresAt: number;
+}
+
+const sessionCache = new Map<string, CachedSession>();
+const SESSION_CACHE_TTL_MS = 60 * 1000; // 60s fast memory cache
+
+export function invalidateSessionCache(rawToken?: string, userId?: string) {
+  if (rawToken) {
+    const hash = hashToken(rawToken);
+    sessionCache.delete(hash);
+  }
+  if (userId) {
+    for (const [hash, entry] of sessionCache.entries()) {
+      if (entry.data.user.id === userId) {
+        sessionCache.delete(hash);
+      }
+    }
+  }
+}
+
 /**
  * Validates a session token from request cookie / header.
- * Checks revocation and expiration in MongoDB.
+ * Checks memory cache first, then verifies revocation and expiration in MongoDB.
  */
 export async function verifySessionToken(rawToken: string): Promise<{
   user: SafeUser;
@@ -81,30 +108,48 @@ export async function verifySessionToken(rawToken: string): Promise<{
   if (!rawToken || typeof rawToken !== "string") return null;
 
   const tokenHash = hashToken(rawToken);
+  const now = Date.now();
+  const cached = sessionCache.get(tokenHash);
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
   const session = await SessionModel.findOne({
     tokenHash,
     revokedAt: null,
     expiresAt: { $gt: new Date() },
-  });
+  }).lean();
 
-  if (!session) return null;
-
-  const user = await UserModel.findOne({ id: session.userId, locked: false });
-  if (!user) return null;
-
-  // Retrieve user organization details
-  let orgName: string | undefined;
-  if (session.organizationId) {
-    const orgs = await getUserOrganizations(user.id);
-    const matched = orgs.find((o) => o.organization.id === session.organizationId);
-    orgName = matched?.organization.name;
+  if (!session) {
+    sessionCache.delete(tokenHash);
+    return null;
   }
 
-  return {
-    user: toSafeUser(user, orgName),
+  const user = await UserModel.findOne({ id: session.userId, locked: false }).lean();
+  if (!user) {
+    sessionCache.delete(tokenHash);
+    return null;
+  }
+
+  // Retrieve user organization details directly via indexed id
+  let orgName: string | undefined;
+  if (session.organizationId) {
+    const org = await OrganizationModel.findOne({ id: session.organizationId }).select("name").lean();
+    orgName = (org as any)?.name;
+  }
+
+  const result = {
+    user: toSafeUser(user as any, orgName),
     organizationId: session.organizationId || user.organizationId,
-    sessionId: session._id.toString(),
+    sessionId: (session as any)._id?.toString() || "",
   };
+
+  sessionCache.set(tokenHash, {
+    data: result,
+    expiresAt: now + SESSION_CACHE_TTL_MS,
+  });
+
+  return result;
 }
 
 /**
@@ -112,6 +157,7 @@ export async function verifySessionToken(rawToken: string): Promise<{
  */
 export async function revokeSessionToken(rawToken: string): Promise<boolean> {
   if (!rawToken) return false;
+  invalidateSessionCache(rawToken);
   const tokenHash = hashToken(rawToken);
   const result = await SessionModel.updateOne(
     { tokenHash },
@@ -253,6 +299,7 @@ export async function updateUserProfile(
     orgName = matched?.organization.name;
   }
 
+  invalidateSessionCache(undefined, userId);
   return toSafeUser(user, orgName);
 }
 

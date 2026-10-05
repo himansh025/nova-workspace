@@ -78,31 +78,52 @@ export async function createOrganization(name: string, ownerUserId: string): Pro
   return org;
 }
 
+const orgRoleCache = new Map<string, { role: OrgRole | null; expiresAt: number }>();
+const userOrgsCache = new Map<string, { orgs: OrgWithRole[]; expiresAt: number }>();
+const CACHE_TTL_MS = 60 * 1000;
+
 export async function getUserOrganizations(userId: string): Promise<OrgWithRole[]> {
-  const memberships = await OrganizationMemberModel.find({ userId, deletedAt: null });
+  const now = Date.now();
+  const cached = userOrgsCache.get(userId);
+  if (cached && cached.expiresAt > now) {
+    return cached.orgs;
+  }
+
+  const memberships = await OrganizationMemberModel.find({ userId, deletedAt: null }).lean();
   if (memberships.length === 0) return [];
 
   const orgIds = memberships.map((m) => m.organizationId);
-  const orgs = await OrganizationModel.find({ id: { $in: orgIds }, deletedAt: null });
+  const orgs = await OrganizationModel.find({ id: { $in: orgIds }, deletedAt: null }).lean();
 
   const result: OrgWithRole[] = [];
   for (const m of memberships) {
     const org = orgs.find((o) => o.id === m.organizationId);
     if (org) {
-      result.push({ organization: org, role: m.role });
+      result.push({ organization: org as any, role: m.role });
     }
   }
 
+  userOrgsCache.set(userId, { orgs: result, expiresAt: now + CACHE_TTL_MS });
   return result;
 }
 
 export async function getOrganizationMembership(orgId: string, userId: string): Promise<OrgRole | null> {
+  const cacheKey = `${orgId}:${userId}`;
+  const now = Date.now();
+  const cached = orgRoleCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.role;
+  }
+
   const membership = await OrganizationMemberModel.findOne({
     organizationId: orgId,
     userId,
     deletedAt: null,
-  });
-  return membership ? membership.role : null;
+  }).lean();
+
+  const role = membership ? membership.role : null;
+  orgRoleCache.set(cacheKey, { role, expiresAt: now + CACHE_TTL_MS });
+  return role;
 }
 
 export async function getOrganizationMembers(orgId: string) {

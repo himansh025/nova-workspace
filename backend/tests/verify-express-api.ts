@@ -169,7 +169,7 @@ async function runExpressAudit() {
     );
 
     // 9. Pull Requests
-    const prsRes = await fetch(`${baseUrl}/api/pull-requests`);
+    const prsRes = await fetch(`${baseUrl}/api/pull-requests`, { headers: authHeaders });
     const prsData = (await prsRes.json()) as any;
     assert(
       prsRes.status === 200 && prsData.success && prsData.pullRequests?.length > 0,
@@ -178,10 +178,11 @@ async function runExpressAudit() {
     );
 
     // 10. AI PR Reviewer
+    const targetPrId = prsData.pullRequests?.[0]?.id || "pr-1";
     const aiReviewRes = await fetch(`${baseUrl}/api/ai/review-pr`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prId: "pr-1" }),
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ prId: targetPrId }),
     });
     const aiReviewData = (await aiReviewRes.json()) as any;
     assert(

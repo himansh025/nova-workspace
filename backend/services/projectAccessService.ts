@@ -10,6 +10,9 @@ export interface ProjectAccessContext {
   memberFound: boolean;
 }
 
+const accessCache = new Map<string, { ctx: ProjectAccessContext; expiresAt: number }>();
+const ACCESS_CACHE_TTL_MS = 60 * 1000;
+
 export async function resolveProjectAccess(req: Request): Promise<ProjectAccessContext> {
   const organizationId = (req as any).organizationId || "org-default";
   const user = (req as any).user;
@@ -17,30 +20,46 @@ export async function resolveProjectAccess(req: Request): Promise<ProjectAccessC
 
   const isPrivileged = userRole === "owner" || userRole === "admin";
 
+  // Fast path: Owners and admins have full access, skip querying TeamMember entirely!
+  if (isPrivileged) {
+    return { organizationId, isPrivileged: true, teamGroupId: null, memberFound: true };
+  }
+
   if (!user?.id && !user?.email) {
-    return { organizationId, isPrivileged, teamGroupId: null, memberFound: false };
+    return { organizationId, isPrivileged: false, teamGroupId: null, memberFound: false };
+  }
+
+  const cacheKey = `${organizationId}:${user.id || user.email}`;
+  const now = Date.now();
+  const cached = accessCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.ctx;
   }
 
   const member = await TeamMemberModel.findOne({
     organizationId,
     $or: [{ id: user.id }, { email: String(user.email).toLowerCase().trim() }],
-  });
+  }).lean();
 
-  if (!member || member.status === "pending") {
-    return {
+  if (!member || (member as any).status === "pending") {
+    const ctx = {
       organizationId,
-      isPrivileged,
+      isPrivileged: false,
       teamGroupId: null,
       memberFound: Boolean(member),
     };
+    accessCache.set(cacheKey, { ctx, expiresAt: now + ACCESS_CACHE_TTL_MS });
+    return ctx;
   }
 
-  return {
+  const ctx = {
     organizationId,
-    isPrivileged,
-    teamGroupId: member.teamGroupId || null,
+    isPrivileged: false,
+    teamGroupId: (member as any).teamGroupId || null,
     memberFound: true,
   };
+  accessCache.set(cacheKey, { ctx, expiresAt: now + ACCESS_CACHE_TTL_MS });
+  return ctx;
 }
 
 /** Mongo filter for projects visible to this viewer */
@@ -69,7 +88,7 @@ export function projectVisibilityFilter(access: ProjectAccessContext): Record<st
 }
 
 export async function getAccessibleProjectIds(access: ProjectAccessContext): Promise<string[]> {
-  const projects = await ProjectModel.find(projectVisibilityFilter(access)).select("id");
+  const projects = await ProjectModel.find(projectVisibilityFilter(access)).select("id").lean();
   return projects.map((p) => p.id);
 }
 
@@ -83,10 +102,10 @@ export async function canAccessProject(
   const project = await ProjectModel.findOne({
     organizationId: access.organizationId,
     id: projectId,
-  });
+  }).lean();
   if (!project) return false;
 
-  const squadId = project.teamGroupId;
+  const squadId = (project as any).teamGroupId;
   if (!squadId) return true;
   return squadId === access.teamGroupId;
 }

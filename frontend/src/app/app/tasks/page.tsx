@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -123,6 +123,7 @@ export default function TasksPage() {
   const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
 
   /* ── Data fetching ──────────────────────────────────────────────────────── */
+  /* ── Data fetching ──────────────────────────────────────────────────────── */
   const fetchTasks = async (overrideProjectId?: string) => {
     try {
       let activeProjectId = overrideProjectId;
@@ -134,8 +135,6 @@ export default function TasksPage() {
             activeProjectId = urlProject;
             localStorage.setItem("nova_tasks_project", urlProject);
             setSelectedProject(urlProject);
-            // Optionally clear it from URL so refresh doesn't force it? 
-            // We'll just leave it for now.
           } else {
             const saved = localStorage.getItem("nova_tasks_project");
             if (saved) {
@@ -152,7 +151,7 @@ export default function TasksPage() {
       if (activeProjectId && activeProjectId !== "all") {
         url += `?projectId=${encodeURIComponent(activeProjectId)}`;
       }
-      
+
       const res = await fetch(url, apiFetchInit());
       const data = await res.json();
       if (data.tasks) setTasks(data.tasks);
@@ -168,27 +167,7 @@ export default function TasksPage() {
       const res = await fetch("/api/projects", apiFetchInit());
       const data = await res.json();
       if (data.projects) setProjects(data.projects);
-    } catch(e) {}
-  };
-
-  const handleProjectFilterChange = (val: string) => {
-    setSelectedProject(val);
-    if (val === "all") {
-      localStorage.removeItem("nova_tasks_project");
-    } else {
-      localStorage.setItem("nova_tasks_project", val);
-    }
-    
-    // Also remove from URL to avoid confusion if we change dropdown
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has("projectId")) {
-         url.searchParams.delete("projectId");
-         window.history.replaceState({}, "", url.toString());
-      }
-    }
-
-    fetchTasks(val);
+    } catch (e) {}
   };
 
   const fetchTeam = async () => {
@@ -201,10 +180,41 @@ export default function TasksPage() {
     }
   };
 
+  // Parallel Initial Loader: fetches tasks, team, and projects concurrently
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        fetchTasks(),
+        fetchTeam(),
+        fetchProjectsList(),
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleProjectFilterChange = (val: string) => {
+    setSelectedProject(val);
+    if (val === "all") {
+      localStorage.removeItem("nova_tasks_project");
+    } else {
+      localStorage.setItem("nova_tasks_project", val);
+    }
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("projectId")) {
+        url.searchParams.delete("projectId");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+
+    fetchTasks(val);
+  };
+
   useEffect(() => {
-    fetchTasks();
-    fetchTeam();
-    fetchProjectsList();
+    loadInitialData();
     const handleRefresh = () => fetchTasks();
     window.addEventListener("task-saved", handleRefresh);
     window.addEventListener("nova:realtime_sync", handleRefresh);
@@ -371,22 +381,24 @@ export default function TasksPage() {
   };
 
   /* ── Filtering ──────────────────────────────────────────────────────────── */
-  const filteredTasks = tasks.filter((t) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      t.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        t.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesPriority =
-      selectedPriority === "all" || t.priority === selectedPriority;
+      const matchesPriority =
+        selectedPriority === "all" || t.priority === selectedPriority;
 
-    const matchesAssignee =
-      selectedAssignee === "all" || t.assignee.id === selectedAssignee;
+      const matchesAssignee =
+        selectedAssignee === "all" || t.assignee.id === selectedAssignee;
 
-    return matchesSearch && matchesPriority && matchesAssignee;
-  });
+      return matchesSearch && matchesPriority && matchesAssignee;
+    });
+  }, [tasks, searchQuery, selectedPriority, selectedAssignee]);
 
   /* ════════════════════════════════════════════════════════════════════════
      Render

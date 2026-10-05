@@ -16,7 +16,7 @@ const TaskSchema = new Schema<ITaskDocument>(
     description: { type: String, default: "" },
     status: {
       type: String,
-      enum: ["backlog", "in_progress", "review", "done"],
+      enum: ["backlog", "todo", "in_progress", "review", "done"],
       default: "backlog",
       index: true,
     },

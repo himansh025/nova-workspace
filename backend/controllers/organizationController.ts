@@ -91,11 +91,12 @@ export const organizationController = {
   async update(req: Request, res: Response) {
     try {
       const orgId = (req as any).organizationId;
-      const { name, slug } = req.body;
+      const { name, slug, defaultBranch } = req.body;
       
       const updateData: any = {};
       if (name && name.trim().length > 0) updateData.name = name.trim();
       if (slug && slug.trim().length > 0) updateData.slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
+      if (defaultBranch && defaultBranch.trim().length > 0) updateData.defaultBranch = defaultBranch.trim();
 
       const org = await OrganizationModel.findOneAndUpdate(
         { id: orgId, deletedAt: null },
