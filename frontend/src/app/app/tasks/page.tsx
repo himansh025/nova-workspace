@@ -72,18 +72,25 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
 
 function PriorityIcon({ priority }: { priority: TaskPriority }) {
   const cls = `w-3 h-3 shrink-0 ${PRIORITY_COLOR[priority]}`;
+  const label = PRIORITY_LABEL[priority] || "Normal";
+  let icon = <Minus className={cls} />;
   switch (priority) {
     case "urgent":
-      return <AlertCircle className={cls} />;
+      icon = <AlertCircle className={cls} />;
+      break;
     case "high":
-      return <ArrowUp className={cls} />;
+      icon = <ArrowUp className={cls} />;
+      break;
     case "medium":
-      return <ArrowRight className={cls} />;
+      icon = <Minus className={cls} />;
+      break;
     case "low":
-      return <ArrowDown className={cls} />;
+      icon = <ArrowDown className={cls} />;
+      break;
     default:
-      return <Minus className={cls} />;
+      icon = <Minus className={cls} />;
   }
+  return <span title={`${label} priority`} className="flex items-center">{icon}</span>;
 }
 
 /* ─── Kanban columns config ──────────────────────────────────────────────── */
@@ -113,6 +120,7 @@ export default function TasksPage() {
   const [selectedTaskDetail, setSelectedTaskDetail] = useState<Task | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null);
+  const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
 
   /* ── Data fetching ──────────────────────────────────────────────────────── */
   const fetchTasks = async (overrideProjectId?: string) => {
@@ -225,6 +233,92 @@ export default function TasksPage() {
       });
     } catch (err) {
       console.error("Failed to update status", err);
+      fetchTasks();
+    }
+  };
+
+  const handleDropOnCard = async (
+    draggedId: string,
+    targetCardId: string,
+    targetCol: TaskStatus
+  ) => {
+    if (!draggedId || draggedId === targetCardId) return;
+
+    // Optimistic reorder: place dragged task right after target card
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === draggedId);
+      if (!task) return prev;
+      const withoutTask = prev.filter((t) => t.id !== draggedId);
+      const targetIndex = withoutTask.findIndex((t) => t.id === targetCardId);
+      const updatedTask = { ...task, status: targetCol };
+
+      if (targetIndex === -1) {
+        return [...withoutTask, updatedTask];
+      }
+      const newTasks = [...withoutTask];
+      newTasks.splice(targetIndex + 1, 0, updatedTask);
+      return newTasks;
+    });
+
+    if (selectedTaskDetail?.id === draggedId) {
+      setSelectedTaskDetail((prev) =>
+        prev ? { ...prev, status: targetCol } : null
+      );
+    }
+
+    try {
+      await fetch(`/api/tasks/${draggedId}`, {
+        ...apiFetchInit({ "Content-Type": "application/json" }),
+        method: "PATCH",
+        body: JSON.stringify({ status: targetCol }),
+      });
+    } catch (err) {
+      console.error("Failed to update status on drop", err);
+      fetchTasks();
+    }
+  };
+
+  const handleDropAtBottom = async (draggedId: string, targetCol: TaskStatus) => {
+    if (!draggedId) return;
+
+    // Optimistic reorder: place dragged task at the end of targetCol
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === draggedId);
+      if (!task) return prev;
+      const withoutTask = prev.filter((t) => t.id !== draggedId);
+
+      let lastColIndex = -1;
+      for (let i = withoutTask.length - 1; i >= 0; i--) {
+        if (withoutTask[i].status === targetCol) {
+          lastColIndex = i;
+          break;
+        }
+      }
+
+      const updatedTask = { ...task, status: targetCol };
+      if (lastColIndex === -1) {
+        return [...withoutTask, updatedTask];
+      } else {
+        const newTasks = [...withoutTask];
+        newTasks.splice(lastColIndex + 1, 0, updatedTask);
+        return newTasks;
+      }
+    });
+
+    if (selectedTaskDetail?.id === draggedId) {
+      setSelectedTaskDetail((prev) =>
+        prev ? { ...prev, status: targetCol } : null
+      );
+    }
+
+    try {
+      await fetch(`/api/tasks/${draggedId}`, {
+        ...apiFetchInit({ "Content-Type": "application/json" }),
+        method: "PATCH",
+        body: JSON.stringify({ status: targetCol }),
+      });
+    } catch (err) {
+      console.error("Failed to update status on drop", err);
       fetchTasks();
     }
   };
@@ -433,7 +527,7 @@ export default function TasksPage() {
         {/* ── Kanban view ───────────────────────────────────────────────── */}
         {viewMode === "kanban" && (
           <div className="flex-1 overflow-x-auto overflow-y-hidden">
-            <div className="flex gap-3 h-full px-5 py-4 items-start min-w-max">
+            <div className="flex gap-3 h-full px-5 py-4 min-w-max items-stretch">
               {COLUMNS.map((col) => {
                 const colTasks = filteredTasks.filter((t) => t.status === col.key);
                 const isColDraggedOver = dragOverCol === col.key;
@@ -457,18 +551,19 @@ export default function TasksPage() {
                     onDrop={(e) => {
                       e.preventDefault();
                       const taskId = e.dataTransfer.getData("text/plain") || draggingTaskId;
-                      if (taskId) handleUpdateStatus(taskId, col.key);
+                      if (taskId) handleDropAtBottom(taskId, col.key);
                       setDragOverCol(null);
+                      setDragOverCardId(null);
                       setDraggingTaskId(null);
                     }}
-                    className={`w-64 shrink-0 flex flex-col max-h-full bg-[var(--nova-deep)] border rounded-lg p-3 transition-all duration-200 ${
+                    className={`w-64 shrink-0 flex flex-col h-full bg-[var(--nova-deep)] border rounded-lg p-3 transition-all duration-200 ${
                       isColDraggedOver
                         ? "border-[var(--nova-accent)] bg-[var(--nova-accent-subtle)]"
                         : "border-[var(--nova-border)]"
                     }`}
                   >
                     {/* Column header */}
-                    <div className="flex items-center justify-between mb-3 px-0.5">
+                    <div className="flex items-center justify-between mb-3 px-0.5 shrink-0">
                       <div className="flex items-center gap-1.5">
                         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[col.key]}`} />
                         <span className="text-[11px] font-medium text-[var(--nova-text-secondary)]">
@@ -491,9 +586,10 @@ export default function TasksPage() {
                     </div>
 
                     {/* Cards */}
-                    <div className="flex flex-col gap-2 flex-1 overflow-y-auto nova-scroll">
+                    <div className="flex flex-col gap-2 flex-1 overflow-y-auto nova-scroll min-h-0">
                       {colTasks.map((task) => {
                         const isDragging = draggingTaskId === task.id;
+                        const isCardTargeted = dragOverCardId === task.id;
                         return (
                           <div
                             key={task.id}
@@ -506,6 +602,31 @@ export default function TasksPage() {
                             onDragEnd={() => {
                               setDraggingTaskId(null);
                               setDragOverCol(null);
+                              setDragOverCardId(null);
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (draggingTaskId && draggingTaskId !== task.id) {
+                                setDragOverCardId(task.id);
+                              }
+                            }}
+                            onDragLeave={() => {
+                              if (dragOverCardId === task.id) {
+                                setDragOverCardId(null);
+                              }
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const draggedId =
+                                e.dataTransfer.getData("text/plain") || draggingTaskId;
+                              if (draggedId) {
+                                handleDropOnCard(draggedId, task.id, col.key);
+                              }
+                              setDragOverCol(null);
+                              setDragOverCardId(null);
+                              setDraggingTaskId(null);
                             }}
                             onClick={() => {
                               if (!draggingTaskId) setSelectedTaskDetail(task);
@@ -513,16 +634,29 @@ export default function TasksPage() {
                             className={`group bg-[var(--nova-surface)] border rounded-md p-3 cursor-grab active:cursor-grabbing hover:border-[var(--nova-border-strong)] hover:shadow-xs transition-all duration-150 ${
                               isDragging
                                 ? "opacity-40 scale-[0.97] border-dashed border-[var(--nova-accent)]"
+                                : isCardTargeted
+                                ? "border-[var(--nova-accent)] ring-1 ring-[var(--nova-accent)] shadow-xs"
                                 : "border-[var(--nova-border)]"
                             }`}
                           >
-                            {/* Top row: key + priority icon + drag grip */}
+                            {/* Top row: key + priority icon + delete button + drag grip */}
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-mono text-[10px] text-[var(--nova-accent)] font-medium">
                                 {task.key}
                               </span>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1">
                                 <PriorityIcon priority={task.priority} />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTask(task.id);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-0.5 text-[var(--nova-text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
+                                  title="Delete task card"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
                                 <GripVertical className="w-3 h-3 text-[var(--nova-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
                               </div>
                             </div>
@@ -580,7 +714,7 @@ export default function TasksPage() {
 
                       {/* Empty column state */}
                       {colTasks.length === 0 && !isColDraggedOver && (
-                        <div className="h-24 border border-dashed border-[var(--nova-border)] rounded-lg flex items-center justify-center text-[11px] text-[var(--nova-text-muted)] font-mono">
+                        <div className="flex-1 min-h-[140px] border border-dashed border-[var(--nova-border)] rounded-lg flex items-center justify-center text-[11px] text-[var(--nova-text-muted)] font-mono">
                           {isLoading && tasks.length === 0 ? (
                             <span className="flex items-center gap-1.5">
                               <Loader2 className="w-3 h-3 animate-spin text-[var(--nova-accent)]" />
@@ -591,6 +725,37 @@ export default function TasksPage() {
                           )}
                         </div>
                       )}
+
+                      {/* Droppable bottom spacer to easily drop below all cards */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragOverCol(col.key);
+                          setDragOverCardId(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const draggedId =
+                            e.dataTransfer.getData("text/plain") || draggingTaskId;
+                          if (draggedId) {
+                            handleDropAtBottom(draggedId, col.key);
+                          }
+                          setDragOverCol(null);
+                          setDragOverCardId(null);
+                          setDraggingTaskId(null);
+                        }}
+                        className={`flex-1 min-h-[50px] rounded-md transition-all duration-150 flex items-center justify-center ${
+                          isColDraggedOver && colTasks.length > 0
+                            ? "border-2 border-dashed border-[var(--nova-accent)]/50 bg-[var(--nova-accent-subtle)]/20 text-[var(--nova-accent)] text-[10px] font-mono py-2"
+                            : ""
+                        }`}
+                      >
+                        {isColDraggedOver && colTasks.length > 0 && (
+                          <span>Drop here to add below</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
