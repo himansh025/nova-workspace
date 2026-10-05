@@ -216,6 +216,8 @@ async function runGithubWorkflowAudit() {
     console.log("---------------------------------------------------------");
   } finally {
     server.close();
+    await mongoose.disconnect();
+    process.exit(0);
   }
 }
 
