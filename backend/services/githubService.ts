@@ -214,9 +214,20 @@ export const githubService = {
       Accept: "application/vnd.github.v3+json",
     };
 
-    if (config.clientId && config.clientSecret) {
-      const auth = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64");
-      headers["Authorization"] = `Basic ${auth}`;
+    if (config.clientSecret && config.clientSecret.trim().length > 0) {
+      const secret = config.clientSecret.trim();
+      if (
+        secret.startsWith("ghp_") ||
+        secret.startsWith("github_pat_") ||
+        secret.startsWith("gho_") ||
+        secret.startsWith("ghu_") ||
+        secret.length > 25
+      ) {
+        headers["Authorization"] = `Bearer ${secret}`;
+      } else if (config.clientId) {
+        const auth = Buffer.from(`${config.clientId}:${secret}`).toString("base64");
+        headers["Authorization"] = `Basic ${auth}`;
+      }
     }
 
     try {

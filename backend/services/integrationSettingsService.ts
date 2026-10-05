@@ -210,16 +210,39 @@ export const integrationSettingsService = {
           "User-Agent": "Nova-Workspace-App",
           "Accept": "application/vnd.github.v3+json",
         };
-        if (clientSecret) {
-          const authString = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-          headers["Authorization"] = `Basic ${authString}`;
+        if (clientSecret && clientSecret.trim().length > 0) {
+          const secret = clientSecret.trim();
+          if (
+            secret.startsWith("ghp_") ||
+            secret.startsWith("github_pat_") ||
+            secret.startsWith("gho_") ||
+            secret.startsWith("ghu_") ||
+            secret.length > 25
+          ) {
+            headers["Authorization"] = `Bearer ${secret}`;
+          } else if (clientId) {
+            const authString = Buffer.from(`${clientId}:${secret}`).toString("base64");
+            headers["Authorization"] = `Basic ${authString}`;
+          }
         }
-        const repoRes = await fetch(`https://api.github.com/repos/${repository}`, { headers });
+        let repoRes = await fetch(`https://api.github.com/repos/${repository}`, { headers });
+        
+        // Fallback: if Basic returned 404/401 and clientSecret is set, retry with Bearer token
+        if ((repoRes.status === 404 || repoRes.status === 401) && clientSecret && headers["Authorization"]?.startsWith("Basic ")) {
+          const bearerHeaders = { ...headers, Authorization: `Bearer ${clientSecret.trim()}` };
+          const retryRes = await fetch(`https://api.github.com/repos/${repository}`, { headers: bearerHeaders });
+          if (retryRes.ok) {
+            repoRes = retryRes;
+          }
+        }
+
         if (repoRes.status === 404) {
-          throw new Error(`Repository "${repository}" not found on GitHub or private without valid credentials.`);
+          throw new Error(
+            `Repository "${repository}" is private or not found. To connect private repositories, paste a GitHub Personal Access Token (PAT starting with ghp_ or github_pat_) into the GitHub Client Secret field.`
+          );
         }
         if (repoRes.status === 401) {
-          throw new Error(`GitHub authentication rejected for "${repository}". Check your Client Secret.`);
+          throw new Error(`GitHub authentication rejected for "${repository}". Check your Personal Access Token or Client Secret.`);
         }
         if (!repoRes.ok) {
           throw new Error(`GitHub API returned HTTP ${repoRes.status} for repository "${repository}".`);

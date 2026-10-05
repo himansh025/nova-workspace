@@ -423,11 +423,13 @@ export default function ThirdPartyCredentialsPanel() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">GitHub Client Secret</label>
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                GitHub Access Token / App Secret
+              </label>
               <div className="relative">
                 <input
                   type={showGithubSecret ? "text" : "password"}
-                  placeholder="Enter GitHub App Client Secret..."
+                  placeholder="Paste GitHub Personal Access Token (ghp_...) or App Secret..."
                   value={githubClientSecret}
                   onChange={(e) => setGithubClientSecret(e.target.value)}
                   className="w-full pl-3 pr-10 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-xs font-mono focus:outline-hidden focus:border-[var(--nova-accent)] placeholder-[var(--nova-text-muted)]"
@@ -440,6 +442,9 @@ export default function ThirdPartyCredentialsPanel() {
                   {showGithubSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
+              <p className="text-[10px] text-[var(--nova-text-muted)] mt-1">
+                For private repos, paste a <strong>Personal Access Token (PAT)</strong> with <code>repo</code> scope.
+              </p>
             </div>
           </div>
 
