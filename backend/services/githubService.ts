@@ -286,7 +286,7 @@ export const githubService = {
             { headers }
           );
           if (filesRes.ok) {
-            const filesData: any[] = await filesRes.json();
+            const filesData = (await filesRes.json()) as any[];
             diffFiles = filesData.flatMap((f) => parsePatchToDiffFiles(f.filename, f.patch));
           }
         } catch {}

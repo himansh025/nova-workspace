@@ -79,8 +79,8 @@ export const systemController = {
 
       const formattedActivities = activities.map(act => {
         const doc = act.toJSON() as any;
-        if (act.createdAt) {
-          doc.timestamp = formatRelativeTime(act.createdAt);
+        if (doc.createdAt) {
+          doc.timestamp = formatRelativeTime(doc.createdAt);
         }
         return doc;
       });

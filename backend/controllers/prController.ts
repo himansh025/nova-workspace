@@ -194,12 +194,12 @@ export const prController = {
       // Prepare code diff string
       const fileDiffsStr = pr.diff
         .map(
-          (file) =>
+          (file: any) =>
             `File: ${file.filename}\n` +
             file.chunks
               .map(
-                (c) =>
-                  `${c.header}\n` + c.lines.map((l) => `${l.type === "add" ? "+" : l.type === "del" ? "-" : " "}${l.content}`).join("\n")
+                (c: any) =>
+                  `${c.header}\n` + c.lines.map((l: any) => `${l.type === "add" ? "+" : l.type === "del" ? "-" : " "}${l.content}`).join("\n")
               )
               .join("\n")
         )

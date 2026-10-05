@@ -181,7 +181,7 @@ async function runExpressAudit() {
     const targetPrId = prsData.pullRequests?.[0]?.id || "pr-1";
     const aiReviewRes = await fetch(`${baseUrl}/api/ai/review-pr`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
+      headers: authHeaders,
       body: JSON.stringify({ prId: targetPrId }),
     });
     const aiReviewData = (await aiReviewRes.json()) as any;

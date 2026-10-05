@@ -11,6 +11,7 @@ export const analyticsService = {
     // Task counts by status
     const tasksByStatus: Record<TaskStatus, number> = {
       backlog: tasks.filter((t) => t.status === "backlog").length,
+      todo: tasks.filter((t) => t.status === "todo").length,
       in_progress: tasks.filter((t) => t.status === "in_progress").length,
       review: tasks.filter((t) => t.status === "review").length,
       done: completedTasks.length,
