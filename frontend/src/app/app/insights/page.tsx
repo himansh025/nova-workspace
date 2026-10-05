@@ -48,7 +48,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="min-h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="min-h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] px-4 sm:px-6 py-4 sm:py-6 lg:py-8 space-y-6 max-w-7xl mx-auto">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] p-4 rounded-lg shadow-xs">
         <div>

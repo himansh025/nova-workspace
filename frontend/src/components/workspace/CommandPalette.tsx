@@ -114,8 +114,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       <div className="fixed inset-0" onClick={onClose} />
 
       {/* Centered panel */}
-      <div className="relative flex justify-center pt-24 px-4">
-        <div className="w-full max-w-lg flex flex-col bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.12)] overflow-hidden">
+      <div className="relative flex justify-center pt-16 sm:pt-24 px-4">
+        <div className="w-full max-w-lg sm:mx-auto flex flex-col bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.12)] overflow-hidden">
 
           {/* ── Search bar ── */}
           <div className="border-b border-[var(--nova-border)] px-4 py-3 bg-[var(--nova-bg)] flex items-center gap-2.5">
@@ -144,7 +144,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           </div>
 
           {/* ── Results area ── */}
-          <div className="max-h-80 overflow-y-auto px-2 py-2 space-y-1 nova-scroll">
+          <div className="max-h-[50vh] sm:max-h-80 overflow-y-auto px-2 py-2 space-y-1 nova-scroll">
 
             {/* Quick Navigation */}
             {filteredNav.length > 0 && (

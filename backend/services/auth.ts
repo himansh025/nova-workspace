@@ -1,4 +1,5 @@
 import { UserModel, IUserDocument } from "../models/User";
+import { TeamMemberModel } from "../models/TeamMember";
 import { SessionModel } from "../models/Session";
 import { EmailVerificationTokenModel, PasswordResetTokenModel } from "../models/AuthTokens";
 import { hashPassword, verifyPassword, generateTokenWithHash, hashToken } from "./cryptoService";
@@ -24,9 +25,9 @@ export function toSafeUser(user: IUserDocument, organizationName?: string): Safe
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: user.role || "Individual",
     organizationId: user.organizationId,
-    organization: organizationName || "Nova Workspace",
+    organization: organizationName || (user.organizationId ? "Nova Workspace" : ""),
     avatar: user.avatar,
     initials: user.initials,
     emailVerified: user.emailVerified,
@@ -157,22 +158,24 @@ export async function registerUserAccount(data: {
     name: data.name.trim(),
     email: normalizedEmail,
     passwordHash,
-    role: data.role || "Software Engineer",
+    role: data.role || "Individual",
     avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80`,
     initials,
     emailVerified: isAutoVerified,
     emailVerifiedAt: isAutoVerified ? new Date() : null,
   });
 
-  // Create initial organization for the new user
-  const orgId = await ensureDefaultOrganization(
-    userDoc.id,
-    userDoc.name,
-    data.organizationName
-  );
-
-  userDoc.organizationId = orgId;
-  await userDoc.save();
+  // Only create organization if explicitly requested; otherwise user registers as an individual
+  let orgId: string | undefined = undefined;
+  if (data.organizationName && data.organizationName.trim()) {
+    orgId = await ensureDefaultOrganization(
+      userDoc.id,
+      userDoc.name,
+      data.organizationName.trim()
+    );
+    userDoc.organizationId = orgId;
+    await userDoc.save();
+  }
 
   // Generate email verification token if email is enabled
   if (ENV.EMAIL_ENABLED && !isAutoVerified) {
@@ -196,6 +199,61 @@ export async function registerUserAccount(data: {
     user: toSafeUser(userDoc, data.organizationName),
     sessionToken,
   };
+}
+
+/**
+ * Updates a user's profile attributes (role, name, avatar) and keeps team membership synced.
+ */
+export async function updateUserProfile(
+  userId: string,
+  data: { name?: string; role?: string; avatar?: string }
+): Promise<SafeUser> {
+  const user = await UserModel.findOne({ id: userId, locked: false });
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  if (data.name && data.name.trim()) {
+    user.name = data.name.trim();
+    user.initials = user.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "DEV";
+  }
+
+  if (data.role !== undefined && data.role.trim()) {
+    user.role = data.role.trim();
+  }
+
+  if (data.avatar !== undefined) {
+    user.avatar = data.avatar;
+  }
+
+  await user.save();
+
+  // Keep TeamMemberModel in sync across organizations if user is a member
+  await TeamMemberModel.updateMany(
+    { id: user.id },
+    {
+      $set: {
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar,
+        initials: user.initials,
+      },
+    }
+  );
+
+  let orgName: string | undefined;
+  if (user.organizationId) {
+    const orgs = await getUserOrganizations(user.id);
+    const matched = orgs.find((o) => o.organization.id === user.organizationId);
+    orgName = matched?.organization.name;
+  }
+
+  return toSafeUser(user, orgName);
 }
 
 /**

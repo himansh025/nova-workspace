@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   authenticateUser,
   registerUserAccount,
+  updateUserProfile,
   revokeSessionToken,
   verifySessionToken,
   verifyEmailWithToken,
@@ -93,9 +94,9 @@ export const authController = {
       broadcastEvent({
         type: "system",
         category: "system",
-        title: "New Team Member Joined",
-        message: `${user.name} registered as ${user.role}`,
-        link: "/app/team",
+        title: user.organizationId ? "New Team Member Joined" : "New User Registered",
+        message: `${user.name} registered${user.role ? ` as ${user.role}` : ""}`,
+        link: user.organizationId ? "/app/team" : "/app",
       });
 
       return res.status(201).json({
@@ -230,6 +231,26 @@ export const authController = {
       return res.json({ success: true, message: "Password updated successfully. Please log in with your new password." });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: "Failed to reset password." });
+    }
+  },
+
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      if (!user || !user.id) {
+        return res.status(401).json({ success: false, error: "Authentication required to update profile." });
+      }
+
+      const { name, role, avatar } = req.body;
+      const updatedUser = await updateUserProfile(user.id, { name, role, avatar });
+
+      return res.json({
+        success: true,
+        user: updatedUser,
+        message: "Profile updated successfully.",
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || "Failed to update profile." });
     }
   },
 };

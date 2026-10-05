@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 
 export default function PricingPage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen overflow-x-hidden">
       <Header />
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-16 sm:pt-20">
         <PricingSection />
         <FAQSection />
         <FinalCTA />

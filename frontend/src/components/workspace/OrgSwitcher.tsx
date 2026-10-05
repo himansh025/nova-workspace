@@ -205,7 +205,223 @@ export const OrgSwitcher: React.FC<{
     }
   };
 
-  if (!activeOrg) return null;
+  if (!activeOrg) {
+    if (asMenuItem) {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCreateModalOpen(true);
+            }}
+            className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-accent)] hover:bg-[var(--nova-accent-subtle)] transition-colors flex items-center justify-between cursor-pointer"
+          >
+            <span className="flex items-center gap-1.5 font-medium">
+              <Plus className="w-3.5 h-3.5" /> Create Organization
+            </span>
+          </button>
+
+          {isCreateModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div
+                className="fixed inset-0"
+                onClick={() => setIsCreateModalOpen(false)}
+              />
+              <div className="relative w-full max-w-md bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.12)] overflow-hidden z-10">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nova-border)]">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+                    <span className="text-[13px] font-semibold text-[var(--nova-text-primary)] tracking-tight">
+                      Create Organization Workspace
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded transition-all duration-150"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateOrg} className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
+                      Organization Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Orion Labs"
+                      value={newOrgName}
+                      onChange={(e) => {
+                        setNewOrgName(e.target.value);
+                        setNewOrgSlug(
+                          e.target.value.toLowerCase().replace(/\s+/g, "-")
+                        );
+                      }}
+                      required
+                      className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-3 py-2 text-[var(--nova-text-primary)] text-[12px] placeholder:text-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)] transition-colors duration-150"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
+                      Workspace Slug
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. orion-labs"
+                      value={newOrgSlug}
+                      onChange={(e) => setNewOrgSlug(e.target.value)}
+                      className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-3 py-2 text-[var(--nova-text-secondary)] font-mono text-[12px] placeholder:text-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)] transition-colors duration-150"
+                    />
+                  </div>
+
+                  <div className="flex items-start gap-3 pl-3 border-l-2 border-[var(--nova-ai)] py-1">
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--nova-ai)] shrink-0 mt-0.5" />
+                    <span className="text-[11px] text-[var(--nova-text-secondary)] leading-relaxed">
+                      Includes multi-tenant database isolation, custom webhook
+                      routing, and RBAC security credentials.
+                    </span>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateModalOpen(false)}
+                      className="px-3 py-1.5 rounded text-[12px] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-all duration-150"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isCreating}
+                      className="px-3 py-1.5 rounded bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] disabled:opacity-50 text-white text-[12px] font-medium transition-colors duration-150"
+                    >
+                      {isCreating ? "Creating…" : "Create Workspace"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    return (
+      <div ref={containerRef} className="relative mb-3">
+        <button
+          type="button"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[var(--nova-deep)] hover:bg-[var(--nova-border-muted)] border border-dashed border-[var(--nova-accent-border)] text-[var(--nova-text-primary)] transition-all duration-150 text-left group cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center shrink-0">
+              <Building2 className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[12px] font-semibold text-[var(--nova-text-primary)] truncate leading-tight">
+                  Individual Account
+                </span>
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium leading-none bg-[var(--nova-surface)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]">
+                  Personal
+                </span>
+              </div>
+              <div className="text-[10px] font-mono text-[var(--nova-accent)] truncate leading-tight mt-0.5 flex items-center gap-1">
+                <Plus className="w-2.5 h-2.5" /> Create Organization
+              </div>
+            </div>
+          </div>
+        </button>
+
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div
+              className="fixed inset-0"
+              onClick={() => setIsCreateModalOpen(false)}
+            />
+            <div className="relative w-full max-w-md bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.12)] overflow-hidden z-10">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--nova-border)]">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+                  <span className="text-[13px] font-semibold text-[var(--nova-text-primary)] tracking-tight">
+                    Create Organization Workspace
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded transition-all duration-150"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateOrg} className="p-5 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
+                    Organization Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Orion Labs"
+                    value={newOrgName}
+                    onChange={(e) => {
+                      setNewOrgName(e.target.value);
+                      setNewOrgSlug(
+                        e.target.value.toLowerCase().replace(/\s+/g, "-")
+                      );
+                    }}
+                    required
+                    className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-3 py-2 text-[var(--nova-text-primary)] text-[12px] placeholder:text-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)] transition-colors duration-150"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1.5">
+                    Workspace Slug
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. orion-labs"
+                    value={newOrgSlug}
+                    onChange={(e) => setNewOrgSlug(e.target.value)}
+                    className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-3 py-2 text-[var(--nova-text-secondary)] font-mono text-[12px] placeholder:text-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)] transition-colors duration-150"
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 pl-3 border-l-2 border-[var(--nova-ai)] py-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--nova-ai)] shrink-0 mt-0.5" />
+                  <span className="text-[11px] text-[var(--nova-text-secondary)] leading-relaxed">
+                    Includes multi-tenant database isolation, custom webhook
+                    routing, and RBAC security credentials.
+                  </span>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="px-3 py-1.5 rounded text-[12px] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-all duration-150"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreating}
+                    className="px-3 py-1.5 rounded bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] disabled:opacity-50 text-white text-[12px] font-medium transition-colors duration-150"
+                  >
+                    {isCreating ? "Creating…" : "Create Workspace"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

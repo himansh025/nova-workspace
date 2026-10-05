@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import WorkspaceNav from "@/components/workspace/WorkspaceNav";
-import CommandPalette from "@/components/workspace/CommandPalette";
 import TaskModal from "@/components/workspace/TaskModal";
 import TourGuide from "@/components/workspace/TourGuide";
 import { ToastProvider } from "@/components/workspace/ToastProvider";
+import WorkspaceLoader from "@/components/workspace/WorkspaceLoader";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { prefetchOrgs } from "@/components/workspace/OrgSwitcher";
@@ -15,7 +15,6 @@ import { prefetchOrgs } from "@/components/workspace/OrgSwitcher";
 function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [newTaskProjectId, setNewTaskProjectId] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -35,14 +34,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   };
 
   if (isLoading || !user) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
-        <div className="flex items-center gap-3 rounded-full border border-[var(--nova-border)] bg-[var(--nova-surface)] px-4 py-2 text-xs font-mono text-[var(--nova-text-secondary)]">
-          <span className="h-2 w-2 rounded-full bg-[var(--nova-accent)] animate-pulse" />
-          Verifying session...
-        </div>
-      </div>
-    );
+    return <WorkspaceLoader />;
   }
 
   return (
@@ -70,7 +62,6 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           {/* Top Header Bar */}
           <WorkspaceNav
-            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
             onOpenNewTaskModal={(pid) => { setNewTaskProjectId(pid || null); setIsNewTaskModalOpen(true); }}
             onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
             onToggleDesktopSidebar={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
@@ -81,12 +72,6 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
-
-        {/* Global Command Palette */}
-        <CommandPalette
-          isOpen={isCommandPaletteOpen}
-          onClose={() => setIsCommandPaletteOpen(false)}
-        />
 
         {/* Global New Issue Creation Modal */}
         <TaskModal

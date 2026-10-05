@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen overflow-x-hidden">
       <Header />
-      <main className="flex-1 pt-32 pb-20">
+      <main className="flex-1 pt-16 sm:pt-20 pb-20">
         <div className="container-site max-w-4xl mx-auto space-y-16">
           <div>
             <SectionLabel tag="MISSION">ABOUT NOVA</SectionLabel>

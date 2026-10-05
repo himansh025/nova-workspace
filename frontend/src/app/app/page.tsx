@@ -108,7 +108,7 @@ export default function OverviewPage() {
   return (
     <div className="p-5 sm:p-6 lg:p-7 space-y-5 max-w-[1280px] mx-auto bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
       {/* ── Page Header ─────────────────────────────────────────────────── */}
-      <div className="flex justify-between items-start gap-4 pb-5 border-b border-[var(--nova-border)]">
+      <div className="flex flex-wrap justify-between items-start gap-2 pb-5 border-b border-[var(--nova-border)]">
         {/* Left: workspace label + title + description */}
         <div>
           <div className="flex items-center gap-0 pl-2 border-l-2 border-[var(--nova-accent)]">

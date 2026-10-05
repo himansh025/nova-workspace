@@ -15,8 +15,8 @@ export const CaseStudySection: React.FC = () => {
       className="section-spacing bg-[var(--landing-bg)] border-t border-[var(--landing-border)]"
     >
       <div className="container-site">
-        <div className="rounded-3xl border border-[var(--landing-border)] bg-[var(--landing-surface)] p-8 md:p-14 relative overflow-hidden shadow-xs">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        <div className="rounded-3xl border border-[var(--landing-border)] bg-[var(--landing-surface)] p-6 sm:p-10 md:p-14 relative overflow-hidden shadow-xs">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             {/* Story narrative */}
             <div className="lg:col-span-7 space-y-6">
               <Reveal>

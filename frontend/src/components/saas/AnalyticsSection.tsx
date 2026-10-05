@@ -38,7 +38,7 @@ export const AnalyticsSection: React.FC = () => {
         </div>
 
         {/* 4 Metric Callout Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {metrics.map((m, idx) => (
             <Reveal key={m.label} delay={0.1 * idx}>
               <div className="p-5 rounded-2xl bg-[var(--landing-surface)] border border-[var(--landing-border)] shadow-xs hover:border-[var(--landing-border-strong)] transition-all">

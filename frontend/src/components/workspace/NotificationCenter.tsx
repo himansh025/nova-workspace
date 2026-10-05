@@ -353,7 +353,7 @@ export function NotificationCenter() {
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-[0_12px_32px_rgba(0,0,0,0.08)] rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[var(--nova-text-primary)]">
+        <div className="absolute right-0 mt-2 w-72 sm:w-96 max-w-[calc(100vw-2rem)] bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-[0_12px_32px_rgba(0,0,0,0.08)] rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[var(--nova-text-primary)]">
           {/* Header */}
           <div className="p-3.5 border-b border-[var(--nova-border)] flex items-center justify-between bg-[var(--nova-surface)]">
             <div className="flex items-center gap-2">

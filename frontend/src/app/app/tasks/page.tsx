@@ -18,11 +18,11 @@ import {
   ArrowUp,
   ArrowRight,
   ArrowDown,
-  Minus
+  Minus,
+  Loader2,
 } from "lucide-react";
 import { Project, Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 import TaskModal from "@/components/workspace/TaskModal";
-import { KanbanSkeleton } from "@/components/workspace/Skeletons";
 import { apiFetchInit, getApiHeaders } from "@/lib/apiHeaders";
 
 /* ─── Status helpers ─────────────────────────────────────────────────────── */
@@ -294,11 +294,6 @@ export default function TasksPage() {
     return matchesSearch && matchesPriority && matchesAssignee;
   });
 
-  /* ── Loading state ──────────────────────────────────────────────────────── */
-  if (isLoading) {
-    return <KanbanSkeleton />;
-  }
-
   /* ════════════════════════════════════════════════════════════════════════
      Render
      ════════════════════════════════════════════════════════════════════════ */
@@ -362,26 +357,26 @@ export default function TasksPage() {
       </div>
 
       {/* ── Filter row ────────────────────────────────────────────────────── */}
-      <div className="px-5 py-3 bg-[var(--nova-bg)] border-b border-[var(--nova-border-muted)] flex items-center justify-between shrink-0">
-        {/* Left: Search */}
-        <div className="flex items-center gap-2 flex-1 max-w-md">
+      <div className="px-5 py-2.5 bg-[var(--nova-bg)] border-b border-[var(--nova-border-muted)] flex flex-wrap items-center justify-between gap-3 shrink-0">
+        {/* Left: Search (Wider) */}
+        <div className="flex items-center gap-2 flex-1 min-w-[220px] max-w-2xl">
           <Search className="w-4 h-4 text-[var(--nova-text-muted)] shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search issues..."
+            placeholder="Search issues by key, title, or branch..."
             className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-3 py-1.5 text-[12px] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-muted)] outline-none w-full focus:border-[var(--nova-accent)] transition-colors h-8"
           />
         </div>
 
-        {/* Right: Filters */}
-        <div className="flex items-center gap-3">
+        {/* Purely Right: Filters */}
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
           {/* Project filter */}
           <select
             value={selectedProject}
             onChange={(e) => handleProjectFilterChange(e.target.value)}
-            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
+            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2.5 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
           >
             <option value="all">All Projects</option>
             {projects.map((p) => (
@@ -395,7 +390,7 @@ export default function TasksPage() {
           <select
             value={selectedPriority}
             onChange={(e) => setSelectedPriority(e.target.value)}
-            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
+            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2.5 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
           >
             <option value="all">All Priorities</option>
             <option value="urgent">Urgent</option>
@@ -408,7 +403,7 @@ export default function TasksPage() {
           <select
             value={selectedAssignee}
             onChange={(e) => setSelectedAssignee(e.target.value)}
-            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
+            className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2.5 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer focus:border-[var(--nova-border-strong)]"
           >
             <option value="all">All Engineers</option>
             {team.map((m) => (
@@ -418,11 +413,19 @@ export default function TasksPage() {
             ))}
           </select>
 
-          <div className="text-[10px] text-[var(--nova-text-muted)] font-mono pl-2 border-l border-[var(--nova-border)]">
-            {filteredTasks.length} Issues
+          <div className="text-[10px] text-[var(--nova-text-muted)] font-mono pl-2 border-l border-[var(--nova-border)] flex items-center gap-1.5">
+            {isLoading && <Loader2 className="w-3 h-3 animate-spin text-[var(--nova-accent)]" />}
+            <span>{isLoading ? "Syncing..." : `${filteredTasks.length} Issues`}</span>
           </div>
         </div>
       </div>
+
+      {/* Subtle Progress Bar */}
+      {isLoading && (
+        <div className="h-0.5 w-full bg-[var(--nova-accent-subtle)] overflow-hidden shrink-0">
+          <div className="h-full bg-[var(--nova-accent)] animate-pulse w-full" />
+        </div>
+      )}
 
       {/* ── Main content area ─────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
@@ -578,7 +581,14 @@ export default function TasksPage() {
                       {/* Empty column state */}
                       {colTasks.length === 0 && !isColDraggedOver && (
                         <div className="h-24 border border-dashed border-[var(--nova-border)] rounded-lg flex items-center justify-center text-[11px] text-[var(--nova-text-muted)] font-mono">
-                          Drag issues here
+                          {isLoading && tasks.length === 0 ? (
+                            <span className="flex items-center gap-1.5">
+                              <Loader2 className="w-3 h-3 animate-spin text-[var(--nova-accent)]" />
+                              Syncing...
+                            </span>
+                          ) : (
+                            "Drag issues here"
+                          )}
                         </div>
                       )}
                     </div>
@@ -592,7 +602,12 @@ export default function TasksPage() {
         {/* ── List view ─────────────────────────────────────────────────── */}
         {viewMode === "list" && (
           <div className="flex-1 overflow-y-auto nova-scroll">
-            {filteredTasks.length === 0 ? (
+            {isLoading && tasks.length === 0 ? (
+              <div className="p-12 flex flex-col items-center justify-center text-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-[var(--nova-accent)]" />
+                <p className="text-[12px] text-[var(--nova-text-muted)] font-mono">Loading issues...</p>
+              </div>
+            ) : filteredTasks.length === 0 ? (
               <div className="p-8 flex flex-col items-center justify-center text-center gap-3">
                 <CheckCircle2 className="w-8 h-8 text-[var(--nova-text-muted)]" />
                 <p className="text-[13px] font-medium text-[var(--nova-text-primary)]">No issues found</p>
@@ -702,7 +717,7 @@ export default function TasksPage() {
 
         {/* ── Task detail panel ─────────────────────────────────────────── */}
         {selectedTaskDetail && (
-          <div className="w-80 shrink-0 bg-[var(--nova-surface)] border-l border-[var(--nova-border)] flex flex-col shadow-lg">
+          <div className="hidden lg:flex w-80 shrink-0 bg-[var(--nova-surface)] border-l border-[var(--nova-border)] flex-col shadow-lg">
             {/* Panel header */}
             <div className="px-4 py-3 border-b border-[var(--nova-border)] flex items-center justify-between shrink-0">
               <span className="font-mono text-[11px] text-[var(--nova-accent)] font-medium">
@@ -851,6 +866,137 @@ export default function TasksPage() {
             </div>
           </div>
         )}
+
+        {/* ── Mobile bottom sheet: task detail (lg and up uses the side panel above) ── */}
+        {selectedTaskDetail && (
+          <div className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-[rgba(15,23,42,0.5)]"
+              onClick={() => setSelectedTaskDetail(null)}
+            />
+            {/* Sheet */}
+            <div className="relative bg-[var(--nova-surface)] border-t border-[var(--nova-border)] rounded-t-xl shadow-2xl z-10 max-h-[80vh] flex flex-col">
+              {/* Handle */}
+              <div className="flex justify-center pt-2 pb-1 shrink-0">
+                <div className="w-10 h-1 rounded-full bg-[var(--nova-border-muted)]" />
+              </div>
+              {/* Header */}
+              <div className="px-4 py-3 border-b border-[var(--nova-border)] flex items-center justify-between shrink-0">
+                <span className="font-mono text-[11px] text-[var(--nova-accent)] font-medium">
+                  {selectedTaskDetail.key}
+                </span>
+                <button
+                  onClick={() => setSelectedTaskDetail(null)}
+                  className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded transition-colors duration-150"
+                  title="Close"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {/* Content */}
+              <div className="px-4 py-4 space-y-4 overflow-y-auto flex-1 nova-scroll">
+                <h2 className="text-[15px] font-medium text-[var(--nova-text-primary)] leading-snug">
+                  {selectedTaskDetail.title}
+                </h2>
+                {selectedTaskDetail.description && (
+                  <p className="text-[12px] text-[var(--nova-text-secondary)] leading-relaxed">
+                    {selectedTaskDetail.description}
+                  </p>
+                )}
+                <div className="bg-[var(--nova-deep)] border border-[var(--nova-border)] rounded-lg p-3 space-y-3">
+                  {/* Status */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--nova-text-muted)]">Status</span>
+                    <select
+                      value={selectedTaskDetail.status}
+                      onChange={(e) => handleUpdateStatus(selectedTaskDetail.id, e.target.value as TaskStatus)}
+                      className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer"
+                    >
+                      <option value="backlog">Backlog</option>
+                      <option value="todo">To Do</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="review">In Review</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </div>
+                  {/* Priority */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--nova-text-muted)]">Priority</span>
+                    <div className="flex items-center gap-1.5">
+                      <PriorityIcon priority={selectedTaskDetail.priority} />
+                      <span className="text-[11px] text-[var(--nova-text-secondary)]">
+                        {PRIORITY_LABEL[selectedTaskDetail.priority]}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Assignee */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--nova-text-muted)]">Assignee</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] text-[var(--nova-accent)] text-[9px] font-bold flex items-center justify-center">
+                        {selectedTaskDetail.assignee.initials}
+                      </div>
+                      <select
+                        value={selectedTaskDetail.assignee.id}
+                        onChange={(e) => handleUpdateAssignee(selectedTaskDetail.id, e.target.value)}
+                        className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer max-w-[120px]"
+                      >
+                        <option value="unassigned">Unassigned</option>
+                        {team.map((member) => (
+                          <option key={member.id} value={member.id}>{member.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  {/* Estimate */}
+                  {selectedTaskDetail.estimate && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-[var(--nova-text-muted)]">Estimate</span>
+                      <span className="font-mono text-[11px] text-[var(--nova-text-secondary)]">
+                        {selectedTaskDetail.estimate}
+                      </span>
+                    </div>
+                  )}
+                  {/* Tags */}
+                  {selectedTaskDetail.tags.length > 0 && (
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[11px] text-[var(--nova-text-muted)] shrink-0">Tags</span>
+                      <div className="flex flex-wrap gap-1 justify-end">
+                        {selectedTaskDetail.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-1.5 py-0.5 rounded bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[10px] text-[var(--nova-text-secondary)] font-mono"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => { setTaskToEdit(selectedTaskDetail); setIsModalOpen(true); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--nova-deep)] hover:bg-[var(--nova-elevated)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded text-[12px] transition-colors duration-150"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTask(selectedTaskDetail.id)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded text-[12px] transition-colors duration-150"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ── Creation / Edit Modal ──────────────────────────────────────────── */}

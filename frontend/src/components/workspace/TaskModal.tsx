@@ -129,7 +129,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(15,23,42,0.4)] backdrop-blur-xs">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden z-10 text-[var(--nova-text-primary)] text-xs">
+      <div className="relative w-full max-w-lg sm:max-w-2xl mx-4 sm:mx-auto bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden z-10 text-[var(--nova-text-primary)] text-xs">
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* Two column grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Status */}
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
@@ -213,7 +213,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Assignee */}
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
@@ -248,7 +248,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* Git Branch & Tags */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Git Branch (Optional)

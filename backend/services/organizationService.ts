@@ -58,6 +58,10 @@ export async function createOrganization(name: string, ownerUserId: string): Pro
   // Ensure owner is added to TeamMember collection for this org
   const user = await UserModel.findOne({ id: ownerUserId });
   if (user) {
+    if (!user.organizationId) {
+      user.organizationId = org.id;
+      await user.save();
+    }
     await TeamMemberModel.create({
       id: user.id,
       organizationId: org.id,

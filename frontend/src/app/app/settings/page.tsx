@@ -18,9 +18,15 @@ import {
   Layers,
   Sliders,
   Check,
-  Sun
+  Sun,
+  User,
+  Building2,
+  Mail,
+  Briefcase,
+  Plus,
 } from "lucide-react";
 
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/workspace/ToastProvider";
 import AISettingsPanel from "@/components/workspace/AISettingsPanel";
 import ThirdPartyCredentialsPanel from "@/components/workspace/ThirdPartyCredentialsPanel";
@@ -52,6 +58,125 @@ export default function SettingsPage() {
   // Tab state
   const [activeTab, setActiveTab] = useState<string>("appearance");
   const [showAdvancedHex, setShowAdvancedHex] = useState(false);
+
+  // User Profile state
+  const { user, updateProfile } = useAuth();
+  const [profileName, setProfileName] = useState(user?.name || "");
+  const [profileRole, setProfileRole] = useState(user?.role || "Individual");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [userOrgs, setUserOrgs] = useState<any[]>([]);
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgSlug, setNewOrgSlug] = useState("");
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setProfileName(user.name || "");
+      setProfileRole(user.role || "Individual");
+    }
+  }, [user]);
+
+  const fetchUserOrgs = () => {
+    fetch("/api/org/list")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.organizations)) {
+          setUserOrgs(data.organizations);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchUserOrgs();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+    }
+  }, []);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileName.trim()) return;
+    setIsSavingProfile(true);
+    try {
+      const res = await updateProfile({
+        name: profileName.trim(),
+        role: profileRole.trim() || "Individual",
+      });
+      if (res.success) {
+        addToast({
+          title: "Profile Saved",
+          message: "Your name and role have been updated.",
+          type: "success",
+        });
+      } else {
+        addToast({
+          title: "Update Failed",
+          message: res.error || "Could not update profile.",
+          type: "warning",
+        });
+      }
+    } catch (err: any) {
+      addToast({
+        title: "Update Failed",
+        message: err.message || "Network error",
+        type: "warning",
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleCreateOrgInSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName.trim()) return;
+    setIsCreatingOrg(true);
+    try {
+      const res = await fetch("/api/org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newOrgName.trim() }),
+      });
+      const data = await res.json();
+      if (data.success && data.organization) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("nova_active_org_id", data.organization.id);
+          window.dispatchEvent(
+            new CustomEvent("nova:org_switched", { detail: data.organization })
+          );
+        }
+        addToast({
+          title: "Organization Created",
+          message: `Workspace "${data.organization.name}" initialized.`,
+          type: "success",
+        });
+        setNewOrgName("");
+        setNewOrgSlug("");
+        setShowCreateOrg(false);
+        fetchUserOrgs();
+        window.location.reload();
+      } else {
+        addToast({
+          title: "Failed to Create Organization",
+          message: data.error || "Could not create organization",
+          type: "warning",
+        });
+      }
+    } catch (err: any) {
+      addToast({
+        title: "Failed to Create Organization",
+        message: err.message || "Network error",
+        type: "warning",
+      });
+    } finally {
+      setIsCreatingOrg(false);
+    }
+  };
 
   // General Org state
   const [workspaceName, setWorkspaceName] = useState("Nova Engineering Labs");
@@ -227,6 +352,7 @@ export default function SettingsPage() {
   };
 
   const tabs = [
+    { id: "profile", label: "Profile & Role", icon: User },
     { id: "appearance", label: "Appearance & Theme", icon: Palette },
     { id: "general", label: "General & Org", icon: Settings },
     { id: "ai", label: "AI Copilot", icon: Sparkles },
@@ -271,7 +397,7 @@ export default function SettingsPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3 py-2 text-[12px] whitespace-nowrap transition-colors duration-150 border-b-2 ${
+                  className={`flex items-center gap-2 px-3 py-2 text-[12px] whitespace-nowrap transition-colors duration-150 border-b-2 cursor-pointer ${
                     isActive
                       ? "border-b-2 border-[var(--nova-accent)] text-[var(--nova-text-primary)] font-medium bg-[var(--nova-accent-subtle)]/40 rounded-t-md"
                       : "border-transparent text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
@@ -299,6 +425,243 @@ export default function SettingsPage() {
           <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{resetMessage}</span>
+          </div>
+        )}
+
+        {/* ─── TAB 0: User Profile & Role ────────────────────────── */}
+        {(activeTab === "profile" || activeTab === "all") && (
+          <div className="space-y-6">
+            <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl p-5 sm:p-6 shadow-xs">
+              <div className="flex items-center justify-between pb-4 border-b border-[var(--nova-border)]">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-[var(--nova-text-primary)] flex items-center gap-2">
+                    <User className="w-4 h-4 text-[var(--nova-accent)]" />
+                    <span>Personal Profile & Engineering Role</span>
+                  </h2>
+                  <p className="text-[12px] text-[var(--nova-text-muted)] mt-0.5">
+                    Customize your display name and engineering title. Roles are visible across task assignments and PR reviews.
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)]">
+                  {userOrgs.length > 0 ? "Organization Member" : "Individual Developer"}
+                </span>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="mt-5 space-y-4 max-w-xl">
+                <div>
+                  <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-3.5 h-3.5 text-[var(--nova-text-muted)] absolute left-3 top-2.5 pointer-events-none" />
+                    <input
+                      type="email"
+                      disabled
+                      value={user?.email || ""}
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-muted)] text-[12px] cursor-not-allowed opacity-80"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <User className="w-3.5 h-3.5 text-[var(--nova-text-muted)] absolute left-3 top-2.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Alex Rivera"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-[12px] focus:outline-none focus:border-[var(--nova-accent)] transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)]">
+                      Engineering Role
+                    </label>
+                    <span className="text-[10px] text-[var(--nova-text-muted)]">
+                      Select below or enter custom title
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <Briefcase className="w-3.5 h-3.5 text-[var(--nova-text-muted)] absolute left-3 top-2.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Staff Backend Engineer"
+                      value={profileRole}
+                      onChange={(e) => setProfileRole(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-[12px] focus:outline-none focus:border-[var(--nova-accent)] transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      "Individual Contributor",
+                      "Staff Backend Engineer",
+                      "Staff Frontend Engineer",
+                      "Full Stack Developer",
+                      "Lead Architect",
+                      "DevOps & SRE",
+                      "Engineering Manager",
+                      "Security Lead",
+                      "Product Manager",
+                      "Software Engineer",
+                    ].map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setProfileRole(r)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                          profileRole === r
+                            ? "bg-[var(--nova-accent-subtle)] border-[var(--nova-accent)] text-[var(--nova-accent)] font-medium"
+                            : "bg-[var(--nova-deep)] border-[var(--nova-border)] text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="px-4 py-2 rounded-lg bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white text-[12px] font-medium shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSavingProfile ? "Saving Profile..." : "Save Profile Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Organizations Section inside Profile Tab */}
+            <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl p-5 sm:p-6 shadow-xs">
+              <div className="flex items-center justify-between pb-4 border-b border-[var(--nova-border)]">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-[var(--nova-text-primary)] flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-[var(--nova-accent)]" />
+                    <span>Organizations & Workspaces</span>
+                  </h2>
+                  <p className="text-[12px] text-[var(--nova-text-muted)] mt-0.5">
+                    Create or manage multi-tenant engineering workspaces and organizations
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateOrg(!showCreateOrg)}
+                  className="px-3 py-1.5 rounded-lg bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white text-[11px] font-medium flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{showCreateOrg ? "Cancel" : "Create Organization"}</span>
+                </button>
+              </div>
+
+              {userOrgs.length === 0 && (
+                <div className="mt-4 p-4 rounded-xl bg-[var(--nova-deep)] border border-[var(--nova-border)] flex items-start gap-3">
+                  <Sparkles className="w-4 h-4 text-[var(--nova-accent)] shrink-0 mt-0.5" />
+                  <div className="text-[12px] space-y-1">
+                    <div className="font-semibold text-[var(--nova-text-primary)]">
+                      Individual Account
+                    </div>
+                    <div className="text-[var(--nova-text-secondary)] leading-relaxed">
+                      You are currently registered as an individual. When you need team collaboration, Kanban sprints, or webhook integrations, you can create your organization below.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {userOrgs.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {userOrgs.map((org) => (
+                    <div
+                      key={org.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-[var(--nova-bg)] border border-[var(--nova-border)]"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center text-[11px] font-bold text-[var(--nova-accent)]">
+                          {org.name[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">
+                            {org.name}
+                          </div>
+                          <div className="text-[10px] font-mono text-[var(--nova-text-muted)]">
+                            {org.slug} · Role: {org.role || "Member"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showCreateOrg && (
+                <form
+                  onSubmit={handleCreateOrgInSettings}
+                  className="mt-4 p-4 rounded-xl bg-[var(--nova-bg)] border border-[var(--nova-accent-border)] space-y-3 max-w-xl"
+                >
+                  <div className="text-[12px] font-semibold text-[var(--nova-text-primary)] flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+                    <span>Create Organization</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                      Organization Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Acme Engineering Labs"
+                      value={newOrgName}
+                      onChange={(e) => {
+                        setNewOrgName(e.target.value);
+                        setNewOrgSlug(e.target.value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-"));
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] text-[12px] focus:outline-none focus:border-[var(--nova-accent)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                      Workspace Slug
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. acme-engineering-labs"
+                      value={newOrgSlug}
+                      onChange={(e) => setNewOrgSlug(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] font-mono text-[11px] focus:outline-none focus:border-[var(--nova-accent)]"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateOrg(false)}
+                      className="px-3 py-1.5 rounded-lg text-[11px] text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isCreatingOrg}
+                      className="px-3.5 py-1.5 rounded-lg bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white text-[11px] font-medium disabled:opacity-50 cursor-pointer"
+                    >
+                      {isCreatingOrg ? "Creating..." : "Create Organization"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         )}
 

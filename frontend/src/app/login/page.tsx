@@ -31,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--landing-bg)] text-[var(--landing-text)] flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden font-sans tech-grid">
+    <div className="min-h-screen bg-[var(--landing-bg)] text-[var(--landing-text)] flex flex-col justify-center items-center px-4 py-12 relative overflow-x-hidden font-sans tech-grid">
       {/* Brand Header */}
       <div className="text-center mb-8 relative z-10">
         <Link href="/" className="inline-flex items-center gap-2 group">

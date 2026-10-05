@@ -196,7 +196,7 @@ export default function ProjectsPage() {
 
       {/* Main Content */}
       {viewMode === "card" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {projects.map((p) => (
             <div
               key={p.id}
@@ -436,7 +436,7 @@ export default function ProjectsPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[var(--nova-text-secondary)] text-[11px] mb-1 font-medium">Sprint Milestone</label>
                   <input

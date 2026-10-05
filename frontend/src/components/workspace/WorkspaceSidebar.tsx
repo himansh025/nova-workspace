@@ -20,6 +20,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
+import { ProfileModal } from "./ProfileModal";
 import { useAuth } from "@/context/AuthContext";
 
 interface WorkspaceSidebarProps {
@@ -59,6 +60,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   });
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isOrgSubmenuOpen, setIsOrgSubmenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     let headers: Record<string, string> = {};
@@ -328,11 +330,11 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               <button
                 onClick={() => {
                   setIsProfileDropdownOpen(false);
-                  // Placeholder for profile action
+                  setIsProfileModalOpen(true);
                 }}
-                className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors rounded-t"
+                className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors rounded-t cursor-pointer"
               >
-                Profile
+                Profile & Role
               </button>
               <OrgSwitcher
                 asMenuItem
@@ -343,7 +345,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                   setIsProfileDropdownOpen(false);
                   void logout();
                 }}
-                className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-colors rounded-b"
+                className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)] transition-colors rounded-b cursor-pointer"
               >
                 Log Out
               </button>
@@ -354,8 +356,8 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
         {/* User profile trigger */}
         <button
           type="button"
-          
-          title="User Profile Menu"
+          onClick={() => setIsProfileModalOpen(true)}
+          title="Edit Profile & Role"
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded hover:bg-[var(--nova-sidebar)] text-left transition-all duration-150 group cursor-pointer"
         >
           {/* Avatar initial */}
@@ -367,11 +369,16 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               {user?.name || "Workspace Member"}
             </span>
             <span className="text-[10px] font-mono text-[var(--nova-text-muted)] truncate">
-              {user?.role || "Engineer"}
+              {user?.role || "Individual"}
             </span>
           </div>
         </button>
       </div>
+
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </aside>
   );
 };

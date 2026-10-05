@@ -17,6 +17,7 @@ import {
   Layers,
   RefreshCw,
   Github,
+  Search,
 } from "lucide-react";
 import { PullRequest } from "@/types";
 import { useToast } from "@/components/workspace/ToastProvider";
@@ -28,6 +29,7 @@ export default function PullRequestsPage() {
   const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null);
   const [integration, setIntegration] = useState<any>(null);
   const [filter, setFilter] = useState<"all" | "open" | "merged">("open");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -144,8 +146,13 @@ export default function PullRequestsPage() {
   };
 
   const filtered = pullRequests.filter((pr) => {
-    if (filter === "all") return true;
-    return pr.status === filter;
+    const matchesFilter = filter === "all" || pr.status === filter;
+    const matchesSearch =
+      searchQuery.trim() === "" ||
+      pr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pr.branch.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(pr.number).includes(searchQuery);
+    return matchesFilter && matchesSearch;
   });
 
   if (loading) {
@@ -192,26 +199,39 @@ export default function PullRequestsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right side: Search + Sync + Filters (Purely Right Aligned) */}
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 ml-auto">
+          {/* PR Search (Wider) */}
+          <div className="relative flex items-center min-w-[180px] w-full sm:w-64 md:w-80">
+            <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--nova-text-muted)] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search PRs by title, branch, #..."
+              className="pl-8 pr-3 py-1.5 w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] focus:border-[var(--nova-accent)] rounded-md text-[12px] text-[var(--nova-text-primary)] placeholder:text-[var(--nova-text-muted)] outline-none transition-colors duration-150 h-8"
+            />
+          </div>
+
           {/* GitHub Sync Button */}
           {integration?.configured && (
             <button
               onClick={handleSyncGitHub}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-3 py-1.5 text-[12px] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className="flex items-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded-md px-3 py-1.5 text-[12px] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-8 shrink-0"
             >
               <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin text-[var(--nova-success-text)]" : "text-[var(--nova-text-secondary)]"}`} />
               <span className="text-[12px]">{isSyncing ? "Syncing…" : "Sync GitHub"}</span>
             </button>
           )}
 
-          {/* Status filter tabs */}
-          <div className="flex items-center bg-[var(--nova-bg)] border border-[var(--nova-border-muted)] rounded p-0.5 gap-0.5">
+          {/* Status filter tabs (Purely Right) */}
+          <div className="flex items-center bg-[var(--nova-bg)] border border-[var(--nova-border-muted)] rounded-md p-0.5 gap-0.5 h-8 shrink-0">
             {(["all", "open", "merged"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-2.5 py-1 rounded-sm text-[11px] font-medium transition-colors duration-150 cursor-pointer ${
+                className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150 cursor-pointer ${
                   filter === f
                     ? "bg-[var(--nova-deep)] text-[var(--nova-text-primary)] border border-[var(--nova-border)]"
                     : "text-[var(--nova-text-muted)] hover:text-[var(--nova-text-secondary)]"

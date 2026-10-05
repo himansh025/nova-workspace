@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "NOVA Workspace — AI Workspace for Modern Product & Engineering Teams",
@@ -30,6 +43,11 @@ export const metadata: Metadata = {
     title: "NOVA Workspace — AI Workspace for Product & Engineering",
     description:
       "One workspace for planning, building and understanding what your team is creating."
+  },
+  icons: {
+    icon: "/brand/logo-mark.png",
+    shortcut: "/brand/logo-mark.png",
+    apple: "/brand/logo-mark.png",
   }
 };
 
@@ -39,9 +57,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="antialiased scroll-smooth" suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased scroll-smooth`} suppressHydrationWarning>
       <body
-        className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)] flex flex-col"
+        className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)] font-sans flex flex-col"
         suppressHydrationWarning
       >
         <AuthProvider>{children}</AuthProvider>

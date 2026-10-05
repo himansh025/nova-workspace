@@ -271,11 +271,11 @@ export function deriveSemanticTokens(
     borderSubtle: '#EEEAE2',
     borderStrong: '#D1C9BC',
 
-    // Warm light theme readable text
-    textPrimary: '#171717',
-    textSecondary: '#68645D',
-    textMuted: '#8C867B',
-    textDisabled: '#A39D93',
+    // High-contrast, sharp, modern text
+    textPrimary: '#0F172A',
+    textSecondary: '#334155',
+    textMuted: '#64748B',
+    textDisabled: '#94A3B8',
     textInverse: '#FFFFFF',
 
     // Primary accent derived roles

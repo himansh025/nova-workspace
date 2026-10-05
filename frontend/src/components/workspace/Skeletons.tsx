@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Kanban, List, Plus, Search } from "lucide-react";
 
 export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
@@ -26,85 +27,212 @@ export function Skeleton({ className = "", ...props }: SkeletonProps) {
  */
 export function KanbanSkeleton() {
   const columns = [
-    { title: "BACKLOG", dot: "bg-neutral-400" },
-    { title: "IN PROGRESS", dot: "bg-sky-500" },
-    { title: "IN REVIEW", dot: "bg-amber-500" },
-    { title: "DONE", dot: "bg-emerald-500" },
+    {
+      key: "backlog",
+      title: "Backlog",
+      count: 1,
+      dot: "bg-[var(--nova-text-muted)]",
+      tasks: [
+        {
+          key: "NV-893",
+          titleWidth: "w-52",
+          statusBg: "bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]",
+          statusText: "Backlog",
+          assignee: "HS",
+        },
+      ],
+    },
+    {
+      key: "todo",
+      title: "To Do",
+      count: 0,
+      dot: "bg-[var(--nova-accent)]",
+      tasks: [],
+    },
+    {
+      key: "in_progress",
+      title: "In Progress",
+      count: 1,
+      dot: "bg-[var(--nova-info)]",
+      tasks: [
+        {
+          key: "NV-889",
+          titleWidth: "w-48",
+          statusBg: "bg-[var(--nova-info-subtle)] text-[var(--nova-info-text)] border border-[var(--nova-info-border)]",
+          statusText: "In Prog",
+          assignee: "HS",
+        },
+      ],
+    },
+    {
+      key: "review",
+      title: "In Review",
+      count: 1,
+      dot: "bg-[var(--nova-warning)]",
+      tasks: [
+        {
+          key: "NV-888",
+          titleWidth: "w-56",
+          statusBg: "bg-[var(--nova-warning-subtle)] text-[var(--nova-warning-text)] border border-[var(--nova-warning-border)]",
+          statusText: "Review",
+          assignee: "HS",
+        },
+      ],
+    },
+    {
+      key: "done",
+      title: "Done",
+      count: 10,
+      dot: "bg-[var(--nova-success)]",
+      tasks: [
+        {
+          key: "NV-887",
+          titleWidth: "w-44",
+          statusBg: "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]",
+          statusText: "Done",
+          assignee: null,
+        },
+        {
+          key: "NV-892",
+          titleWidth: "w-52",
+          statusBg: "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]",
+          statusText: "Done",
+          assignee: null,
+        },
+        {
+          key: "NV-890",
+          titleWidth: "w-48",
+          statusBg: "bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]",
+          statusText: "Done",
+          assignee: null,
+        },
+      ],
+    },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] animate-fadeIn">
-      {/* Top Controls Header */}
-      <div className="p-4 sm:px-6 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-5 w-16 rounded" />
-          </div>
-          <Skeleton className="h-3.5 w-64" />
+    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
+      {/* ── Top toolbar ───────────────────────────────────────────────────── */}
+      <div className="px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex items-center justify-between gap-3 shrink-0">
+        <div className="flex flex-col">
+          <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)] leading-none">
+            Tasks &amp; Board
+          </h1>
+          <span className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
+            Sprint 48 Active Cycle · Drag or update status across columns
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Skeleton className="h-8 w-36 sm:w-48" />
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-8 w-24" />
+        <div className="flex items-center gap-2.5">
+          <div className="bg-[var(--nova-deep)] border border-[var(--nova-border)] rounded p-0.5 flex gap-0.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[11px] font-medium bg-[var(--nova-surface)] text-[var(--nova-text-primary)] shadow-xs">
+              <Kanban className="w-3 h-3" />
+              <span>Kanban</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[11px] font-medium text-[var(--nova-text-muted)]">
+              <List className="w-3 h-3" />
+              <span>List</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] text-white rounded text-[12px] font-medium opacity-90">
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Task</span>
+          </div>
         </div>
       </div>
 
-      {/* 4-Column Board Grid */}
-      <div className="flex-1 p-4 sm:p-6 overflow-x-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start min-w-[900px]">
-          {columns.map((col) => (
-            <div
-              key={col.title}
-              className="flex flex-col rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] p-3 min-h-[560px]"
-            >
-              {/* Column Header */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--nova-border)]">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${col.dot} opacity-60 animate-pulse`} />
-                  <span className="text-xs font-mono font-semibold text-[var(--nova-text-secondary)] tracking-wider">
-                    {col.title}
-                  </span>
-                  <Skeleton className="h-4 w-6 rounded-full" />
-                </div>
-                <Skeleton className="h-4 w-4 rounded" />
-              </div>
+      {/* ── Filter row ────────────────────────────────────────────────────── */}
+      <div className="px-5 py-2.5 bg-[var(--nova-bg)] border-b border-[var(--nova-border-muted)] flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-2 flex-1 min-w-[220px] max-w-2xl">
+          <Search className="w-4 h-4 text-[var(--nova-text-muted)] shrink-0" />
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-3 py-1.5 text-[12px] text-[var(--nova-text-muted)] w-full h-8 flex items-center">
+            Search issues by key, title, or branch...
+          </div>
+        </div>
 
-              {/* Task Cards */}
-              <div className="space-y-3">
-                {[0, 1, 2].map((cardIdx) => (
-                  <div
-                    key={cardIdx}
-                    className="p-3.5 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] space-y-3 shadow-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-14" />
-                        <Skeleton className="h-4 w-12 rounded-full" />
-                      </div>
-                      <Skeleton className="h-4 w-16 rounded" />
-                    </div>
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2.5 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] flex items-center">
+            All Projects
+          </div>
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2.5 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] flex items-center">
+            All Priorities
+          </div>
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-md px-2.5 py-1.5 h-8 text-[11px] text-[var(--nova-text-secondary)] flex items-center">
+            All Engineers
+          </div>
+          <div className="text-[10px] text-[var(--nova-text-muted)] font-mono pl-2 border-l border-[var(--nova-border)] flex items-center">
+            <Skeleton className="h-3 w-14" />
+          </div>
+        </div>
+      </div>
 
-                    <div className="space-y-1.5">
-                      <Skeleton className={`h-4 ${cardIdx % 2 === 0 ? "w-11/12" : "w-4/5"}`} />
-                      <Skeleton className="h-3.5 w-3/5" />
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-[var(--nova-border)]">
-                      <div className="flex items-center gap-1.5">
-                        <Skeleton className="h-5 w-5 rounded-full" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                      <Skeleton className="h-3.5 w-10" />
-                    </div>
+      {/* ── Main content area ─────────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="flex gap-3 h-full px-5 py-4 items-start min-w-max">
+            {columns.map((col) => (
+              <div
+                key={col.key}
+                className="w-72 shrink-0 flex flex-col rounded-xl bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs overflow-hidden"
+              >
+                {/* Column header */}
+                <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--nova-border-muted)] bg-[var(--nova-surface)]">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${col.dot}`} />
+                    <span className="text-[12px] font-semibold text-[var(--nova-text-primary)]">
+                      {col.title}
+                    </span>
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)] leading-none">
+                      {col.count}
+                    </span>
                   </div>
-                ))}
+                  <div className="text-[var(--nova-text-muted)] p-0.5">
+                    <Plus className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                {/* Column cards container */}
+                <div className="p-2 space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto no-scrollbar">
+                  {col.tasks.length === 0 ? (
+                    <div className="border-2 border-dashed border-[var(--nova-border)] rounded-xl p-4 text-center text-[11px] text-[var(--nova-text-placeholder)]">
+                      Drag issues here
+                    </div>
+                  ) : (
+                    col.tasks.map((task, i) => (
+                      <div
+                        key={i}
+                        className="p-3 rounded-lg border bg-[var(--nova-bg)] border-[var(--nova-border)] space-y-2 shadow-2xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-semibold text-[var(--nova-accent)]">
+                            {task.key}
+                          </span>
+                          <span className="text-[10px] text-[var(--nova-text-muted)]">→</span>
+                        </div>
+                        <div className="space-y-1">
+                          <Skeleton className={`h-3.5 ${task.titleWidth}`} />
+                          <Skeleton className="h-3 w-3/4" />
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${task.statusBg}`}>
+                            {task.statusText}
+                          </span>
+                          {task.assignee ? (
+                            <div className="w-4 h-4 rounded-full bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center text-[8px] font-bold text-[var(--nova-accent)]">
+                              {task.assignee}
+                            </div>
+                          ) : (
+                            <Skeleton className="w-4 h-4 rounded-full" />
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>

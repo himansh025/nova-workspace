@@ -37,7 +37,7 @@ export const SecuritySection: React.FC = () => {
       id="security"
       className="section-spacing bg-[var(--landing-surface-muted)] text-[var(--landing-text)] border-t border-[var(--landing-border)]"
     >
-      <div className="container-site space-y-24">
+      <div className="container-site px-4 sm:px-6 lg:px-8 space-y-24">
         {/* 21. DEVELOPER SECTION: BUILT FOR MODERN TEAMS */}
         <div>
           <div className="max-w-2xl mb-12">
@@ -66,7 +66,7 @@ export const SecuritySection: React.FC = () => {
             <div className="p-3 rounded-3xl bg-[var(--landing-surface)] border border-[var(--landing-border-strong)] shadow-xs">
               <div className="rounded-2xl border border-[var(--nova-border)] bg-[var(--nova-bg)] overflow-hidden shadow-xl">
                 {/* Editor Tabs & Chrome */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--nova-bg)] border-b border-[var(--nova-border)]">
+                <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--nova-bg)] border-b border-[var(--nova-border)] overflow-x-auto">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1.5 mr-3">
                       <span className="w-3 h-3 rounded-full bg-white/10" />

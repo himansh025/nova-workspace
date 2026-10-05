@@ -239,7 +239,7 @@ export default function SprintsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[var(--nova-bg)]">
       {/* ── Sticky Page Header ──────────────────────────────── */}
-      <div className="shrink-0 px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] text-[var(--nova-text-primary)] flex items-center justify-between">
+      <div className="shrink-0 px-4 sm:px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] text-[var(--nova-text-primary)] flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)]">

@@ -46,6 +46,11 @@ interface AuthContextType {
     role?: string;
     organization?: string;
   }) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (data: {
+    name?: string;
+    role?: string;
+    avatar?: string;
+  }) => Promise<{ success: boolean; user?: User; error?: string }>;
   logout: () => Promise<void>;
   setUser: (u: User | null) => void;
 }
@@ -55,6 +60,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => ({ success: false }),
   signup: async () => ({ success: false }),
+  updateProfile: async () => ({ success: false }),
   logout: async () => {},
   setUser: () => {},
 });
@@ -176,6 +182,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = async (profileData: {
+    name?: string;
+    role?: string;
+    avatar?: string;
+  }) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("nova_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers,
+        body: JSON.stringify(profileData),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || "Failed to update profile" };
+      }
+      handleSetUser(data.user);
+      return { success: true, user: data.user };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to update profile" };
+    }
+  };
+
   const logout = async () => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("nova_token") : null;
@@ -193,7 +226,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, setUser: handleSetUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        signup,
+        updateProfile,
+        logout,
+        setUser: handleSetUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

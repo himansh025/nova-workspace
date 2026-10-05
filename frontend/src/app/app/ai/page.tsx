@@ -130,7 +130,7 @@ export default function AIPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
+    <div className="flex flex-col h-full w-full min-w-0 bg-[var(--nova-bg)] text-[var(--nova-text-primary)]">
       {/* ── Conversation stream ── */}
       <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 w-full nova-scroll">
         {messages.map((msg, idx) => (

@@ -6,7 +6,6 @@ import {
   Lock,
   Mail,
   User,
-  Building2,
   ArrowRight,
   AlertCircle,
   Eye,
@@ -19,8 +18,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState("Staff Backend Engineer");
-  const [organization, setOrganization] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signup } = useAuth();
@@ -33,8 +30,6 @@ export default function SignupPage() {
       name,
       email,
       password,
-      role,
-      organization: organization || `${name.split(" ")[0]}'s Workspace`,
     });
     if (!res.success) {
       setError(res.error || "Registration failed. Please check your inputs.");
@@ -43,7 +38,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--landing-bg)] text-[var(--landing-text)] flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden font-sans tech-grid">
+    <div className="min-h-screen bg-[var(--landing-bg)] text-[var(--landing-text)] flex flex-col justify-center items-center px-4 py-12 relative overflow-x-hidden font-sans tech-grid">
       {/* Brand Header */}
       <div className="text-center mb-6 relative z-10">
         <Link href="/" className="inline-flex items-center gap-2 group">
@@ -54,10 +49,10 @@ export default function SignupPage() {
           />
         </Link>
         <h1 className="text-xl sm:text-2xl font-semibold text-[var(--landing-text)] mt-4 tracking-tight">
-          Create Your Engineering Workspace
+          Create Your Account
         </h1>
         <p className="text-xs text-[var(--landing-text-muted)] mt-1 max-w-sm">
-          Launch a collaborative operating system with Kanban boards, AI spec generators, and service topologies.
+          Register as an individual developer. You can customize your profile and create organizations anytime.
         </p>
       </div>
 
@@ -90,14 +85,14 @@ export default function SignupPage() {
 
           <div>
             <label className="block text-xs font-medium text-[var(--landing-text)] mb-1">
-              Work Email
+              Email Address
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-[var(--landing-text-muted)] absolute left-3 top-3 pointer-events-none" />
               <input
                 type="email"
                 required
-                placeholder="alex@acme.dev"
+                placeholder="alex@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[var(--landing-bg)] border border-[var(--landing-border)] text-[var(--landing-text)] focus:border-[var(--landing-primary)] text-xs placeholder:text-[var(--landing-text-muted)] focus:outline-none transition-colors"
@@ -129,51 +124,13 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-[var(--landing-text)] mb-1">
-                Engineering Role
-              </label>
-              <div className="relative">
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--landing-bg)] border border-[var(--landing-border)] text-[var(--landing-text)] focus:border-[var(--landing-primary)] text-xs focus:outline-none cursor-pointer"
-                >
-                  <option value="Lead Architect">Lead Architect</option>
-                  <option value="Staff Backend Engineer">Backend Engineer</option>
-                  <option value="Staff Frontend Engineer">Frontend Engineer</option>
-                  <option value="DevOps & SRE">DevOps & SRE</option>
-                  <option value="Security Lead">Security Lead</option>
-                  <option value="Product Manager">Product Manager</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-[var(--landing-text)] mb-1">
-                Organization Name
-              </label>
-              <div className="relative">
-                <Building2 className="w-4 h-4 text-[var(--landing-text-muted)] absolute left-3 top-3 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="e.g. Acme Labs"
-                  value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[var(--landing-bg)] border border-[var(--landing-border)] text-[var(--landing-text)] focus:border-[var(--landing-primary)] text-xs placeholder:text-[var(--landing-text-muted)] focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
           <div className="pt-2">
             <button
               type="submit"
               disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--landing-primary)] hover:bg-[var(--landing-primary-hover)] text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
             >
-              <span>{isSubmitting ? "Creating Workspace..." : "Create Engineering Account"}</span>
+              <span>{isSubmitting ? "Creating Account..." : "Create Account"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -181,7 +138,7 @@ export default function SignupPage() {
 
         {/* Footer */}
         <div className="mt-5 text-center text-xs text-[var(--landing-text-muted)]">
-          Already have an engineering workspace?{" "}
+          Already have an account?{" "}
           <Link href="/login" className="text-[var(--landing-primary)] hover:text-[var(--landing-primary-hover)] font-medium underline underline-offset-4">
             Sign in
           </Link>
