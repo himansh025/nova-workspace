@@ -20,10 +20,8 @@ jobs:
 
       - name: Run Gemini
         uses: google-github-actions/run-gemini-cli@v0
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GH_TOKEN: ${{ github.token }}
         with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
             Analyze this repository and act as a senior software engineer.
 
@@ -35,28 +33,48 @@ jobs:
             does not reliably refresh.
 
             Known relevant files:
-
-            frontend/src/app/app/pull-requests/page.tsx
-            frontend/src/components/workspace/NotificationCenter.tsx
+            - frontend/src/app/app/pull-requests/page.tsx
+            - frontend/src/components/workspace/NotificationCenter.tsx
 
             Do not assume these are the only relevant files.
 
-            First investigate:
+            Investigate the entire notification architecture.
+
+            Check:
             - notification creation
             - notification APIs
             - SSE implementation
             - notification refresh mechanism
             - unread count calculation
             - merge flow
-            - React state/event subscriptions
+            - React state management
+            - event subscriptions
+            - frontend/backend communication
 
             Find the actual root cause before changing anything.
 
-            Then:
-            1. Implement the smallest production-safe fix.
-            2. Do not modify seed/demo data.
-            3. Do not make unrelated changes.
-            4. Run relevant tests.
-            5. Run type checking if available.
-            6. Review the resulting diff.
-            7. Explain the root cause and fix.
+            Expected behavior:
+            1. User merges a pull request.
+            2. Merge succeeds.
+            3. Notification toast appears.
+            4. Notification refresh event is triggered.
+            5. NotificationCenter receives the event.
+            6. Notification history/unread count refreshes.
+            7. The notification bell immediately shows the correct count.
+
+            IMPORTANT:
+            - Do not modify seed/demo data.
+            - Do not make unrelated changes.
+            - Do not rewrite working architecture unnecessarily.
+            - Make the smallest production-safe fix.
+            - Inspect all relevant files before making changes.
+
+            After implementing the fix:
+            1. Run relevant tests.
+            2. Run TypeScript/type checking if available.
+            3. Run the appropriate build if practical.
+            4. Review the git diff.
+            5. Explain the exact root cause.
+            6. Explain the fix.
+            7. List every modified file.
+            8. Report any tests or checks that could not be run.
