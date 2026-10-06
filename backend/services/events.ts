@@ -23,35 +23,7 @@ if (process.env.NODE_ENV !== "production") {
   global.__novaEventEmitter = eventEmitter;
 }
 
-const notificationHistory: RealtimeEvent[] = global.__novaNotificationHistory || [
-  {
-    id: "notif-init-1",
-    type: "git_webhook",
-    category: "git",
-    title: "Git Commit Synced",
-    message: "Marcus Chen pushed commit 7b23f1e to fix/offline-sync",
-    timestamp: "10m ago",
-    link: "/app/tasks",
-  },
-  {
-    id: "notif-init-2",
-    type: "release_updated",
-    category: "releases",
-    title: "Canary Rollout Updated",
-    message: "Production canary traffic promoted to 25%",
-    timestamp: "25m ago",
-    link: "/app/releases",
-  },
-  {
-    id: "notif-init-3",
-    type: "spec_approved",
-    category: "specs",
-    title: "Architecture Spec Approved",
-    message: "SPEC-104 (CRDT State Sync Protocol) was officially approved",
-    timestamp: "1h ago",
-    link: "/app/specs",
-  },
-];
+const notificationHistory: RealtimeEvent[] = global.__novaNotificationHistory || [];
 if (process.env.NODE_ENV !== "production") {
   global.__novaNotificationHistory = notificationHistory;
 }

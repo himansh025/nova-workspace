@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { prController } from "../controllers/prController";
+import { optionalAuth } from "../middlewares/auth";
 
 const router = Router();
+
+router.use(optionalAuth);
 
 router.get("/pull-requests", prController.getPullRequests);
 router.post("/pull-requests/sync", prController.syncPullRequests);
