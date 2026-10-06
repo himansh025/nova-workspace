@@ -245,7 +245,7 @@ export const webhookController = {
         const configuredDefaultBranch = orgDoc?.defaultBranch || "main";
 
         // Construct dynamic, realistic code diff files for the PR
-        const diffFiles = generateRealisticDiffForTopic(ghPR.title, linkedIssueKey);
+        const diffFiles = await githubService.fetchPullRequestDiff(orgId, ghPR.number, ghPR.title, linkedIssueKey);
 
         await PullRequestModel.findOneAndUpdate(
           { organizationId: orgId, $or: [{ id: prId }, { number: ghPR.number }] },

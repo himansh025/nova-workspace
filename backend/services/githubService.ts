@@ -199,6 +199,47 @@ export const githubService = {
     };
   },
 
+  
+  async fetchPullRequestDiff(organizationId: string, prNumber: number, fallbackTitle: string, fallbackTaskKey?: string) {
+    const config = await this.getGitHubConfig(organizationId);
+    let diffFiles = [];
+    if (config.repository) {
+      const headers: Record<string, string> = {
+        "User-Agent": "Nova-Workspace-App",
+        Accept: "application/vnd.github.v3+json",
+      };
+      if (config.clientSecret && config.clientSecret.trim().length > 0) {
+        const secret = config.clientSecret.trim();
+        if (
+          secret.startsWith("ghp_") ||
+          secret.startsWith("github_pat_") ||
+          secret.startsWith("gho_") ||
+          secret.startsWith("ghu_") ||
+          secret.length > 25
+        ) {
+          headers["Authorization"] = `Bearer ${secret}`;
+        } else if (config.clientId) {
+          const auth = Buffer.from(`${config.clientId}:${secret}`).toString("base64");
+          headers["Authorization"] = `Basic ${auth}`;
+        }
+      }
+      try {
+        const filesRes = await fetch(
+          `https://api.github.com/repos/${config.repository}/pulls/${prNumber}/files`,
+          { headers }
+        );
+        if (filesRes.ok) {
+          const filesData: any = await filesRes.json();
+          diffFiles = filesData.flatMap((f: any) => parsePatchToDiffFiles(f.filename, f.patch));
+        }
+      } catch (e) {}
+    }
+    if (diffFiles.length === 0) {
+      diffFiles = generateRealisticDiffForTopic(fallbackTitle, fallbackTaskKey);
+    }
+    return diffFiles;
+  },
+
   async syncPullRequestsFromGitHub(organizationId: string) {
     const config = await this.getGitHubConfig(organizationId);
     if (!config.repository || !config.repository.includes("/")) {
@@ -279,21 +320,8 @@ export const githubService = {
         const linkedIssueKey = extractTaskKey(headBranch, ghPR.title, ghPR.body);
 
         // Fetch PR files from GitHub API if possible
-        let diffFiles: IPullRequestDiffFile[] = [];
-        try {
-          const filesRes = await fetch(
-            `https://api.github.com/repos/${config.repository}/pulls/${ghPR.number}/files`,
-            { headers }
-          );
-          if (filesRes.ok) {
-            const filesData = (await filesRes.json()) as any[];
-            diffFiles = filesData.flatMap((f) => parsePatchToDiffFiles(f.filename, f.patch));
-          }
-        } catch {}
-
-        if (diffFiles.length === 0) {
-          diffFiles = generateRealisticDiffForTopic(ghPR.title, linkedIssueKey);
-        }
+        // Fetch PR files from GitHub API if possible
+        const diffFiles = await this.fetchPullRequestDiff(organizationId, ghPR.number, ghPR.title, linkedIssueKey);
 
         await PullRequestModel.findOneAndUpdate(
           { organizationId, $or: [{ id: prId }, { number: ghPR.number }] },
