@@ -31,6 +31,12 @@ export const sprintService = {
     const totalDays = input.totalDays || 14;
     const start = new Date(input.startDate).getTime();
     const burndown = [];
+    burndown.push({
+      day: 0,
+      date: "Kickoff",
+      idealRemaining: 0,
+      actualRemaining: 0,
+    });
     for (let day = 1; day <= totalDays; day++) {
       const dDate = new Date(start + (day - 1) * 86400000);
       const dateStr = isNaN(dDate.getTime())
@@ -40,7 +46,7 @@ export const sprintService = {
         day,
         date: dateStr,
         idealRemaining: 0,
-        actualRemaining: day === 1 ? 0 : null,
+        actualRemaining: null,
       });
     }
 
@@ -277,19 +283,28 @@ export const sprintService = {
 
     const existingMap = new Map((sprint.burndown || []).map((b) => [b.day, b]));
     const newBurndown = [];
+
+    // Day 0: Kickoff
+    newBurndown.push({
+      day: 0,
+      date: "Kickoff",
+      idealRemaining: total,
+      actualRemaining: total,
+    });
+
     for (let day = 1; day <= totalDays; day++) {
       const dDate = new Date(start + (day - 1) * 86400000);
       const dateStr = isNaN(dDate.getTime())
         ? `Day ${day}`
         : dDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const idealRemaining = Math.max(0, Math.round(total - ((day - 1) / Math.max(1, totalDays - 1)) * total));
+      const idealRemaining = Math.max(0, Math.round(total - (day / totalDays) * total));
 
       let actualRemaining: number | null = null;
       if (day < currentDay) {
         const prev = existingMap.get(day);
         actualRemaining = prev?.actualRemaining !== null && prev?.actualRemaining !== undefined
           ? prev.actualRemaining
-          : Math.round(total - ((day - 1) / Math.max(1, currentDay - 1 || 1)) * (total - sprint.remainingPoints));
+          : Math.round(total - (day / currentDay) * (total - sprint.remainingPoints));
       } else if (day === currentDay) {
         actualRemaining = sprint.remainingPoints;
       } else {

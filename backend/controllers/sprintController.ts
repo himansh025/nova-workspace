@@ -14,11 +14,16 @@ export const sprintController = {
         taskQuery.projectId = { $in: ids.length > 0 ? ids : ["__none__"] };
       }
 
-      const [sprints, activeSprint, allTasks] = await Promise.all([
+      let [sprints, activeSprint, allTasks] = await Promise.all([
         sprintService.getSprints(orgId),
         sprintService.getActiveSprint(orgId),
         TaskModel.find(taskQuery).sort({ updatedAt: -1 }),
       ]);
+
+      if (activeSprint) {
+        await sprintService.recalculateSprintPoints(orgId, activeSprint.id);
+        activeSprint = await sprintService.getActiveSprint(orgId);
+      }
 
       const activeTaskIds = new Set(activeSprint?.taskIds || []);
       const sprintTasks = allTasks.filter((t) => activeTaskIds.has(t.id));
@@ -31,7 +36,7 @@ export const sprintController = {
               completedSprints.reduce((acc, curr) => acc + curr.completedPoints, 0) /
                 completedSprints.length
             )
-          : 24;
+          : (activeSprint?.completedPoints || 0);
 
       return res.json({
         success: true,
