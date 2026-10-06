@@ -52,9 +52,9 @@ const SprintSchema = new Schema<ISprintDocument>(
     endDate: { type: String, required: true },
     totalDays: { type: Number, default: 14 },
     currentDay: { type: Number, default: 1 },
-    totalPoints: { type: Number, default: 40 },
+    totalPoints: { type: Number, default: 0 },
     completedPoints: { type: Number, default: 0 },
-    remainingPoints: { type: Number, default: 40 },
+    remainingPoints: { type: Number, default: 0 },
     taskIds: [{ type: String }],
     burndown: [
       {
