@@ -14,11 +14,16 @@ export const sprintController = {
         taskQuery.projectId = { $in: ids.length > 0 ? ids : ["__none__"] };
       }
 
-      const [sprints, activeSprint, allTasks] = await Promise.all([
+      let [sprints, activeSprint, allTasks] = await Promise.all([
         sprintService.getSprints(orgId),
         sprintService.getActiveSprint(orgId),
         TaskModel.find(taskQuery).sort({ updatedAt: -1 }),
       ]);
+
+      if (activeSprint) {
+        await sprintService.recalculateSprintPoints(orgId, activeSprint.id);
+        activeSprint = await sprintService.getActiveSprint(orgId);
+      }
 
       const activeTaskIds = new Set(activeSprint?.taskIds || []);
       const sprintTasks = allTasks.filter((t) => activeTaskIds.has(t.id));
@@ -31,7 +36,7 @@ export const sprintController = {
               completedSprints.reduce((acc, curr) => acc + curr.completedPoints, 0) /
                 completedSprints.length
             )
-          : 24;
+          : (activeSprint?.completedPoints || 0);
 
       return res.json({
         success: true,
@@ -57,7 +62,12 @@ export const sprintController = {
   async createSprint(req: Request, res: Response) {
     try {
       const orgId = (req as any).organizationId || "org-default";
-      const { name, goal, startDate, endDate, totalDays } = req.body;
+      const { name, goal, startDate, endDate, totalDays, action, sprintId } = req.body;
+
+      if (action === "start" && sprintId) {
+        const sprint = await sprintService.startSprint(orgId, sprintId as string);
+        return res.json({ success: true, sprint });
+      }
 
       if (!name) {
         return res.status(400).json({ success: false, error: "Sprint name is required." });
@@ -129,6 +139,45 @@ export const sprintController = {
       return res.json({ success: true, activeSprint });
     } catch (error: any) {
       return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
+  async updateOrAssignSprint(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId || "org-default";
+      const { id } = req.params;
+      const { taskId, action, name, goal, startDate, endDate, totalDays } = req.body;
+
+      if (taskId) {
+        const targetSprintId = action === "unassign" ? null : (id as string);
+        const activeSprint = await sprintService.assignTaskToSprint(orgId, taskId, targetSprintId);
+        return res.json({ success: true, activeSprint });
+      }
+
+      const updated = await sprintService.updateSprint(orgId, id as string, {
+        name,
+        goal,
+        startDate,
+        endDate,
+        totalDays,
+      });
+      return res.json({ success: true, sprint: updated });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+  },
+
+  async deleteSprint(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId || "org-default";
+      const { id } = req.params;
+      const deleted = await sprintService.deleteSprint(orgId, id as string);
+      if (!deleted) {
+        return res.status(404).json({ success: false, error: "Sprint not found" });
+      }
+      return res.json({ success: true, id });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: error.message });
     }
   },
 };

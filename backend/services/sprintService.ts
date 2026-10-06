@@ -11,7 +11,7 @@ export const sprintService = {
   async getActiveSprint(organizationId: string): Promise<ISprintDocument | null> {
     const active = await SprintModel.findOne({ organizationId, status: "active" });
     if (active) return active;
-    return SprintModel.findOne({ organizationId }).sort({ createdAt: -1 });
+    return null;
   },
 
   async getSprintById(organizationId: string, id: string): Promise<ISprintDocument | null> {
@@ -25,24 +25,56 @@ export const sprintService = {
     startDate: string;
     endDate: string;
     totalDays?: number;
+    status?: "active" | "planned";
   }): Promise<ISprintDocument> {
     const sprintId = `spr-${Date.now().toString(36)}`;
+    const totalDays = input.totalDays || 14;
+    const start = new Date(input.startDate).getTime();
+    const burndown = [];
+    burndown.push({
+      day: 0,
+      date: "Kickoff",
+      idealRemaining: 0,
+      actualRemaining: 0,
+    });
+    for (let day = 1; day <= totalDays; day++) {
+      const dDate = new Date(start + (day - 1) * 86400000);
+      const dateStr = isNaN(dDate.getTime())
+        ? `Day ${day}`
+        : dDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      burndown.push({
+        day,
+        date: dateStr,
+        idealRemaining: 0,
+        actualRemaining: null,
+      });
+    }
+
     const sprint = await SprintModel.create({
       id: sprintId,
       organizationId: input.organizationId,
       name: input.name,
       goal: input.goal || "",
-      status: "planned",
+      status: input.status || "planned",
       startDate: input.startDate,
       endDate: input.endDate,
-      totalDays: input.totalDays || 14,
+      totalDays,
       currentDay: 1,
       totalPoints: 0,
       completedPoints: 0,
       remainingPoints: 0,
       taskIds: [],
-      burndown: [],
+      burndown,
       pokerVotes: [],
+    });
+
+    broadcastEvent({
+      type: "system",
+      category: "system",
+      title: "Sprint Created",
+      message: `Created sprint: ${sprint.name}`,
+      link: "/app/sprints",
+      meta: { sprintId: sprint.id, organizationId: input.organizationId },
     });
 
     return sprint;
@@ -54,7 +86,8 @@ export const sprintService = {
     voter: string,
     points: number
   ) {
-    const sprint = await SprintModel.findOne({ organizationId, status: "active" });
+    const sprint = await SprintModel.findOne({ organizationId, status: "active" }) ||
+      await SprintModel.findOne({ organizationId, taskIds: taskId });
 
     // Update task estimate
     await TaskModel.updateOne(
@@ -88,11 +121,18 @@ export const sprintService = {
   },
 
   async assignTaskToSprint(organizationId: string, taskId: string, targetSprintId: string | null) {
+    // Find previous sprints containing this taskId to update their points too
+    const previousSprints = await SprintModel.find({ organizationId, taskIds: taskId });
+
     // Remove from all sprints in org
     await SprintModel.updateMany(
       { organizationId },
       { $pull: { taskIds: taskId } }
     );
+
+    for (const prev of previousSprints) {
+      await this.recalculateSprintPoints(organizationId, prev.id);
+    }
 
     if (targetSprintId) {
       await SprintModel.updateOne(
@@ -112,9 +152,10 @@ export const sprintService = {
       { $set: { status: "planned" } }
     );
 
+    const nowStr = new Date().toISOString().split("T")[0];
     const sprint = await SprintModel.findOneAndUpdate(
       { organizationId, id: sprintId },
-      { $set: { status: "active", currentDay: 1 } },
+      { $set: { status: "active", currentDay: 1, startDate: nowStr } },
       { returnDocument: "after" }
     );
 
@@ -169,6 +210,7 @@ export const sprintService = {
     if (nextPlanned) {
       nextPlanned.status = "active";
       await nextPlanned.save();
+      await this.recalculateSprintPoints(organizationId, nextPlanned.id);
     }
 
     await ActivityItemModel.create({
@@ -182,6 +224,36 @@ export const sprintService = {
     });
 
     return { completedSprint: sprint, rolledOverCount };
+  },
+
+  async deleteSprint(organizationId: string, sprintId: string) {
+    const sprint = await SprintModel.findOneAndDelete({ organizationId, id: sprintId });
+    if (!sprint) return false;
+    broadcastEvent({
+      type: "system",
+      category: "system",
+      title: "Sprint Deleted",
+      message: `Deleted sprint ${sprint.name}`,
+      link: "/app/sprints",
+      meta: { sprintId, organizationId },
+    });
+    return true;
+  },
+
+  async updateSprint(
+    organizationId: string,
+    sprintId: string,
+    updates: Partial<{ name: string; goal: string; startDate: string; endDate: string; totalDays: number }>
+  ) {
+    const sprint = await SprintModel.findOneAndUpdate(
+      { organizationId, id: sprintId },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    if (sprint) {
+      await this.recalculateSprintPoints(organizationId, sprintId);
+    }
+    return sprint;
   },
 
   async recalculateSprintPoints(organizationId: string, sprintId: string) {
@@ -201,6 +273,53 @@ export const sprintService = {
     sprint.totalPoints = total;
     sprint.completedPoints = completed;
     sprint.remainingPoints = Math.max(0, total - completed);
+
+    const totalDays = sprint.totalDays || 14;
+    const start = new Date(sprint.startDate).getTime();
+    const now = Date.now();
+    const diffDays = isNaN(start) ? 1 : Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
+    const currentDay = Math.min(totalDays, Math.max(1, diffDays));
+    sprint.currentDay = currentDay;
+
+    const existingMap = new Map((sprint.burndown || []).map((b) => [b.day, b]));
+    const newBurndown = [];
+
+    // Day 0: Kickoff
+    newBurndown.push({
+      day: 0,
+      date: "Kickoff",
+      idealRemaining: total,
+      actualRemaining: total,
+    });
+
+    for (let day = 1; day <= totalDays; day++) {
+      const dDate = new Date(start + (day - 1) * 86400000);
+      const dateStr = isNaN(dDate.getTime())
+        ? `Day ${day}`
+        : dDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const idealRemaining = Math.max(0, Math.round(total - (day / totalDays) * total));
+
+      let actualRemaining: number | null = null;
+      if (day < currentDay) {
+        const prev = existingMap.get(day);
+        actualRemaining = prev?.actualRemaining !== null && prev?.actualRemaining !== undefined
+          ? prev.actualRemaining
+          : Math.round(total - (day / currentDay) * (total - sprint.remainingPoints));
+      } else if (day === currentDay) {
+        actualRemaining = sprint.remainingPoints;
+      } else {
+        actualRemaining = null;
+      }
+
+      newBurndown.push({
+        day,
+        date: dateStr,
+        idealRemaining,
+        actualRemaining,
+      });
+    }
+    sprint.burndown = newBurndown;
+
     await sprint.save();
   },
 };

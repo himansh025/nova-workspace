@@ -28,6 +28,7 @@ export interface Project {
   activeBranch: string;
   repository: string;
   teamGroupId?: string | null;
+  isDefaultForTasks?: boolean;
   createdAt: string;
   updatedAt: string;
 }

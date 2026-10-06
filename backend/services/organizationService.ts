@@ -48,9 +48,10 @@ export async function createOrganization(name: string, ownerUserId: string): Pro
     repository: "github.com/organization/main",
     sprint: "Sprint 1",
     progressPercent: 0,
-    cycleTime: "1.4d",
-    velocity: "24 pts",
+    cycleTime: "--",
+    velocity: "0 pts",
     activeBranch: "main",
+    isDefaultForTasks: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });

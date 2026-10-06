@@ -18,21 +18,25 @@ import {
   ChevronRight,
   Layers,
   ArrowUpRight,
-  UserCheck
+  UserCheck,
+  X,
+  Trash2,
+  ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { Sprint, VelocityHistory } from "@/types";
-import { Task } from "@/types";
+import { Sprint, VelocityHistory, Task } from "@/types";
 import { SprintSkeleton } from "@/components/workspace/Skeletons";
+import { apiFetchInit, getApiHeaders } from "@/lib/apiHeaders";
+import DatePicker from "@/components/ui/DatePicker";
 
 export default function SprintsPage() {
   const { user } = useAuth();
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const [velocityHistory, setVelocityHistory] = useState<VelocityHistory[]>([]);
-  const [avgVelocity, setAvgVelocity] = useState<number>(38);
-  const [sprintTasks, setSprintTasks] = useState<Task[]>([]);
-  const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
+  const [avgVelocity, setAvgVelocity] = useState<number>(24);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Planning Poker State
@@ -42,23 +46,55 @@ export default function SprintsPage() {
 
   // Complete Sprint Modal State
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
-  const [rolloverTarget, setRolloverTarget] = useState<string>("sprint-25");
+  const [rolloverTarget, setRolloverTarget] = useState<string>("");
   const [isSubmittingComplete, setIsSubmittingComplete] = useState(false);
+
+  // Create Sprint Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newSprintName, setNewSprintName] = useState("");
+  const [newSprintGoal, setNewSprintGoal] = useState("");
+  const [newSprintDurationDays, setNewSprintDurationDays] = useState(14);
+  const [newSprintStartDate, setNewSprintStartDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [newSprintEndDate, setNewSprintEndDate] = useState(
+    new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0]
+  );
+  const [startImmediately, setStartImmediately] = useState(false);
+  const [isCreatingSprint, setIsCreatingSprint] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Notification / toast banner
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   // Hover state for SVG burndown chart
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
+  const showToast = (text: string, type: "success" | "error" = "success") => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const fetchSprintData = async () => {
     try {
-      const res = await fetch("/api/sprints");
+      const res = await fetch("/api/sprints", apiFetchInit());
       const data = await res.json();
       if (data.success) {
-        setSprints(data.sprints);
-        setActiveSprint(data.activeSprint);
-        setVelocityHistory(data.velocityHistory);
-        setAvgVelocity(data.avgVelocity);
-        setSprintTasks(data.sprintTasks);
-        setBacklogTasks(data.backlogTasks);
+        setSprints(data.sprints || []);
+        setActiveSprint(data.activeSprint || null);
+        setVelocityHistory(data.velocityHistory || []);
+        setAvgVelocity(data.avgVelocity || 24);
+        setAllTasks(data.allTasks || []);
+
+        // Default selected sprint to active sprint, or first planned, or first available
+        if (!selectedSprintId) {
+          if (data.activeSprint) {
+            setSelectedSprintId(data.activeSprint.id);
+          } else if (data.sprints && data.sprints.length > 0) {
+            const planned = data.sprints.find((s: Sprint) => s.status === "planned");
+            setSelectedSprintId(planned ? planned.id : data.sprints[0].id);
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to load sprints data:", err);
@@ -71,6 +107,83 @@ export default function SprintsPage() {
     fetchSprintData();
   }, []);
 
+  // Set default dates when duration changes
+  const handleDurationChange = (days: number) => {
+    setNewSprintDurationDays(days);
+    const start = new Date(newSprintStartDate || Date.now());
+    const end = new Date(start.getTime() + days * 86400000);
+    setNewSprintEndDate(end.toISOString().split("T")[0]);
+  };
+
+  const handleStartDateChange = (dateStr: string) => {
+    setNewSprintStartDate(dateStr);
+    const start = new Date(dateStr);
+    const end = new Date(start.getTime() + newSprintDurationDays * 86400000);
+    setNewSprintEndDate(end.toISOString().split("T")[0]);
+  };
+
+  // Determine current active or selected sprint
+  const currentSprint =
+    sprints.find((s) => s.id === selectedSprintId) ||
+    activeSprint ||
+    sprints.find((s) => s.status === "planned") ||
+    sprints[0] ||
+    null;
+
+  // Derive committed vs backlog tasks based on currentSprint
+  const currentTaskIds = new Set(currentSprint?.taskIds || []);
+  const sprintTasks = allTasks.filter((t) => currentTaskIds.has(t.id));
+  const backlogTasks = allTasks.filter((t) => !currentTaskIds.has(t.id));
+
+  // Planned sprints list
+  const plannedSprints = sprints.filter((s) => s.status === "planned");
+
+  // Create Sprint Action
+  const handleCreateSprint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSprintName.trim()) {
+      setCreateError("Please provide a sprint name.");
+      return;
+    }
+    setCreateError(null);
+    setIsCreatingSprint(true);
+
+    try {
+      const res = await fetch("/api/sprints", {
+        method: "POST",
+        ...apiFetchInit({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          name: newSprintName.trim(),
+          goal: newSprintGoal.trim(),
+          startDate: newSprintStartDate,
+          endDate: newSprintEndDate,
+          totalDays: newSprintDurationDays,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.sprint) {
+        showToast(`Sprint "${data.sprint.name}" created successfully!`);
+        setIsCreateModalOpen(false);
+        setNewSprintName("");
+        setNewSprintGoal("");
+
+        // If user wanted to start immediately
+        if (startImmediately) {
+          await handleStartSprint(data.sprint.id);
+        } else {
+          setSelectedSprintId(data.sprint.id);
+          await fetchSprintData();
+        }
+      } else {
+        setCreateError(data.error || "Failed to create sprint.");
+      }
+    } catch (err: any) {
+      setCreateError(err.message || "Network error while creating sprint.");
+    } finally {
+      setIsCreatingSprint(false);
+    }
+  };
+
   // Handle Poker Estimate
   const handleCastVote = async (points: number) => {
     if (!selectedTaskForPoker) return;
@@ -79,42 +192,48 @@ export default function SprintsPage() {
     try {
       const res = await fetch("/api/sprints/poker", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        ...apiFetchInit({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           taskId: selectedTaskForPoker.id,
           voter: user?.name || "Team Member",
-          points
-        })
+          points,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setPokerSuccessMsg(`Assigned ${points} pts to ${selectedTaskForPoker.key}`);
         setTimeout(() => setPokerSuccessMsg(null), 3000);
+        showToast(`Estimated ${selectedTaskForPoker.key} as ${points} points.`);
         fetchSprintData();
       }
     } catch (err) {
       console.error("Poker vote error:", err);
+      showToast("Failed to record poker vote.", "error");
     }
   };
 
   // Toggle Task In/Out of Sprint
   const handleToggleSprintTask = async (taskId: string, targetSprintId: string | null) => {
-    if (!activeSprint) return;
+    const destinationSprintId = targetSprintId !== undefined ? targetSprintId : currentSprint?.id || null;
     try {
-      const res = await fetch(`/api/sprints/${activeSprint.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/sprints/assign", {
+        method: "POST",
+        ...apiFetchInit({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           taskId,
-          action: targetSprintId ? "assign" : "unassign"
-        })
+          sprintId: destinationSprintId,
+        }),
       });
       const data = await res.json();
       if (data.success) {
+        showToast(destinationSprintId ? "Task added to sprint." : "Task moved to backlog.");
         fetchSprintData();
+      } else {
+        showToast(data.error || "Failed to update sprint assignment.", "error");
       }
     } catch (err) {
       console.error("Toggle sprint task error:", err);
+      showToast("Failed to update task sprint assignment.", "error");
     }
   };
 
@@ -122,14 +241,38 @@ export default function SprintsPage() {
   const handleToggleTaskStatus = async (task: Task) => {
     const newStatus = task.status === "done" ? "in_progress" : "done";
     try {
-      await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
+        ...apiFetchInit({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ status: newStatus }),
       });
-      fetchSprintData();
+      const data = await res.json();
+      if (data.success) {
+        fetchSprintData();
+      }
     } catch (err) {
       console.error("Task status error:", err);
+    }
+  };
+
+  // Handle Start Sprint
+  const handleStartSprint = async (sprintId: string) => {
+    try {
+      const res = await fetch(`/api/sprints/${sprintId}/start`, {
+        method: "POST",
+        ...apiFetchInit({ "Content-Type": "application/json" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Sprint successfully started and active!");
+        setSelectedSprintId(sprintId);
+        fetchSprintData();
+      } else {
+        showToast(data.error || "Failed to start sprint.", "error");
+      }
+    } catch (err) {
+      console.error("Failed to start sprint:", err);
+      showToast("Failed to start sprint.", "error");
     }
   };
 
@@ -140,35 +283,43 @@ export default function SprintsPage() {
     try {
       const res = await fetch(`/api/sprints/${activeSprint.id}/complete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rolloverTargetId: rolloverTarget })
+        ...apiFetchInit({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ rolloverTargetId: rolloverTarget || undefined }),
       });
       const data = await res.json();
       if (data.success) {
         setIsCompleteModalOpen(false);
+        showToast(`Sprint cycle complete! ${data.rolledOverCount || 0} incomplete tasks rolled over.`);
         fetchSprintData();
+      } else {
+        showToast(data.error || "Failed to complete sprint.", "error");
       }
     } catch (err) {
       console.error("Failed to complete sprint:", err);
+      showToast("Failed to complete sprint.", "error");
     } finally {
       setIsSubmittingComplete(false);
     }
   };
 
-  // Handle Start Next Sprint
-  const handleStartSprint = async (sprintId: string) => {
+  // Handle Delete Sprint
+  const handleDeleteSprint = async (sprintId: string, sprintName: string) => {
+    if (!confirm(`Are you sure you want to delete "${sprintName}"?`)) return;
     try {
-      const res = await fetch("/api/sprints", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "start", sprintId })
+      const res = await fetch(`/api/sprints/${sprintId}`, {
+        method: "DELETE",
+        ...apiFetchInit(),
       });
       const data = await res.json();
       if (data.success) {
+        showToast(`Sprint "${sprintName}" deleted.`);
+        if (selectedSprintId === sprintId) {
+          setSelectedSprintId(null);
+        }
         fetchSprintData();
       }
     } catch (err) {
-      console.error("Failed to start sprint:", err);
+      console.error("Delete sprint error:", err);
     }
   };
 
@@ -179,8 +330,8 @@ export default function SprintsPage() {
   }
 
   // Burndown SVG Calculations
-  const burndownData = activeSprint?.burndown || [];
-  const maxPts = activeSprint?.totalPoints || 42;
+  const burndownData = currentSprint?.burndown || [];
+  const maxPts = Math.max(currentSprint?.totalPoints || 0, 10);
   const svgWidth = 850;
   const svgHeight = 260;
   const paddingX = 45;
@@ -198,18 +349,15 @@ export default function SprintsPage() {
     return paddingY + (1 - ratio) * chartH;
   };
 
-  // Build Ideal Line path
-  const idealPath = burndownData
-    .map((d, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(d.idealRemaining)}`)
-    .join(" ");
+  const idealPath = burndownData.length > 0
+    ? burndownData.map((d, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(d.idealRemaining)}`).join(" ")
+    : "";
 
-  // Build Actual Line path
   const actualDays = burndownData.filter((d) => d.actualRemaining !== null);
-  const actualPath = actualDays
-    .map((d, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(d.actualRemaining!)}`)
-    .join(" ");
+  const actualPath = actualDays.length > 0
+    ? actualDays.map((d, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(d.actualRemaining!)}`).join(" ")
+    : "";
 
-  // Area fill under actual line
   const lastActualIndex = actualDays.length - 1;
   const actualAreaPath =
     actualDays.length > 0
@@ -218,16 +366,16 @@ export default function SprintsPage() {
 
   const completedCount = sprintTasks.filter((t) => t.status === "done").length;
   const totalCount = sprintTasks.length;
-  const completionPercentage = activeSprint
-    ? Math.round((activeSprint.completedPoints / (activeSprint.totalPoints || 1)) * 100)
+  const completionPercentage = currentSprint && (currentSprint.totalPoints || 0) > 0
+    ? Math.round((currentSprint.completedPoints / currentSprint.totalPoints) * 100)
     : 0;
+
   const isAhead =
-    activeSprint && activeSprint.burndown.find((b) => b.day === activeSprint.currentDay)
-      ? (activeSprint.burndown.find((b) => b.day === activeSprint.currentDay)!.idealRemaining -
-          activeSprint.remainingPoints) >= 0
+    currentSprint && currentSprint.burndown && currentSprint.burndown.find((b) => b.day === currentSprint.currentDay)
+      ? (currentSprint.burndown.find((b) => b.day === currentSprint.currentDay)!.idealRemaining -
+          currentSprint.remainingPoints) >= 0
       : true;
 
-  /* ─── Priority badge helper ──────────────────────────────── */
   const getPriorityBadge = (priority: string) => {
     if (priority === "urgent")
       return "bg-[var(--nova-danger-subtle)] text-[var(--nova-danger-text)] border border-[var(--nova-danger-border)]";
@@ -238,31 +386,100 @@ export default function SprintsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[var(--nova-bg)]">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-[12px] font-medium shadow-lg ${
+              toastMessage.type === "success"
+                ? "bg-[var(--nova-surface)] text-[var(--nova-text-primary)] border-[var(--nova-success-border)]"
+                : "bg-[var(--nova-surface)] text-[var(--nova-danger-text)] border-[var(--nova-danger-border)]"
+            }`}
+          >
+            {toastMessage.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-[var(--nova-success)]" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-[var(--nova-danger)]" />
+            )}
+            {toastMessage.text}
+          </div>
+        </div>
+      )}
+
       {/* ── Sticky Page Header ──────────────────────────────── */}
       <div className="shrink-0 px-4 sm:px-5 py-3 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] text-[var(--nova-text-primary)] flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)]">
-              Sprint Planning
-            </h1>
-            {activeSprint && (
-              <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]">
-                Active
-              </span>
-            )}
+        <div className="flex items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[15px] font-semibold tracking-tight text-[var(--nova-text-primary)]">
+                Sprint Planning
+              </h1>
+              {activeSprint ? (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]">
+                  Active Sprint
+                </span>
+              ) : (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-deep)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]">
+                  No Active Sprint
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 mt-0.5">
+              {currentSprint ? (
+                <p className="text-[11px] text-[var(--nova-text-muted)]">
+                  {currentSprint.name} ·{" "}
+                  {currentSprint.status === "active"
+                    ? `Day ${currentSprint.currentDay} of ${currentSprint.totalDays}`
+                    : `Planned (${currentSprint.totalDays} days)`}
+                </p>
+              ) : (
+                <p className="text-[11px] text-[var(--nova-text-muted)]">
+                  No sprints configured. Click "+ Create Sprint" to start planning iterations.
+                </p>
+              )}
+
+              {/* Sprint Switcher Dropdown (if multiple sprints) */}
+              {sprints.length > 1 && (
+                <div className="relative inline-block ml-1">
+                  <select
+                    value={currentSprint?.id || ""}
+                    onChange={(e) => setSelectedSprintId(e.target.value)}
+                    aria-label="Select sprint"
+                    className="text-[11px] bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded px-2 py-0.5 cursor-pointer outline-none hover:border-[var(--nova-accent-border)]"
+                  >
+                    {sprints.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
-          <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
-            {activeSprint
-              ? `${activeSprint.name} · Day ${activeSprint.currentDay} of ${activeSprint.totalDays}`
-              : "No active sprint"}
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Poker Deck button — uses AI violet accent */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Create Sprint Button */}
           <button
             onClick={() => {
-              if (backlogTasks.length > 0) setSelectedTaskForPoker(backlogTasks[0]);
+              setNewSprintName(`Sprint ${(sprints.length || 0) + 1}`);
+              setNewSprintGoal("");
+              setIsCreateModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 bg-[var(--nova-deep)] hover:bg-[var(--nova-elevated)] border border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] text-[var(--nova-text-primary)] rounded px-3 py-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+            Create Sprint
+          </button>
+
+          {/* Poker Deck Button */}
+          <button
+            onClick={() => {
+              const targetTask = backlogTasks[0] || sprintTasks[0];
+              if (targetTask) setSelectedTaskForPoker(targetTask);
+              else showToast("Create or add tasks to backlog first to estimate story points.", "error");
             }}
             className="flex items-center gap-1.5 bg-[var(--nova-ai-subtle)] hover:bg-[rgba(139,92,246,0.18)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded px-3 py-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer"
           >
@@ -270,19 +487,84 @@ export default function SprintsPage() {
             Poker Deck
           </button>
 
-          {/* Complete Sprint — primary CTA */}
-          <button
-            onClick={() => setIsCompleteModalOpen(true)}
-            className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 cursor-pointer"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Complete Sprint
-          </button>
+          {/* Start Current Sprint (if selected sprint is planned) */}
+          {currentSprint && currentSprint.status === "planned" && (
+            <button
+              onClick={() => handleStartSprint(currentSprint.id)}
+              className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 cursor-pointer shadow-xs"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Start Sprint
+            </button>
+          )}
+
+          {/* Complete Sprint (only if active sprint is present) */}
+          {activeSprint && (
+            <button
+              onClick={() => {
+                const nextSprint = plannedSprints.find((s) => s.id !== activeSprint.id);
+                setRolloverTarget(nextSprint ? nextSprint.id : "");
+                setIsCompleteModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 cursor-pointer"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Complete Sprint
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Scrollable Body ──────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto nova-scroll px-5 py-4 space-y-4">
+
+        {/* ── Workflow Guide Banner (When No Active Sprint) ────── */}
+        {!activeSprint && (
+          <div className="bg-[var(--nova-surface)] border border-[var(--nova-accent-border)] rounded-lg p-4 shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--nova-accent)]" />
+                  <h3 className="text-[13px] font-semibold text-[var(--nova-text-primary)]">
+                    Sprint Planning Ready
+                  </h3>
+                  <span className="text-[11px] font-mono text-[var(--nova-accent-text)] bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] px-1.5 py-0.2 rounded">
+                    Workflow Step 3 & 4
+                  </span>
+                </div>
+                <p className="text-[12px] text-[var(--nova-text-secondary)] mt-1">
+                  1. Pick tasks from <strong>Product Backlog</strong> into <strong>Committed Scope</strong>. &nbsp;•&nbsp;
+                  2. Use <strong>Planning Poker</strong> to estimate complexity. &nbsp;•&nbsp;
+                  3. Click <strong>Start Sprint</strong> to kick off the iteration.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {currentSprint && currentSprint.status === "planned" ? (
+                  <button
+                    onClick={() => handleStartSprint(currentSprint.id)}
+                    className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3.5 py-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer shadow-xs"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    Start {currentSprint.name} Now
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setNewSprintName(`Sprint ${(sprints.length || 0) + 1}`);
+                      setStartImmediately(true);
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3.5 py-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Create & Start Sprint
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── KPI Strip ───────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -292,7 +574,7 @@ export default function SprintsPage() {
               Committed
             </div>
             <div className="text-[22px] font-semibold text-[var(--nova-text-primary)] font-mono leading-none">
-              {activeSprint?.totalPoints}
+              {currentSprint?.totalPoints ?? 0}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
             </div>
             <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">{totalCount} scope items</div>
@@ -304,7 +586,7 @@ export default function SprintsPage() {
               Burned / Done
             </div>
             <div className="text-[22px] font-semibold text-[var(--nova-success)] font-mono leading-none">
-              {activeSprint?.completedPoints}
+              {currentSprint?.completedPoints ?? 0}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
             </div>
             <div className="text-[11px] text-[var(--nova-success-text)] mt-1 flex items-center gap-1">
@@ -319,7 +601,7 @@ export default function SprintsPage() {
               Remaining
             </div>
             <div className="text-[22px] font-semibold text-[var(--nova-accent)] font-mono leading-none">
-              {activeSprint?.remainingPoints}
+              {currentSprint?.remainingPoints ?? 0}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
             </div>
             <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">
@@ -336,27 +618,43 @@ export default function SprintsPage() {
               {avgVelocity}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts/sprint</span>
             </div>
-            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">Rolling 3-sprint avg</div>
+            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">Historical rolling avg</div>
           </div>
 
           {/* Burndown Pace */}
           <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-3.5">
             <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] mb-1">
-              Pace
+              Status
             </div>
             <div
               className={`text-[13px] font-semibold mt-1 flex items-center gap-1.5 ${
-                isAhead ? "text-[var(--nova-success-text)]" : "text-[var(--nova-warning-text)]"
+                currentSprint?.status === "active"
+                  ? isAhead
+                    ? "text-[var(--nova-success-text)]"
+                    : "text-[var(--nova-warning-text)]"
+                  : "text-[var(--nova-text-muted)]"
               }`}
             >
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  isAhead ? "bg-[var(--nova-success)] animate-pulse" : "bg-[var(--nova-warning)]"
+                  currentSprint?.status === "active"
+                    ? isAhead
+                      ? "bg-[var(--nova-success)] animate-pulse"
+                      : "bg-[var(--nova-warning)]"
+                    : "bg-[var(--nova-text-muted)]"
                 }`}
               />
-              {isAhead ? "+5 pts Ahead" : "Slightly Behind"}
+              {currentSprint?.status === "active"
+                ? isAhead
+                  ? "On Track"
+                  : "Needs Attention"
+                : currentSprint?.status === "planned"
+                ? "Planned (Ready)"
+                : "No Active Sprint"}
             </div>
-            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">On track for Sep 22</div>
+            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">
+              {currentSprint?.endDate ? `Target ${currentSprint.endDate}` : "Unscheduled"}
+            </div>
           </div>
         </div>
 
@@ -370,11 +668,11 @@ export default function SprintsPage() {
                   Burndown Trajectory
                 </span>
                 <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] px-2 py-0.5 rounded">
-                  Daily Point Depletion
+                  Daily Story Points
                 </span>
               </div>
               <p className="text-[12px] text-[var(--nova-text-secondary)] mt-0.5">
-                Target vs actual burned story points across {activeSprint?.totalDays || 14} sprint days. Hover nodes to inspect daily deltas.
+                Target ideal burn line vs actual burned story points across {currentSprint?.totalDays || 14} days.
               </p>
             </div>
 
@@ -391,144 +689,157 @@ export default function SprintsPage() {
             </div>
           </div>
 
-          {/* SVG Canvas */}
-          <div className="relative w-full overflow-x-auto nova-scroll pt-1">
-            <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-52 select-none">
-              <defs>
-                <linearGradient id="actualAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--nova-accent)" stopOpacity="0.20" />
-                  <stop offset="100%" stopColor="var(--nova-accent)" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
+          {/* SVG Canvas or Empty State */}
+          {burndownData.length > 0 ? (
+            <div className="relative w-full overflow-x-auto nova-scroll pt-1">
+              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-52 select-none">
+                <defs>
+                  <linearGradient id="actualAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--nova-accent)" stopOpacity="0.20" />
+                    <stop offset="100%" stopColor="var(--nova-accent)" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
 
-              {/* Grid Horizontal Lines */}
-              {[0, 10, 20, 30, 40].map((pt) => {
-                const y = getY(pt);
-                return (
-                  <g key={`grid-${pt}`}>
-                    <line
-                      x1={paddingX}
-                      y1={y}
-                      x2={svgWidth - paddingX}
-                      y2={y}
-                      stroke="var(--nova-border-muted)"
-                      strokeDasharray="4 4"
-                    />
-                    <text
-                      x={paddingX - 8}
-                      y={y + 3}
-                      fill="var(--nova-text-muted)"
-                      fontSize="9"
-                      fontFamily="monospace"
-                      textAnchor="end"
+                {/* Grid Horizontal Lines */}
+                {[0, Math.round(maxPts * 0.25), Math.round(maxPts * 0.5), Math.round(maxPts * 0.75), maxPts].map((pt) => {
+                  const y = getY(pt);
+                  return (
+                    <g key={`grid-${pt}`}>
+                      <line
+                        x1={paddingX}
+                        y1={y}
+                        x2={svgWidth - paddingX}
+                        y2={y}
+                        stroke="var(--nova-border-muted)"
+                        strokeDasharray="4 4"
+                      />
+                      <text
+                        x={paddingX - 8}
+                        y={y + 3}
+                        fill="var(--nova-text-muted)"
+                        fontSize="9"
+                        fontFamily="monospace"
+                        textAnchor="end"
+                      >
+                        {pt}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Day Labels along X */}
+                {burndownData.map((d, i) => {
+                  const x = getX(i);
+                  const isCurrent = d.day === (currentSprint?.currentDay || 1);
+                  return (
+                    <g key={`label-${d.day}`}>
+                      <line
+                        x1={x}
+                        y1={paddingY}
+                        x2={x}
+                        y2={paddingY + chartH}
+                        stroke={isCurrent ? "var(--nova-accent-border)" : "var(--nova-border-muted)"}
+                        strokeDasharray={isCurrent ? "2 2" : undefined}
+                      />
+                      <text
+                        x={x}
+                        y={paddingY + chartH + 16}
+                        fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-text-muted)"}
+                        fontWeight={isCurrent ? "bold" : "normal"}
+                        fontSize="9"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
+                        D{d.day}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Area Under Actual Line */}
+                {actualAreaPath && <path d={actualAreaPath} fill="url(#actualAreaGrad)" />}
+
+                {/* Ideal Burndown Line */}
+                {idealPath && (
+                  <path
+                    d={idealPath}
+                    fill="none"
+                    stroke="var(--nova-border-strong)"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 4"
+                  />
+                )}
+
+                {/* Actual Burndown Line */}
+                {actualPath && (
+                  <path d={actualPath} fill="none" stroke="var(--nova-accent)" strokeWidth="2.5" />
+                )}
+
+                {/* Actual Data Nodes */}
+                {actualDays.map((d, i) => {
+                  const x = getX(i);
+                  const y = getY(d.actualRemaining!);
+                  const isHovered = hoveredDay === d.day;
+                  const isCurrent = d.day === currentSprint?.currentDay;
+
+                  return (
+                    <g
+                      key={`node-${d.day}`}
+                      onMouseEnter={() => setHoveredDay(d.day)}
+                      onMouseLeave={() => setHoveredDay(null)}
+                      className="cursor-pointer"
                     >
-                      {pt}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Day Labels along X */}
-              {burndownData.map((d, i) => {
-                const x = getX(i);
-                const isCurrent = d.day === activeSprint?.currentDay;
-                return (
-                  <g key={`label-${d.day}`}>
-                    <line
-                      x1={x}
-                      y1={paddingY}
-                      x2={x}
-                      y2={paddingY + chartH}
-                      stroke={isCurrent ? "var(--nova-accent-border)" : "var(--nova-border-muted)"}
-                      strokeDasharray={isCurrent ? "2 2" : undefined}
-                    />
-                    <text
-                      x={x}
-                      y={paddingY + chartH + 16}
-                      fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-text-muted)"}
-                      fontWeight={isCurrent ? "bold" : "normal"}
-                      fontSize="9"
-                      fontFamily="monospace"
-                      textAnchor="middle"
-                    >
-                      D{d.day}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Area Under Actual Line */}
-              {actualAreaPath && <path d={actualAreaPath} fill="url(#actualAreaGrad)" />}
-
-              {/* Ideal Burndown Line */}
-              <path
-                d={idealPath}
-                fill="none"
-                stroke="var(--nova-border-strong)"
-                strokeWidth="1.5"
-                strokeDasharray="6 4"
-              />
-
-              {/* Actual Burndown Line */}
-              <path d={actualPath} fill="none" stroke="var(--nova-accent)" strokeWidth="2.5" />
-
-              {/* Actual Data Nodes */}
-              {actualDays.map((d, i) => {
-                const x = getX(i);
-                const y = getY(d.actualRemaining!);
-                const isHovered = hoveredDay === d.day;
-                const isCurrent = d.day === activeSprint?.currentDay;
-
-                return (
-                  <g
-                    key={`node-${d.day}`}
-                    onMouseEnter={() => setHoveredDay(d.day)}
-                    onMouseLeave={() => setHoveredDay(null)}
-                    className="cursor-pointer"
-                  >
-                    <circle
-                      cx={x}
-                      cy={y}
-                      r={isHovered ? 6 : isCurrent ? 5 : 3.5}
-                      fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-accent)"}
-                      stroke="var(--nova-surface)"
-                      strokeWidth="2"
-                    />
-                    {isCurrent && (
                       <circle
                         cx={x}
                         cy={y}
-                        r="8"
-                        fill="none"
-                        stroke="var(--nova-accent-text)"
-                        strokeWidth="1"
-                        className="animate-ping"
+                        r={isHovered ? 6 : isCurrent ? 5 : 3.5}
+                        fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-accent)"}
+                        stroke="var(--nova-surface)"
+                        strokeWidth="2"
                       />
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+                      {isCurrent && (
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="8"
+                          fill="none"
+                          stroke="var(--nova-accent-text)"
+                          strokeWidth="1"
+                          className="animate-ping"
+                        />
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
 
-            {/* Hover Tooltip */}
-            {hoveredDay && (
-              <div className="absolute top-2 right-3 bg-[var(--nova-elevated)] border border-[var(--nova-border-strong)] p-2.5 rounded-lg shadow-md text-[11px] font-mono text-[var(--nova-text-secondary)] pointer-events-none z-10">
-                <div className="text-[var(--nova-text-primary)] font-medium flex items-center gap-1.5 mb-1">
-                  <Calendar className="w-3 h-3 text-[var(--nova-accent)]" />
-                  Day {hoveredDay} · {burndownData[hoveredDay - 1]?.date}
+              {/* Hover Tooltip */}
+              {hoveredDay && (
+                <div className="absolute top-2 right-3 bg-[var(--nova-elevated)] border border-[var(--nova-border-strong)] p-2.5 rounded-lg shadow-md text-[11px] font-mono text-[var(--nova-text-secondary)] pointer-events-none z-10">
+                  <div className="text-[var(--nova-text-primary)] font-medium flex items-center gap-1.5 mb-1">
+                    <Calendar className="w-3 h-3 text-[var(--nova-accent)]" />
+                    Day {hoveredDay} · {burndownData[hoveredDay - 1]?.date}
+                  </div>
+                  <div>
+                    Actual:{" "}
+                    <span className="text-[var(--nova-accent)] font-semibold">
+                      {burndownData[hoveredDay - 1]?.actualRemaining ?? "N/A"} pts
+                    </span>
+                  </div>
+                  <div className="text-[var(--nova-text-muted)]">
+                    Ideal: {burndownData[hoveredDay - 1]?.idealRemaining} pts
+                  </div>
                 </div>
-                <div>
-                  Actual:{" "}
-                  <span className="text-[var(--nova-accent)] font-semibold">
-                    {burndownData[hoveredDay - 1]?.actualRemaining ?? "N/A"} pts
-                  </span>
-                </div>
-                <div className="text-[var(--nova-text-muted)]">
-                  Ideal: {burndownData[hoveredDay - 1]?.idealRemaining} pts
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-md">
+              <p>No burndown trajectory active yet.</p>
+              <p className="mt-1 text-[11px] text-[var(--nova-text-secondary)]">
+                Start a sprint with estimated story points to visualize daily progress.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ── Planning Poker Deck ──────────────────────────────── */}
@@ -537,7 +848,6 @@ export default function SprintsPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  {/* AI-accent left border treatment */}
                   <span className="w-0.5 h-4 rounded-full bg-[var(--nova-ai)]" />
                   <Sparkles className="w-3.5 h-3.5 text-[var(--nova-ai)]" />
                   <span className="text-[12px] font-medium text-[var(--nova-ai-text)]">
@@ -595,14 +905,14 @@ export default function SprintsPage() {
               <div className="flex items-center gap-2">
                 <Target className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
                 <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
-                  Committed Scope
+                  Committed Scope {currentSprint ? `(${currentSprint.name})` : ""}
                 </span>
                 <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-deep)] text-[var(--nova-text-secondary)] border border-[var(--nova-border)]">
                   {sprintTasks.length}
                 </span>
               </div>
               <span className="text-[11px] text-[var(--nova-text-muted)] font-mono">
-                {activeSprint?.completedPoints} / {activeSprint?.totalPoints} pts done
+                {currentSprint?.completedPoints ?? 0} / {currentSprint?.totalPoints ?? 0} pts done
               </span>
             </div>
 
@@ -689,7 +999,9 @@ export default function SprintsPage() {
 
               {sprintTasks.length === 0 && (
                 <div className="py-10 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-md mx-1">
-                  No tasks assigned to this sprint. Pick items from the backlog.
+                  {currentSprint
+                    ? "No tasks assigned to this sprint yet. Pick items from the backlog below."
+                    : "No sprint selected. Create a sprint to start committing tasks."}
                 </div>
               )}
             </div>
@@ -707,7 +1019,7 @@ export default function SprintsPage() {
                   {backlogTasks.length}
                 </span>
               </div>
-              <span className="text-[11px] text-[var(--nova-text-muted)]">Ready for Grooming</span>
+              <span className="text-[11px] text-[var(--nova-text-muted)]">Ready for Sprint</span>
             </div>
 
             <div className="px-3 py-3 space-y-1.5 nova-scroll max-h-[26rem] overflow-y-auto">
@@ -744,10 +1056,15 @@ export default function SprintsPage() {
                         Estimate
                       </button>
                       <button
-                        onClick={() =>
-                          handleToggleSprintTask(task.id, activeSprint?.id || "sprint-24")
-                        }
-                        title="Add to Active Sprint"
+                        onClick={() => {
+                          if (currentSprint) {
+                            handleToggleSprintTask(task.id, currentSprint.id);
+                          } else {
+                            showToast("Please create a sprint first before adding tasks.", "error");
+                            setIsCreateModalOpen(true);
+                          }
+                        }}
+                        title="Add to Current Sprint"
                         className="flex items-center gap-1 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-2 py-1 text-[11px] font-medium transition-colors duration-150 cursor-pointer"
                       >
                         <Plus className="w-3 h-3" />
@@ -760,31 +1077,87 @@ export default function SprintsPage() {
 
               {backlogTasks.length === 0 && (
                 <div className="py-10 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-md mx-1">
-                  Product backlog is empty — all items groomed!
+                  Product backlog is empty — create tasks in the Tasks section to plan them here!
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* ── Velocity History & Sprint Pipeline ───────────────── */}
+        {/* ── Sprint Pipeline & Velocity History ──────────────── */}
         <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
               <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
-                Sprint Velocity History
+                Sprint Pipeline & Velocity
               </span>
               <p className="text-[12px] text-[var(--nova-text-secondary)] mt-0.5">
-                Committed vs completed story points across previous iterations.
+                Planned iterations ready to run, plus historical velocity completed points.
               </p>
             </div>
-            <span className="text-[11px] text-[var(--nova-text-muted)] font-mono">
-              Target capacity:{" "}
-              <span className="text-[var(--nova-text-primary)] font-medium">40 pts</span>
-            </span>
+            <button
+              onClick={() => {
+                setNewSprintName(`Sprint ${(sprints.length || 0) + 1}`);
+                setIsCreateModalOpen(true);
+              }}
+              className="flex items-center gap-1 text-[11px] text-[var(--nova-accent)] hover:underline cursor-pointer"
+            >
+              <Plus className="w-3 h-3" /> Plan Next Sprint
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            {/* Planned Sprints Cards */}
+            {plannedSprints.map((s) => (
+              <div
+                key={s.id}
+                className={`bg-[var(--nova-elevated)] border rounded-md p-3 space-y-2 transition-all ${
+                  currentSprint?.id === s.id
+                    ? "border-[var(--nova-accent)]"
+                    : "border-[var(--nova-accent-border)] hover:border-[var(--nova-accent)]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-medium text-[var(--nova-accent-text)] truncate">
+                    {s.name}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]">
+                      Planned
+                    </span>
+                    <button
+                      onClick={() => handleDeleteSprint(s.id, s.name)}
+                      className="text-[var(--nova-text-muted)] hover:text-[var(--nova-danger-text)] p-0.5 cursor-pointer"
+                      title="Delete Sprint"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-[var(--nova-text-secondary)] line-clamp-2">
+                  {s.goal || "Sprint iteration backlog."} · {s.totalPoints || 0} pts scope.
+                </p>
+
+                <div className="flex items-center gap-1.5 pt-1">
+                  <button
+                    onClick={() => handleStartSprint(s.id)}
+                    className="flex-1 flex items-center justify-center gap-1 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-2.5 py-1 text-[11px] font-medium transition-all duration-150 cursor-pointer"
+                  >
+                    <Play className="w-3 h-3" />
+                    Start
+                  </button>
+                  <button
+                    onClick={() => setSelectedSprintId(s.id)}
+                    className="flex items-center justify-center bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-2 py-1 text-[11px] transition-all duration-150 cursor-pointer"
+                  >
+                    View
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Velocity History Cards */}
             {velocityHistory.map((item) => (
               <div
                 key={item.sprintId}
@@ -811,33 +1184,157 @@ export default function SprintsPage() {
               </div>
             ))}
 
-            {/* Upcoming Sprint Preview */}
-            {sprints.find((s) => s.status === "planned") && (
-              <div className="bg-[var(--nova-elevated)] border border-[var(--nova-accent-border)] rounded-md p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-medium text-[var(--nova-accent-text)]">
-                    Sprint 25
-                  </span>
-                  <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] border border-[var(--nova-accent-border)]">
-                    Planned
-                  </span>
-                </div>
-                <p className="text-[11px] text-[var(--nova-text-secondary)] line-clamp-2">
-                  Multi-region sharding &amp; edge session stores. 34 pts scope.
-                </p>
-                <button
-                  onClick={() => handleStartSprint("sprint-25")}
-                  className="w-full flex items-center justify-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-3 py-1.5 text-[12px] transition-all duration-150 cursor-pointer"
-                >
-                  <Play className="w-3 h-3" />
-                  Start Sprint
-                </button>
+            {/* If no planned or history */}
+            {plannedSprints.length === 0 && velocityHistory.length === 0 && (
+              <div className="col-span-full py-6 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-md">
+                No past or upcoming sprints. Plan a new sprint iteration above!
               </div>
             )}
           </div>
         </div>
 
       </div>
+
+      {/* ── Create Sprint Modal ───────────────────────────────── */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-[var(--nova-overlay)] z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[var(--nova-elevated)] border border-[var(--nova-border-strong)] rounded-xl shadow-xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--nova-border)] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center text-[var(--nova-accent)]">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-semibold text-[var(--nova-text-primary)]">
+                    Create New Sprint
+                  </h3>
+                  <p className="text-[11px] text-[var(--nova-text-muted)]">
+                    Configure iteration dates and objectives.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {createError && (
+              <div className="p-2.5 rounded bg-[var(--nova-danger-subtle)] border border-[var(--nova-danger-border)] text-[var(--nova-danger-text)] text-[11px]">
+                {createError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateSprint} className="space-y-3.5">
+              <div>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                  Sprint Name *
+                </label>
+                <input
+                  type="text"
+                  value={newSprintName}
+                  onChange={(e) => setNewSprintName(e.target.value)}
+                  placeholder="e.g. Sprint 26: Authentication & Gateway"
+                  required
+                  className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded px-3 py-1.5 text-[12px] text-[var(--nova-text-primary)] outline-none focus:border-[var(--nova-accent-border)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                  Sprint Goal
+                </label>
+                <input
+                  type="text"
+                  value={newSprintGoal}
+                  onChange={(e) => setNewSprintGoal(e.target.value)}
+                  placeholder="e.g. Deliver OAuth2 integration and rate-limiting"
+                  className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded px-3 py-1.5 text-[12px] text-[var(--nova-text-primary)] outline-none focus:border-[var(--nova-accent-border)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                  Iteration Duration
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[7, 14, 21, 28].map((days) => (
+                    <button
+                      type="button"
+                      key={days}
+                      onClick={() => handleDurationChange(days)}
+                      className={`py-1.5 rounded text-[11px] font-medium border transition-colors cursor-pointer ${
+                        newSprintDurationDays === days
+                          ? "bg-[var(--nova-accent)] text-white border-[var(--nova-accent-border)]"
+                          : "bg-[var(--nova-bg)] text-[var(--nova-text-secondary)] border-[var(--nova-border)] hover:border-[var(--nova-border-strong)]"
+                      }`}
+                    >
+                      {days / 7} {days === 7 ? "Week" : "Weeks"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                    Start Date
+                  </label>
+                  <DatePicker
+                    value={newSprintStartDate}
+                    onChange={(val) => handleStartDateChange(val)}
+                    placeholder="Select start date"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+                    End Date
+                  </label>
+                  <DatePicker
+                    value={newSprintEndDate}
+                    onChange={(val) => setNewSprintEndDate(val)}
+                    minDate={newSprintStartDate}
+                    align="right"
+                    placeholder="Select end date"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={startImmediately}
+                  onChange={(e) => setStartImmediately(e.target.checked)}
+                  className="accent-[var(--nova-accent)] rounded"
+                />
+                <span className="text-[12px] text-[var(--nova-text-primary)]">
+                  Start this sprint immediately as active
+                </span>
+              </label>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--nova-border-muted)]">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded px-3 py-1.5 text-[12px] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingSprint}
+                  className="flex items-center gap-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-3.5 py-1.5 text-[12px] font-medium transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {isCreatingSprint ? "Creating…" : "Create Sprint"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Complete Sprint Modal ────────────────────────────── */}
       {isCompleteModalOpen && activeSprint && (
@@ -851,7 +1348,7 @@ export default function SprintsPage() {
                 </div>
                 <div>
                   <h3 className="text-[15px] font-semibold text-[var(--nova-text-primary)]">
-                    Complete {activeSprint.name.split(":")[0]}
+                    Complete {activeSprint.name}
                   </h3>
                   <p className="text-[11px] text-[var(--nova-text-muted)] mt-0.5">
                     Finalize story point burn and handle incomplete scope items.
@@ -891,24 +1388,32 @@ export default function SprintsPage() {
                 {sprintTasks.filter((t) => t.status !== "done").length} items):
               </label>
               <div className="space-y-2">
-                <label className="flex items-center gap-3 p-3 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] cursor-pointer transition-all duration-150">
-                  <input
-                    type="radio"
-                    name="rollover"
-                    value="sprint-25"
-                    checked={rolloverTarget === "sprint-25"}
-                    onChange={(e) => setRolloverTarget(e.target.value)}
-                    className="accent-[var(--nova-accent)]"
-                  />
-                  <div>
-                    <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">
-                      Sprint 25 <span className="text-[var(--nova-accent-text)] text-[11px]">(Recommended)</span>
-                    </div>
-                    <div className="text-[11px] text-[var(--nova-text-muted)]">
-                      Rollover directly into upcoming sprint iteration
-                    </div>
-                  </div>
-                </label>
+                {/* Dynamically list planned sprints */}
+                {plannedSprints
+                  .filter((s) => s.id !== activeSprint.id)
+                  .map((ps) => (
+                    <label
+                      key={ps.id}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] cursor-pointer transition-all duration-150"
+                    >
+                      <input
+                        type="radio"
+                        name="rollover"
+                        value={ps.id}
+                        checked={rolloverTarget === ps.id}
+                        onChange={(e) => setRolloverTarget(e.target.value)}
+                        className="accent-[var(--nova-accent)]"
+                      />
+                      <div>
+                        <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">
+                          {ps.name} <span className="text-[var(--nova-accent-text)] text-[11px]">(Planned Sprint)</span>
+                        </div>
+                        <div className="text-[11px] text-[var(--nova-text-muted)]">
+                          {ps.goal || "Rollover into upcoming planned iteration"}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
 
                 <label className="flex items-center gap-3 p-3 rounded-lg bg-[var(--nova-bg)] border border-[var(--nova-border)] hover:border-[var(--nova-accent-border)] cursor-pointer transition-all duration-150">
                   <input

@@ -12,5 +12,7 @@ router.post("/poker", sprintController.castVote);
 router.post("/assign", sprintController.assignTask);
 router.post("/:id/start", sprintController.startSprint);
 router.post("/:id/complete", sprintController.completeSprint);
+router.patch("/:id", sprintController.updateOrAssignSprint);
+router.delete("/:id", sprintController.deleteSprint);
 
 export default router;
