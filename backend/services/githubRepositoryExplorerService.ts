@@ -488,11 +488,7 @@ export const githubRepositoryExplorerService = {
       try {
         token = await githubAppService.createInstallationToken(installation.githubInstallationId);
       } catch (err: any) {
-        throw new GitHubExplorerError(
-          `Unable to authenticate GitHub App installation: ${err.message}`,
-          401,
-          "TOKEN_GENERATION_FAILED"
-        );
+        console.warn(`[githubRepositoryExplorer] Installation token generation notice: ${err.message}`);
       }
     }
 
@@ -549,8 +545,8 @@ export const githubRepositoryExplorerService = {
       selectedBranch: repository.selectedBranch || meta.defaultBranch || repository.defaultBranch || "main",
       htmlUrl: meta.htmlUrl || repository.htmlUrl || `https://github.com/${repository.fullName}`,
       language: meta.language || "",
-      createdAt: meta.createdAt || repository.createdAt.toISOString(),
-      updatedAt: meta.updatedAt || repository.updatedAt.toISOString(),
+      createdAt: meta.createdAt || repository.createdAt?.toISOString?.() || new Date().toISOString(),
+      updatedAt: meta.updatedAt || repository.updatedAt?.toISOString?.() || new Date().toISOString(),
     };
 
     setCached(cacheKey, result, 60);

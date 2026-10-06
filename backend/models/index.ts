@@ -20,3 +20,5 @@ export * from "./GitHubAccount";
 export * from "./GitHubInstallation";
 export * from "./Repository";
 export * from "./GitHubWebhookDelivery";
+export * from "./AIConversation";
+export * from "./AIMessage";

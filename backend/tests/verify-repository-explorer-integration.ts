@@ -235,6 +235,7 @@ async function runIntegrationSuite() {
 
     // Restore active status
     await GitHubInstallationModel.updateOne({ id: "ghi-exp-inst-a" }, { $set: { status: "ACTIVE" } });
+    clearExplorerCache();
 
     // ─── 5. REPOSITORY METADATA ENDPOINT ─────────────────────────────────────
     console.log("\n▶ [5. REPOSITORY METADATA]");
