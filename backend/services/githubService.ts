@@ -1,6 +1,8 @@
 import { IntegrationSettingsModel } from "../models/IntegrationSettings";
 import { PullRequestModel, IPullRequestDiffFile } from "../models/PullRequest";
 import { OrganizationModel } from "../models/Organization";
+import { RepositoryModel } from "../models/Repository";
+import { githubAppService } from "./githubAppService";
 import { decryptSecret } from "./cryptoService";
 import { ENV } from "../config/env";
 
@@ -119,7 +121,14 @@ export function generateRealisticDiffForTopic(title: string = "", taskKey?: stri
 
 export function parsePatchToDiffFiles(filename: string, patch?: string): IPullRequestDiffFile[] {
   if (!patch) {
-    return generateRealisticDiffForTopic(filename);
+    return [
+      {
+        filename,
+        oldPath: `a/${filename}`,
+        newPath: `b/${filename}`,
+        chunks: [{ header: "@@ -1,1 +1,1 @@", lines: [{ type: "normal", oldLine: 1, newLine: 1, content: "// File modified" }] }],
+      },
+    ];
   }
 
   const lines = patch.split("\n");
@@ -165,84 +174,156 @@ export function parsePatchToDiffFiles(filename: string, patch?: string): IPullRe
 }
 
 export const githubService = {
-  async getGitHubConfig(organizationId: string) {
+  async getGitHubAuth(organizationId: string): Promise<{
+    provider: "github_app" | "legacy_pat" | "none";
+    token?: string;
+    repository?: string;
+    webhookSecret?: string;
+    installationId?: number;
+    defaultBranch?: string;
+  }> {
+    // 1. Prioritize GitHub App installation
+    const installation = await githubAppService.getActiveInstallation(organizationId);
+    if (installation) {
+      const selectedRepo = await RepositoryModel.findOne({ organizationId, selected: true });
+      let token: string | undefined;
+      try {
+        token = await githubAppService.createInstallationToken(installation.githubInstallationId);
+      } catch (err: any) {
+        console.warn("[githubService] Failed to generate installation token:", err.message);
+      }
+
+      return {
+        provider: "github_app",
+        token,
+        repository: selectedRepo?.fullName,
+        defaultBranch: selectedRepo?.defaultBranch || "main",
+        webhookSecret: ENV.GITHUB_WEBHOOK_SECRET,
+        installationId: installation.githubInstallationId,
+      };
+    }
+
+    // 2. Fall back to Legacy PAT configuration if present
     const doc = await IntegrationSettingsModel.findOne({ organizationId });
-    const clientId = isRealValue(doc?.github?.clientId)
-      ? doc!.github!.clientId
-      : isRealValue(ENV.GITHUB_CLIENT_ID)
-      ? ENV.GITHUB_CLIENT_ID
-      : "";
+    if (doc?.github?.enabled) {
+      const clientSecret = doc.github.encryptedClientSecret
+        ? decryptSecret(doc.github.encryptedClientSecret)
+        : isRealValue(ENV.GITHUB_CLIENT_SECRET)
+        ? ENV.GITHUB_CLIENT_SECRET
+        : "";
 
-    const clientSecret = doc?.github?.encryptedClientSecret
-      ? decryptSecret(doc.github.encryptedClientSecret)
-      : isRealValue(ENV.GITHUB_CLIENT_SECRET)
-      ? ENV.GITHUB_CLIENT_SECRET
-      : "";
+      const webhookSecret = doc.github.encryptedWebhookSecret
+        ? decryptSecret(doc.github.encryptedWebhookSecret)
+        : ENV.GITHUB_WEBHOOK_SECRET || "";
 
-    const webhookSecret = doc?.github?.encryptedWebhookSecret
-      ? decryptSecret(doc.github.encryptedWebhookSecret)
-      : ENV.GITHUB_WEBHOOK_SECRET || "";
+      const repository = isRealValue(doc.github.repository) ? doc.github.repository : "";
 
-    const repository = isRealValue(doc?.github?.repository)
-      ? doc!.github!.repository!
-      : "";
+      if (repository) {
+        return {
+          provider: "legacy_pat",
+          token: clientSecret,
+          repository,
+          webhookSecret,
+        };
+      }
+    }
 
-    const enabled = doc?.github?.enabled ?? Boolean(clientId && repository);
+    return { provider: "none" };
+  },
+
+  async getGitHubConfig(organizationId: string) {
+    const auth = await this.getGitHubAuth(organizationId);
+    if (auth.provider === "github_app") {
+      return {
+        configured: Boolean(auth.repository),
+        enabled: true,
+        provider: "github_app",
+        repository: auth.repository || "",
+        webhookSecret: auth.webhookSecret || "",
+      };
+    }
+
+    if (auth.provider === "legacy_pat") {
+      return {
+        configured: Boolean(auth.repository),
+        enabled: true,
+        provider: "legacy_pat",
+        repository: auth.repository || "",
+        webhookSecret: auth.webhookSecret || "",
+      };
+    }
 
     return {
-      configured: Boolean(clientId && repository),
-      enabled,
-      clientId,
-      clientSecret,
-      webhookSecret,
-      repository,
+      configured: false,
+      enabled: false,
+      provider: "none",
+      repository: "",
+      webhookSecret: ENV.GITHUB_WEBHOOK_SECRET || "",
     };
   },
 
-  
-  async fetchPullRequestDiff(organizationId: string, prNumber: number, fallbackTitle: string, fallbackTaskKey?: string) {
-    const config = await this.getGitHubConfig(organizationId);
-    let diffFiles = [];
-    if (config.repository) {
-      const headers: Record<string, string> = {
-        "User-Agent": "Nova-Workspace-App",
-        Accept: "application/vnd.github.v3+json",
-      };
-      if (config.clientSecret && config.clientSecret.trim().length > 0) {
-        const secret = config.clientSecret.trim();
-        if (
-          secret.startsWith("ghp_") ||
-          secret.startsWith("github_pat_") ||
-          secret.startsWith("gho_") ||
-          secret.startsWith("ghu_") ||
-          secret.length > 25
-        ) {
-          headers["Authorization"] = `Bearer ${secret}`;
-        } else if (config.clientId) {
-          const auth = Buffer.from(`${config.clientId}:${secret}`).toString("base64");
-          headers["Authorization"] = `Basic ${auth}`;
+  async fetchPullRequestDiff(
+    organizationId: string,
+    prNumber: number,
+    fallbackTitle: string,
+    fallbackTaskKey?: string,
+    isSimulation = false
+  ): Promise<IPullRequestDiffFile[]> {
+    const auth = await this.getGitHubAuth(organizationId);
+
+    if (auth.provider === "none" || !auth.repository) {
+      if (isSimulation || !ENV.IS_PRODUCTION) {
+        return generateRealisticDiffForTopic(fallbackTitle, fallbackTaskKey);
+      }
+      return [];
+    }
+
+    const headers: Record<string, string> = {
+      "User-Agent": "Nova-Workspace-App",
+      Accept: "application/vnd.github.v3+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    };
+
+    if (auth.token && auth.token.trim().length > 0) {
+      const secret = auth.token.trim();
+      if (
+        auth.provider === "github_app" ||
+        secret.startsWith("ghp_") ||
+        secret.startsWith("github_pat_") ||
+        secret.startsWith("gho_") ||
+        secret.startsWith("ghu_") ||
+        secret.length > 25
+      ) {
+        headers["Authorization"] = `Bearer ${secret}`;
+      }
+    }
+
+    try {
+      const filesRes = await fetch(
+        `https://api.github.com/repos/${auth.repository}/pulls/${prNumber}/files`,
+        { headers }
+      );
+      if (filesRes.ok) {
+        const filesData: any = await filesRes.json();
+        if (Array.isArray(filesData)) {
+          return filesData.flatMap((f: any) => parsePatchToDiffFiles(f.filename, f.patch));
         }
       }
-      try {
-        const filesRes = await fetch(
-          `https://api.github.com/repos/${config.repository}/pulls/${prNumber}/files`,
-          { headers }
-        );
-        if (filesRes.ok) {
-          const filesData: any = await filesRes.json();
-          diffFiles = filesData.flatMap((f: any) => parsePatchToDiffFiles(f.filename, f.patch));
-        }
-      } catch (e) {}
+    } catch (e: any) {
+      console.warn("[fetchPullRequestDiff] GitHub API fetch error:", e.message);
     }
-    if (diffFiles.length === 0) {
-      diffFiles = generateRealisticDiffForTopic(fallbackTitle, fallbackTaskKey);
+
+    // In production, do NOT silently replace real repository changes with fake diffs!
+    if (isSimulation) {
+      return generateRealisticDiffForTopic(fallbackTitle, fallbackTaskKey);
     }
-    return diffFiles;
+
+    return [];
   },
 
   async syncPullRequestsFromGitHub(organizationId: string) {
-    const config = await this.getGitHubConfig(organizationId);
-    if (!config.repository || !config.repository.includes("/")) {
+    const auth = await this.getGitHubAuth(organizationId);
+    if (!auth.repository || !auth.repository.includes("/")) {
       return {
         success: false,
         synced: 0,
@@ -253,11 +334,13 @@ export const githubService = {
     const headers: Record<string, string> = {
       "User-Agent": "Nova-Workspace-App",
       Accept: "application/vnd.github.v3+json",
+      "X-GitHub-Api-Version": "2022-11-28",
     };
 
-    if (config.clientSecret && config.clientSecret.trim().length > 0) {
-      const secret = config.clientSecret.trim();
+    if (auth.token && auth.token.trim().length > 0) {
+      const secret = auth.token.trim();
       if (
+        auth.provider === "github_app" ||
         secret.startsWith("ghp_") ||
         secret.startsWith("github_pat_") ||
         secret.startsWith("gho_") ||
@@ -265,27 +348,26 @@ export const githubService = {
         secret.length > 25
       ) {
         headers["Authorization"] = `Bearer ${secret}`;
-      } else if (config.clientId) {
-        const auth = Buffer.from(`${config.clientId}:${secret}`).toString("base64");
-        headers["Authorization"] = `Basic ${auth}`;
       }
     }
 
     try {
       // Sync repository default branch into Organization model if available
-      const repoRes = await fetch(`https://api.github.com/repos/${config.repository}`, { headers });
-      if (repoRes.ok) {
-        const repoMeta: any = await repoRes.json();
-        if (repoMeta.default_branch) {
-          await OrganizationModel.updateOne(
-            { id: organizationId },
-            { $set: { defaultBranch: repoMeta.default_branch } }
-          );
+      try {
+        const repoRes = await fetch(`https://api.github.com/repos/${auth.repository}`, { headers });
+        if (repoRes.ok) {
+          const repoMeta: any = await repoRes.json();
+          if (repoMeta.default_branch) {
+            await OrganizationModel.updateOne(
+              { id: organizationId },
+              { $set: { defaultBranch: repoMeta.default_branch } }
+            );
+          }
         }
-      }
+      } catch {}
 
       const res = await fetch(
-        `https://api.github.com/repos/${config.repository}/pulls?state=all&per_page=30`,
+        `https://api.github.com/repos/${auth.repository}/pulls?state=all&per_page=30`,
         { headers }
       );
 
@@ -319,9 +401,12 @@ export const githubService = {
         const targetBranch = ghPR.base?.ref || "main";
         const linkedIssueKey = extractTaskKey(headBranch, ghPR.title, ghPR.body);
 
-        // Fetch PR files from GitHub API if possible
-        // Fetch PR files from GitHub API if possible
-        const diffFiles = await this.fetchPullRequestDiff(organizationId, ghPR.number, ghPR.title, linkedIssueKey);
+        const diffFiles = await this.fetchPullRequestDiff(
+          organizationId,
+          ghPR.number,
+          ghPR.title,
+          linkedIssueKey
+        );
 
         await PullRequestModel.findOneAndUpdate(
           { organizationId, $or: [{ id: prId }, { number: ghPR.number }] },
@@ -360,8 +445,8 @@ export const githubService = {
       return {
         success: true,
         synced: syncedCount,
-        repository: config.repository,
-        message: `Successfully synchronized ${syncedCount} pull requests from ${config.repository}.`,
+        repository: auth.repository,
+        message: `Successfully synchronized ${syncedCount} pull requests from ${auth.repository}.`,
       };
     } catch (err: any) {
       return {

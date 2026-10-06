@@ -950,23 +950,20 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!githubSync) {
-                        addToast({
-                          title: "GitHub Credentials Required",
-                          message: "Configure your GitHub Client ID & Secret in Credentials tab to activate live sync.",
-                          type: "warning",
-                        });
-                      } else {
-                        setGithubSync(false);
-                      }
+                      setActiveTab("credentials");
+                      addToast({
+                        title: "GitHub App Management",
+                        message: "Manage your GitHub App connection and repository selection in the Credentials tab.",
+                        type: "accent",
+                      });
                     }}
-                    className={`px-3 py-1 rounded text-[11px] font-mono transition-colors ${
+                    className={`px-3 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                       githubSync
                         ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                         : "bg-[var(--nova-surface)] text-[var(--nova-text-muted)] border border-[var(--nova-border)]"
                     }`}
                   >
-                    {githubSync ? "Connected" : "Disconnected"}
+                    {githubSync ? "Connected (Manage)" : "Configure"}
                   </button>
                 </div>
 

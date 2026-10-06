@@ -16,3 +16,7 @@ export * from "./IntegrationSettings";
 export * from "./PullRequest";
 export * from "./ServiceNode";
 export * from "./OutgoingWebhook";
+export * from "./GitHubAccount";
+export * from "./GitHubInstallation";
+export * from "./Repository";
+export * from "./GitHubWebhookDelivery";

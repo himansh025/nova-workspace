@@ -13,7 +13,8 @@ export const projectController = {
     try {
       const access = await resolveProjectAccess(req);
       const projects = await ProjectModel.find(projectVisibilityFilter(access)).sort({ createdAt: -1 });
-      const orgId = (req as any).organizationId || "org-default";
+      const orgId = (req as any).organizationId;
+      if (!orgId) return res.status(400).json({ success: false, error: "Organization context required." });
       const metrics = await computeProjectMetrics(
         orgId,
         projects.map((p) => p.id)
@@ -27,7 +28,8 @@ export const projectController = {
 
   async createProject(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || "org-default";
+      const orgId = (req as any).organizationId;
+      if (!orgId) return res.status(400).json({ success: false, error: "Organization context required." });
       const { name, slug, description, repository, sprint, teamGroupId, isDefaultForTasks } = req.body;
 
       if (!name) {
@@ -68,7 +70,8 @@ export const projectController = {
 
   async updateProject(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || "org-default";
+      const orgId = (req as any).organizationId;
+      if (!orgId) return res.status(400).json({ success: false, error: "Organization context required." });
       const { id } = req.params;
       const updates = req.body;
       const access = await resolveProjectAccess(req);
@@ -100,7 +103,8 @@ export const projectController = {
 
   async deleteProject(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || "org-default";
+      const orgId = (req as any).organizationId;
+      if (!orgId) return res.status(400).json({ success: false, error: "Organization context required." });
       const { id } = req.params;
       const access = await resolveProjectAccess(req);
       if (!(await canAccessProject(access, id as string))) {

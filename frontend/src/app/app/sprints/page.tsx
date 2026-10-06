@@ -35,7 +35,7 @@ export default function SprintsPage() {
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const [velocityHistory, setVelocityHistory] = useState<VelocityHistory[]>([]);
-  const [avgVelocity, setAvgVelocity] = useState<number>(24);
+  const [avgVelocity, setAvgVelocity] = useState<number>(0);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,7 +83,7 @@ export default function SprintsPage() {
         setSprints(data.sprints || []);
         setActiveSprint(data.activeSprint || null);
         setVelocityHistory(data.velocityHistory || []);
-        setAvgVelocity(data.avgVelocity || 24);
+        setAvgVelocity(data.avgVelocity || 0);
         setAllTasks(data.allTasks || []);
 
         // Default selected sprint to active sprint, or first planned, or first available
@@ -167,7 +167,6 @@ export default function SprintsPage() {
         setNewSprintName("");
         setNewSprintGoal("");
 
-        // If user wanted to start immediately
         if (startImmediately) {
           await handleStartSprint(data.sprint.id);
         } else {
@@ -329,52 +328,112 @@ export default function SprintsPage() {
     return <SprintSkeleton />;
   }
 
-  // Burndown SVG Calculations
-  const burndownData = currentSprint?.burndown || [];
-  const maxPts = Math.max(currentSprint?.totalPoints || 0, 10);
-  const svgWidth = 850;
-  const svgHeight = 260;
-  const paddingX = 45;
-  const paddingY = 30;
-  const chartW = svgWidth - paddingX * 2;
-  const chartH = svgHeight - paddingY * 2;
+  // ── High-Fidelity Burndown Calculations ──────────────────
+  const totalDays = Math.max(1, currentSprint?.totalDays || 14);
+  const totalPoints = currentSprint?.totalPoints ?? 0;
+  const remainingPoints = currentSprint?.remainingPoints ?? 0;
+  const completedPoints = currentSprint?.completedPoints ?? 0;
+  const currentDay = Math.min(totalDays, Math.max(1, currentSprint?.currentDay || 1));
 
-  const getX = (dayIndex: number) => {
-    const totalDays = burndownData.length > 1 ? burndownData.length - 1 : 1;
-    return paddingX + (dayIndex / totalDays) * chartW;
+  // Build normalized burndown array with Day 0 (Kickoff baseline)
+  const normalizedBurndown: {
+    day: number;
+    date: string;
+    idealRemaining: number;
+    actualRemaining: number | null;
+  }[] = [];
+
+  const rawBurndownMap = new Map((currentSprint?.burndown || []).map((b) => [b.day, b]));
+
+  // Day 0: Kickoff baseline
+  normalizedBurndown.push({
+    day: 0,
+    date: "Kickoff",
+    idealRemaining: totalPoints,
+    actualRemaining: totalPoints,
+  });
+
+  const startDateTimestamp = currentSprint?.startDate ? new Date(currentSprint.startDate).getTime() : Date.now();
+
+  for (let day = 1; day <= totalDays; day++) {
+    const dDate = new Date(startDateTimestamp + (day - 1) * 86400000);
+    const dateStr = isNaN(dDate.getTime())
+      ? `Day ${day}`
+      : dDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const idealRemaining = Math.max(0, Math.round(totalPoints - (day / totalDays) * totalPoints));
+
+    const existing = rawBurndownMap.get(day);
+    let actualRemaining: number | null = null;
+
+    if (day < currentDay) {
+      actualRemaining = existing?.actualRemaining !== null && existing?.actualRemaining !== undefined
+        ? existing.actualRemaining
+        : Math.round(totalPoints - (day / currentDay) * (totalPoints - remainingPoints));
+    } else if (day === currentDay) {
+      actualRemaining = remainingPoints;
+    } else {
+      actualRemaining = null;
+    }
+
+    normalizedBurndown.push({
+      day,
+      date: dateStr,
+      idealRemaining,
+      actualRemaining,
+    });
+  }
+
+  // SVG Canvas Metrics
+  const svgWidth = 920;
+  const svgHeight = 280;
+  const paddingLeft = 52;
+  const paddingRight = 36;
+  const paddingTop = 26;
+  const paddingBottom = 42;
+  const chartW = svgWidth - paddingLeft - paddingRight;
+  const chartH = svgHeight - paddingTop - paddingBottom;
+  const maxPts = Math.max(totalPoints, 10);
+
+  const getX = (dayNum: number) => {
+    return paddingLeft + (Math.max(0, Math.min(dayNum, totalDays)) / totalDays) * chartW;
   };
 
   const getY = (pts: number) => {
     const ratio = Math.max(0, pts) / (maxPts || 1);
-    return paddingY + (1 - ratio) * chartH;
+    return paddingTop + (1 - ratio) * chartH;
   };
 
-  const idealPath = burndownData.length > 0
-    ? burndownData.map((d, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(d.idealRemaining)}`).join(" ")
-    : "";
+  // Ideal trajectory path
+  const idealPath = `M ${getX(0)} ${getY(totalPoints)} L ${getX(totalDays)} ${getY(0)}`;
 
-  const actualDays = burndownData.filter((d) => d.actualRemaining !== null);
+  // Actual trajectory path
+  const actualDays = normalizedBurndown.filter((d) => d.actualRemaining !== null);
   const actualPath = actualDays.length > 0
-    ? actualDays.map((d, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(d.actualRemaining!)}`).join(" ")
+    ? actualDays
+        .map((d, i) => `${i === 0 ? "M" : "L"} ${getX(d.day)} ${getY(d.actualRemaining!)}`)
+        .join(" ")
     : "";
 
-  const lastActualIndex = actualDays.length - 1;
+  const lastActual = actualDays[actualDays.length - 1];
   const actualAreaPath =
     actualDays.length > 0
-      ? `${actualPath} L ${getX(lastActualIndex)} ${paddingY + chartH} L ${getX(0)} ${paddingY + chartH} Z`
+      ? `${actualPath} L ${getX(lastActual.day)} ${paddingTop + chartH} L ${getX(actualDays[0].day)} ${paddingTop + chartH} Z`
       : "";
 
   const completedCount = sprintTasks.filter((t) => t.status === "done").length;
   const totalCount = sprintTasks.length;
-  const completionPercentage = currentSprint && (currentSprint.totalPoints || 0) > 0
-    ? Math.round((currentSprint.completedPoints / currentSprint.totalPoints) * 100)
+  const completionPercentage = totalPoints > 0
+    ? Math.round((completedPoints / totalPoints) * 100)
     : 0;
 
-  const isAhead =
-    currentSprint && currentSprint.burndown && currentSprint.burndown.find((b) => b.day === currentSprint.currentDay)
-      ? (currentSprint.burndown.find((b) => b.day === currentSprint.currentDay)!.idealRemaining -
-          currentSprint.remainingPoints) >= 0
-      : true;
+  // Real pace delta
+  const todayEntry = normalizedBurndown.find((b) => b.day === currentDay);
+  const paceDiff = todayEntry
+    ? todayEntry.idealRemaining - (todayEntry.actualRemaining ?? remainingPoints)
+    : 0;
+  const isAhead = paceDiff >= 0;
+
+  const currentHoverItem = hoveredDay !== null ? normalizedBurndown.find((b) => b.day === hoveredDay) : null;
 
   const getPriorityBadge = (priority: string) => {
     if (priority === "urgent")
@@ -574,7 +633,7 @@ export default function SprintsPage() {
               Committed
             </div>
             <div className="text-[22px] font-semibold text-[var(--nova-text-primary)] font-mono leading-none">
-              {currentSprint?.totalPoints ?? 0}
+              {totalPoints}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
             </div>
             <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">{totalCount} scope items</div>
@@ -586,7 +645,7 @@ export default function SprintsPage() {
               Burned / Done
             </div>
             <div className="text-[22px] font-semibold text-[var(--nova-success)] font-mono leading-none">
-              {currentSprint?.completedPoints ?? 0}
+              {completedPoints}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
             </div>
             <div className="text-[11px] text-[var(--nova-success-text)] mt-1 flex items-center gap-1">
@@ -601,7 +660,7 @@ export default function SprintsPage() {
               Remaining
             </div>
             <div className="text-[22px] font-semibold text-[var(--nova-accent)] font-mono leading-none">
-              {currentSprint?.remainingPoints ?? 0}
+              {remainingPoints}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
             </div>
             <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">
@@ -618,13 +677,15 @@ export default function SprintsPage() {
               {avgVelocity}
               <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts/sprint</span>
             </div>
-            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">Historical rolling avg</div>
+            <div className="text-[11px] text-[var(--nova-text-muted)] mt-1">
+              {velocityHistory.length > 0 ? "Rolling historical avg" : "Current sprint burn"}
+            </div>
           </div>
 
           {/* Burndown Pace */}
           <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-3.5">
             <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] mb-1">
-              Status
+              Pace Status
             </div>
             <div
               className={`text-[13px] font-semibold mt-1 flex items-center gap-1.5 ${
@@ -645,9 +706,11 @@ export default function SprintsPage() {
                 }`}
               />
               {currentSprint?.status === "active"
-                ? isAhead
-                  ? "On Track"
-                  : "Needs Attention"
+                ? paceDiff > 0
+                  ? `+${paceDiff} pts Ahead`
+                  : paceDiff === 0
+                  ? "On Schedule"
+                  : `${Math.abs(paceDiff)} pts Behind`
                 : currentSprint?.status === "planned"
                 ? "Planned (Ready)"
                 : "No Active Sprint"}
@@ -658,129 +721,184 @@ export default function SprintsPage() {
           </div>
         </div>
 
-        {/* ── Burndown Chart ───────────────────────────────────── */}
-        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        {/* ── High-Fidelity Burndown Chart ─────────────────────── */}
+        <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-xs rounded-xl p-4 sm:p-5 relative overflow-hidden">
+          {/* Chart Header Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
             <div>
               <div className="flex items-center gap-2">
-                <TrendingDown className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
-                <span className="text-[13px] font-medium text-[var(--nova-text-primary)]">
-                  Burndown Trajectory
-                </span>
-                <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--nova-text-muted)] bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] px-2 py-0.5 rounded">
-                  Daily Story Points
-                </span>
+                <div className="w-7 h-7 rounded-lg bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] flex items-center justify-center text-[var(--nova-accent)]">
+                  <TrendingDown className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-[14px] font-semibold text-[var(--nova-text-primary)]">
+                    Burndown Trajectory
+                  </h2>
+                  <p className="text-[11px] text-[var(--nova-text-secondary)]">
+                    Real point burn vs ideal target pace across {totalDays} iteration days.
+                  </p>
+                </div>
               </div>
-              <p className="text-[12px] text-[var(--nova-text-secondary)] mt-0.5">
-                Target ideal burn line vs actual burned story points across {currentSprint?.totalDays || 14} days.
-              </p>
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-4 shrink-0">
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 border-t-2 border-dashed border-[var(--nova-text-muted)]" />
-                <span className="text-[11px] text-[var(--nova-text-muted)]">Ideal</span>
+            {/* Quick Metrics & Legend */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {currentSprint?.status === "active" && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[11px] font-mono">
+                  <span className="text-[var(--nova-text-muted)]">Burn Rate:</span>
+                  <span className="text-[var(--nova-text-primary)] font-semibold">
+                    {(completedPoints / Math.max(1, currentDay)).toFixed(1)} pts/day
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[11px] font-mono">
+                <span className="text-[var(--nova-text-muted)]">Burned:</span>
+                <span className="text-[var(--nova-accent)] font-semibold">
+                  {completionPercentage}%
+                </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-1 bg-[var(--nova-accent)] rounded-full" />
-                <span className="text-[11px] text-[var(--nova-text-secondary)]">Actual</span>
+
+              <div className="flex items-center gap-3 pl-2 border-l border-[var(--nova-border)] text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-0.5 border-t-2 border-dashed border-[var(--nova-border-strong)]" />
+                  <span className="text-[var(--nova-text-muted)]">Ideal Pace</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3.5 h-3.5 rounded-full bg-[var(--nova-accent)] flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  </div>
+                  <span className="text-[var(--nova-text-primary)] font-medium">Actual Burn</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* SVG Canvas or Empty State */}
-          {burndownData.length > 0 ? (
+          {/* SVG Canvas */}
+          {totalPoints > 0 ? (
             <div className="relative w-full overflow-x-auto nova-scroll pt-1">
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-52 select-none">
+              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-64 sm:h-72 select-none">
                 <defs>
+                  {/* Glowing Area Fill Gradient */}
                   <linearGradient id="actualAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--nova-accent)" stopOpacity="0.20" />
+                    <stop offset="0%" stopColor="var(--nova-accent)" stopOpacity="0.25" />
+                    <stop offset="60%" stopColor="var(--nova-accent)" stopOpacity="0.08" />
                     <stop offset="100%" stopColor="var(--nova-accent)" stopOpacity="0.0" />
                   </linearGradient>
+
+                  {/* Drop Shadow Filter for Actual Line */}
+                  <filter id="actualGlow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="var(--nova-accent)" floodOpacity="0.45" />
+                  </filter>
                 </defs>
 
-                {/* Grid Horizontal Lines */}
-                {[0, Math.round(maxPts * 0.25), Math.round(maxPts * 0.5), Math.round(maxPts * 0.75), maxPts].map((pt) => {
+                {/* Horizontal Grid Tiers */}
+                {[0, Math.round(maxPts * 0.25), Math.round(maxPts * 0.5), Math.round(maxPts * 0.75), maxPts].map((pt, idx) => {
                   const y = getY(pt);
                   return (
-                    <g key={`grid-${pt}`}>
+                    <g key={`grid-${pt}-${idx}`}>
                       <line
-                        x1={paddingX}
+                        x1={paddingLeft}
                         y1={y}
-                        x2={svgWidth - paddingX}
+                        x2={svgWidth - paddingRight}
                         y2={y}
                         stroke="var(--nova-border-muted)"
                         strokeDasharray="4 4"
+                        strokeWidth="1"
                       />
                       <text
-                        x={paddingX - 8}
-                        y={y + 3}
+                        x={paddingLeft - 10}
+                        y={y + 3.5}
                         fill="var(--nova-text-muted)"
-                        fontSize="9"
+                        fontSize="10"
                         fontFamily="monospace"
                         textAnchor="end"
                       >
-                        {pt}
+                        {pt}p
                       </text>
                     </g>
                   );
                 })}
 
-                {/* Day Labels along X */}
-                {burndownData.map((d, i) => {
-                  const x = getX(i);
-                  const isCurrent = d.day === (currentSprint?.currentDay || 1);
+                {/* Vertical Day Grid Lines & Labels */}
+                {normalizedBurndown.map((d) => {
+                  const x = getX(d.day);
+                  const isToday = d.day === currentDay && currentSprint?.status === "active";
+                  const isKickoff = d.day === 0;
+
                   return (
-                    <g key={`label-${d.day}`}>
+                    <g key={`grid-day-${d.day}`}>
                       <line
                         x1={x}
-                        y1={paddingY}
+                        y1={paddingTop}
                         x2={x}
-                        y2={paddingY + chartH}
-                        stroke={isCurrent ? "var(--nova-accent-border)" : "var(--nova-border-muted)"}
-                        strokeDasharray={isCurrent ? "2 2" : undefined}
+                        y2={paddingTop + chartH}
+                        stroke={isToday ? "var(--nova-accent)" : "var(--nova-border-muted)"}
+                        strokeDasharray={isToday ? "2 2" : undefined}
+                        strokeWidth={isToday ? "1.5" : "0.75"}
+                        opacity={isToday ? 0.7 : 0.4}
                       />
                       <text
                         x={x}
-                        y={paddingY + chartH + 16}
-                        fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-text-muted)"}
-                        fontWeight={isCurrent ? "bold" : "normal"}
-                        fontSize="9"
+                        y={paddingTop + chartH + 18}
+                        fill={isToday ? "var(--nova-accent)" : "var(--nova-text-muted)"}
+                        fontWeight={isToday ? "bold" : "normal"}
+                        fontSize={isKickoff ? "9" : "10"}
                         fontFamily="monospace"
                         textAnchor="middle"
                       >
-                        D{d.day}
+                        {isKickoff ? "Start" : `D${d.day}`}
                       </text>
                     </g>
                   );
                 })}
 
-                {/* Area Under Actual Line */}
+                {/* Shaded Area Under Actual Curve */}
                 {actualAreaPath && <path d={actualAreaPath} fill="url(#actualAreaGrad)" />}
 
-                {/* Ideal Burndown Line */}
-                {idealPath && (
+                {/* Ideal Burndown Guideline */}
+                <path
+                  d={idealPath}
+                  fill="none"
+                  stroke="var(--nova-border-strong)"
+                  strokeWidth="1.75"
+                  strokeDasharray="6 5"
+                  opacity="0.85"
+                />
+
+                {/* Actual Burndown Polyline */}
+                {actualPath && (
                   <path
-                    d={idealPath}
+                    d={actualPath}
                     fill="none"
-                    stroke="var(--nova-border-strong)"
-                    strokeWidth="1.5"
-                    strokeDasharray="6 4"
+                    stroke="var(--nova-accent)"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    filter="url(#actualGlow)"
                   />
                 )}
 
-                {/* Actual Burndown Line */}
-                {actualPath && (
-                  <path d={actualPath} fill="none" stroke="var(--nova-accent)" strokeWidth="2.5" />
+                {/* Hover Laser Guide */}
+                {hoveredDay !== null && (
+                  <line
+                    x1={getX(hoveredDay)}
+                    y1={paddingTop}
+                    x2={getX(hoveredDay)}
+                    y2={paddingTop + chartH}
+                    stroke="var(--nova-accent)"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 3"
+                    className="pointer-events-none"
+                  />
                 )}
 
-                {/* Actual Data Nodes */}
-                {actualDays.map((d, i) => {
-                  const x = getX(i);
+                {/* Interactive Data Nodes on All Recorded Days */}
+                {actualDays.map((d) => {
+                  const x = getX(d.day);
                   const y = getY(d.actualRemaining!);
                   const isHovered = hoveredDay === d.day;
-                  const isCurrent = d.day === currentSprint?.currentDay;
+                  const isToday = d.day === currentDay && currentSprint?.status === "active";
 
                   return (
                     <g
@@ -789,57 +907,112 @@ export default function SprintsPage() {
                       onMouseLeave={() => setHoveredDay(null)}
                       className="cursor-pointer"
                     >
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r={isHovered ? 6 : isCurrent ? 5 : 3.5}
-                        fill={isCurrent ? "var(--nova-accent-text)" : "var(--nova-accent)"}
-                        stroke="var(--nova-surface)"
-                        strokeWidth="2"
-                      />
-                      {isCurrent && (
+                      {/* Generous invisible hover target */}
+                      <circle cx={x} cy={y} r="14" fill="transparent" />
+
+                      {/* Today outer ping animation */}
+                      {isToday && (
                         <circle
                           cx={x}
                           cy={y}
-                          r="8"
+                          r="10"
                           fill="none"
-                          stroke="var(--nova-accent-text)"
-                          strokeWidth="1"
-                          className="animate-ping"
+                          stroke="var(--nova-accent)"
+                          strokeWidth="1.5"
+                          className="animate-ping opacity-60"
                         />
+                      )}
+
+                      {/* Node Circle */}
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={isHovered ? 6.5 : isToday ? 5.5 : 4.5}
+                        fill={isHovered ? "var(--nova-accent-hover)" : "var(--nova-accent)"}
+                        stroke="var(--nova-surface)"
+                        strokeWidth={isHovered ? "2.5" : "2"}
+                        className="transition-all duration-150"
+                      />
+
+                      {/* Node Inner Core on Today */}
+                      {isToday && (
+                        <circle cx={x} cy={y} r="2" fill="white" className="pointer-events-none" />
                       )}
                     </g>
                   );
                 })}
               </svg>
 
-              {/* Hover Tooltip */}
-              {hoveredDay && (
-                <div className="absolute top-2 right-3 bg-[var(--nova-elevated)] border border-[var(--nova-border-strong)] p-2.5 rounded-lg shadow-md text-[11px] font-mono text-[var(--nova-text-secondary)] pointer-events-none z-10">
-                  <div className="text-[var(--nova-text-primary)] font-medium flex items-center gap-1.5 mb-1">
-                    <Calendar className="w-3 h-3 text-[var(--nova-accent)]" />
-                    Day {hoveredDay} · {burndownData[hoveredDay - 1]?.date}
-                  </div>
-                  <div>
-                    Actual:{" "}
-                    <span className="text-[var(--nova-accent)] font-semibold">
-                      {burndownData[hoveredDay - 1]?.actualRemaining ?? "N/A"} pts
+              {/* Floating Inspection HUD Tooltip */}
+              {currentHoverItem && (
+                <div className="absolute top-2 right-4 bg-[var(--nova-elevated)] border border-[var(--nova-border-strong)] p-3 rounded-xl shadow-xl text-[11px] font-mono pointer-events-none z-20 animate-in fade-in duration-150 min-w-44">
+                  <div className="text-[var(--nova-text-primary)] font-semibold flex items-center justify-between pb-1.5 mb-2 border-b border-[var(--nova-border-muted)]">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[var(--nova-accent)]" />
+                      {currentHoverItem.day === 0 ? "Kickoff Baseline" : `Day ${currentHoverItem.day}`}
+                    </span>
+                    <span className="text-[10px] text-[var(--nova-text-muted)] font-normal">
+                      {currentHoverItem.date}
                     </span>
                   </div>
-                  <div className="text-[var(--nova-text-muted)]">
-                    Ideal: {burndownData[hoveredDay - 1]?.idealRemaining} pts
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[var(--nova-text-secondary)]">Remaining:</span>
+                      <span className="text-[var(--nova-accent)] font-semibold">
+                        {currentHoverItem.actualRemaining !== null ? `${currentHoverItem.actualRemaining} pts` : "Pending"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[var(--nova-text-secondary)]">Ideal Target:</span>
+                      <span className="text-[var(--nova-text-muted)]">
+                        {currentHoverItem.idealRemaining} pts
+                      </span>
+                    </div>
+
+                    {currentHoverItem.actualRemaining !== null && (
+                      <div className="flex items-center justify-between pt-1 border-t border-[var(--nova-border-muted)] text-[10px]">
+                        <span className="text-[var(--nova-text-secondary)]">Burn Delta:</span>
+                        <span
+                          className={
+                            currentHoverItem.idealRemaining - currentHoverItem.actualRemaining >= 0
+                              ? "text-[var(--nova-success-text)] font-semibold"
+                              : "text-[var(--nova-warning-text)] font-semibold"
+                          }
+                        >
+                          {currentHoverItem.idealRemaining - currentHoverItem.actualRemaining >= 0
+                            ? `+${currentHoverItem.idealRemaining - currentHoverItem.actualRemaining} pts Ahead`
+                            : `${Math.abs(currentHoverItem.idealRemaining - currentHoverItem.actualRemaining)} pts Behind`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="py-12 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-md">
-              <p>No burndown trajectory active yet.</p>
+            <div className="py-14 text-center text-[12px] text-[var(--nova-text-muted)] border border-dashed border-[var(--nova-border-muted)] rounded-lg">
+              <p className="font-medium text-[var(--nova-text-primary)]">No story points committed to this sprint yet</p>
               <p className="mt-1 text-[11px] text-[var(--nova-text-secondary)]">
-                Start a sprint with estimated story points to visualize daily progress.
+                Add estimated tasks from the Product Backlog below to generate the burndown curve.
               </p>
             </div>
           )}
+
+          {/* Chart Footer Meta Bar */}
+          <div className="mt-3 pt-3 border-t border-[var(--nova-border-muted)] flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[11px] text-[var(--nova-text-secondary)]">
+            <div className="flex items-center gap-3">
+              <span>Start: <strong className="text-[var(--nova-text-primary)]">{currentSprint?.startDate || "Today"}</strong></span>
+              <span>•</span>
+              <span>Target End: <strong className="text-[var(--nova-text-primary)]">{currentSprint?.endDate || "Unscheduled"}</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[var(--nova-text-muted)] font-mono">Scope:</span>
+              <strong className="text-[var(--nova-text-primary)] font-mono">{totalPoints} pts</strong>
+              <span>({sprintTasks.length} tasks)</span>
+            </div>
+          </div>
         </div>
 
         {/* ── Planning Poker Deck ──────────────────────────────── */}
@@ -912,7 +1085,7 @@ export default function SprintsPage() {
                 </span>
               </div>
               <span className="text-[11px] text-[var(--nova-text-muted)] font-mono">
-                {currentSprint?.completedPoints ?? 0} / {currentSprint?.totalPoints ?? 0} pts done
+                {completedPoints} / {totalPoints} pts done
               </span>
             </div>
 
@@ -1052,7 +1225,7 @@ export default function SprintsPage() {
                         title="Estimate Story Points"
                         className="flex items-center gap-1 bg-[var(--nova-ai-subtle)] hover:bg-[rgba(139,92,246,0.18)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] rounded px-2 py-1 text-[11px] transition-all duration-150 cursor-pointer"
                       >
-                        <Sparkles className="w-3 h-3" />
+                        <Sparkles className="w-3.5 h-3.5" />
                         Estimate
                       </button>
                       <button
@@ -1067,7 +1240,7 @@ export default function SprintsPage() {
                         title="Add to Current Sprint"
                         className="flex items-center gap-1 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-2 py-1 text-[11px] font-medium transition-colors duration-150 cursor-pointer"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3.5 h-3.5" />
                         Sprint
                       </button>
                     </div>
@@ -1102,7 +1275,7 @@ export default function SprintsPage() {
               }}
               className="flex items-center gap-1 text-[11px] text-[var(--nova-accent)] hover:underline cursor-pointer"
             >
-              <Plus className="w-3 h-3" /> Plan Next Sprint
+              <Plus className="w-3.5 h-3.5" /> Plan Next Sprint
             </button>
           </div>
 
@@ -1130,7 +1303,7 @@ export default function SprintsPage() {
                       className="text-[var(--nova-text-muted)] hover:text-[var(--nova-danger-text)] p-0.5 cursor-pointer"
                       title="Delete Sprint"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -1144,7 +1317,7 @@ export default function SprintsPage() {
                     onClick={() => handleStartSprint(s.id)}
                     className="flex-1 flex items-center justify-center gap-1 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded px-2.5 py-1 text-[11px] font-medium transition-all duration-150 cursor-pointer"
                   >
-                    <Play className="w-3 h-3" />
+                    <Play className="w-3.5 h-3.5" />
                     Start
                   </button>
                   <button
@@ -1368,14 +1541,14 @@ export default function SprintsPage() {
               <div className="bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg p-3">
                 <div className="text-[11px] text-[var(--nova-text-muted)] mb-0.5">Completed</div>
                 <div className="text-[20px] font-semibold text-[var(--nova-success)] font-mono leading-none">
-                  {activeSprint.completedPoints}
+                  {completedPoints}
                   <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
                 </div>
               </div>
               <div className="bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg p-3">
                 <div className="text-[11px] text-[var(--nova-text-muted)] mb-0.5">Incomplete</div>
                 <div className="text-[20px] font-semibold text-[var(--nova-warning)] font-mono leading-none">
-                  {activeSprint.remainingPoints}
+                  {remainingPoints}
                   <span className="text-[11px] font-sans text-[var(--nova-text-muted)] ml-1">pts</span>
                 </div>
               </div>

@@ -1,16 +1,15 @@
 import { Router } from "express";
 import { prController } from "../controllers/prController";
-import { optionalAuth } from "../middlewares/auth";
+import { authGuard, requireOrg } from "../middlewares/auth";
 
 const router = Router();
 
-router.use(optionalAuth);
-
-router.get("/pull-requests", prController.getPullRequests);
-router.post("/pull-requests/sync", prController.syncPullRequests);
-router.patch("/pull-requests", prController.patchPullRequest);
-router.delete("/pull-requests/:id", prController.deletePullRequest);
-router.delete("/pull-requests", prController.deletePullRequest);
-router.post("/ai/review-pr", prController.reviewPullRequest);
+// Strictly require authenticated session and organization context for all PR operations
+router.get("/pull-requests", authGuard, requireOrg, prController.getPullRequests);
+router.post("/pull-requests/sync", authGuard, requireOrg, prController.syncPullRequests);
+router.patch("/pull-requests", authGuard, requireOrg, prController.patchPullRequest);
+router.delete("/pull-requests/:id", authGuard, requireOrg, prController.deletePullRequest);
+router.delete("/pull-requests", authGuard, requireOrg, prController.deletePullRequest);
+router.post("/ai/review-pr", authGuard, requireOrg, prController.reviewPullRequest);
 
 export default router;
