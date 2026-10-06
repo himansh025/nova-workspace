@@ -1,0 +1,62 @@
+name: Gemini Code Agent
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  gemini:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gemini
+        uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        with:
+          prompt: |
+            Analyze this repository and act as a senior software engineer.
+
+            Investigate the current issue described below.
+
+            ISSUE:
+            After a pull request is merged, the notification toast
+            appears correctly, but the notification bell/unread count
+            does not reliably refresh.
+
+            Known relevant files:
+
+            frontend/src/app/app/pull-requests/page.tsx
+            frontend/src/components/workspace/NotificationCenter.tsx
+
+            Do not assume these are the only relevant files.
+
+            First investigate:
+            - notification creation
+            - notification APIs
+            - SSE implementation
+            - notification refresh mechanism
+            - unread count calculation
+            - merge flow
+            - React state/event subscriptions
+
+            Find the actual root cause before changing anything.
+
+            Then:
+            1. Implement the smallest production-safe fix.
+            2. Do not modify seed/demo data.
+            3. Do not make unrelated changes.
+            4. Run relevant tests.
+            5. Run type checking if available.
+            6. Review the resulting diff.
+            7. Explain the root cause and fix.
