@@ -226,7 +226,8 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
       {/* ── Right / Center actions ── */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         {/* ── Wide Search Bar with Dropdown (Desktop/Tablet only; on mobile it is in the sidebar menu) ── */}
-        <div
+       
+        {/* <div
           ref={searchContainerRef}
           className="relative hidden md:block md:w-72 lg:w-[420px]"
         >
@@ -265,10 +266,8 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
             )}
           </div>
 
-          {/* ── Search Dropdown Menu ── */}
           {isSearchOpen && (
             <div className="absolute left-0 right-0 top-full mt-1 bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg shadow-2xl max-h-[380px] overflow-y-auto no-scrollbar z-50 py-1.5">
-              {/* Quick Navigation Section */}
               {filteredNav.length > 0 && (
                 <div className="mb-2">
                   <div className="px-3 py-1 text-[9px] font-mono uppercase tracking-wider text-[var(--nova-text-muted)]">
@@ -294,9 +293,8 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
                     </button>
                   ))}
                 </div>
-              )}
-
-              {/* Tasks Matching Search */}
+              )} */}
+{/* 
               {searchQuery.trim() !== "" && filteredTasks.length > 0 && (
                 <div className="mb-2 border-t border-[var(--nova-border-muted)] pt-1.5">
                   <div className="px-3 py-1 text-[9px] font-mono uppercase tracking-wider text-[var(--nova-text-muted)] flex items-center justify-between">
@@ -323,9 +321,8 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
                     </button>
                   ))}
                 </div>
-              )}
-
-              {/* Specs Matching Search */}
+              )} */}
+{/* 
               {searchQuery.trim() !== "" && filteredSpecs.length > 0 && (
                 <div className="mb-1 border-t border-[var(--nova-border-muted)] pt-1.5">
                   <div className="px-3 py-1 text-[9px] font-mono uppercase tracking-wider text-[var(--nova-text-muted)]">
@@ -351,21 +348,21 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
                     </button>
                   ))}
                 </div>
-              )}
+              )} */}
 
               {/* Empty state when query produces no matches */}
-              {searchQuery.trim() !== "" &&
+              {/* {searchQuery.trim() !== "" &&
                 filteredNav.length === 0 &&
                 filteredTasks.length === 0 &&
                 filteredSpecs.length === 0 && (
                   <div className="px-4 py-6 text-center text-[11px] text-[var(--nova-text-muted)]">
                     No results found for &ldquo;{searchQuery}&rdquo;
                   </div>
-                )}
-            </div>
+                )} */}
+            {/* </div>
           )}
         </div>
-
+ */}
 
 
         {/* Real-time notification center */}
