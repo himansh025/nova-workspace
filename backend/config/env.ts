@@ -102,6 +102,12 @@ export const ENV = {
   get CREDENTIAL_ENCRYPTION_KEY(): string {
     return process.env.CREDENTIAL_ENCRYPTION_KEY || "";
   },
+  get GITHUB_MAX_SOURCE_FILE_SIZE(): number {
+    return Number(process.env.GITHUB_MAX_SOURCE_FILE_SIZE || 1024 * 1024); // 1 MB default
+  },
+  get GITHUB_REQUEST_TIMEOUT_MS(): number {
+    return Number(process.env.GITHUB_REQUEST_TIMEOUT_MS || 10000); // 10s default
+  },
 
   // GitLab OAuth (optional)
   GITLAB_CLIENT_ID: process.env.GITLAB_CLIENT_ID || "",

@@ -18,6 +18,7 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  FolderGit2,
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { ProfileModal } from "./ProfileModal";
@@ -123,6 +124,11 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           label: "Pull Requests",
           href: "/app/pull-requests",
           icon: <GitPullRequest size={14} />,
+        },
+        {
+          label: "Repository Explorer",
+          href: "/app/code",
+          icon: <FolderGit2 size={14} />,
         },
       ],
     },
