@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Sprint, VelocityHistory, Task } from "@/types";
 import { SprintSkeleton } from "@/components/workspace/Skeletons";
 import { apiFetchInit, getApiHeaders } from "@/lib/apiHeaders";
+import DatePicker from "@/components/ui/DatePicker";
 
 export default function SprintsPage() {
   const { user } = useAuth();
@@ -1281,22 +1282,22 @@ export default function SprintsPage() {
                   <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                     Start Date
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={newSprintStartDate}
-                    onChange={(e) => handleStartDateChange(e.target.value)}
-                    className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded px-2.5 py-1.5 text-[12px] text-[var(--nova-text-primary)] outline-none focus:border-[var(--nova-accent-border)]"
+                    onChange={(val) => handleStartDateChange(val)}
+                    placeholder="Select start date"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                     End Date
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={newSprintEndDate}
-                    onChange={(e) => setNewSprintEndDate(e.target.value)}
-                    className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded px-2.5 py-1.5 text-[12px] text-[var(--nova-text-primary)] outline-none focus:border-[var(--nova-accent-border)]"
+                    onChange={(val) => setNewSprintEndDate(val)}
+                    minDate={newSprintStartDate}
+                    align="right"
+                    placeholder="Select end date"
                   />
                 </div>
               </div>
