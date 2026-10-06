@@ -11,7 +11,7 @@ export const meshController = {
 
       let count = await ServiceNodeModel.countDocuments({ organizationId: orgId, environment: env });
 
-      // If no nodes exist in database for this org & environment, seed persistent records in MongoDB
+      // If no nodes exist in database for this org & environment, initialize baseline records in MongoDB
       if (count === 0) {
         const baselineNodes = INITIAL_SERVICE_NODES.map((n) => ({
           ...n,

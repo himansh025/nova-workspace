@@ -6,8 +6,11 @@ import { PullRequestModel } from "../models/PullRequest";
 import { TaskModel } from "../models/Task";
 import { ActivityItemModel } from "../models/Activity";
 import { OrganizationModel } from "../models/Organization";
+import { OrganizationMemberModel } from "../models/OrganizationMember";
+import { ProjectModel } from "../models/Project";
 import { IntegrationSettingsModel } from "../models/IntegrationSettings";
 import { githubService, extractTaskKey, parsePatchToDiffFiles, generateRealisticDiffForTopic } from "../services/githubService";
+import { notificationService } from "../services/notificationService";
 import { ENV } from "../config/env";
 
 const defaultWebhooks = [
@@ -107,16 +110,56 @@ export const webhookController = {
     try {
       let orgId =
         (req as any).organizationId ||
+        (req.query.orgId as string) ||
         (req.headers["x-organization-id"] as string) ||
         req.body.organizationId;
-      const repoFullName = req.body.repository?.full_name;
+      const repoFullName = req.body.repository?.full_name || req.body.repository?.name;
 
-      if (!orgId && repoFullName) {
-        const setting = await IntegrationSettingsModel.findOne({ "github.repository": repoFullName });
+      if ((!orgId || orgId === "org-default") && repoFullName) {
+        const escaped = repoFullName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const setting = await IntegrationSettingsModel.findOne({
+          "github.repository": new RegExp(`^${escaped}$`, "i"),
+        });
         if (setting) {
           orgId = setting.organizationId;
+        } else {
+          const project = await ProjectModel.findOne({
+            repository: new RegExp(escaped, "i"),
+          });
+          if (project) {
+            orgId = project.organizationId;
+          }
         }
       }
+
+      // If orgId is still not resolved, check linked task key
+      if (!orgId || orgId === "org-default") {
+        const earlyTaskKey =
+          req.body.taskKey ||
+          extractTaskKey(
+            req.body.ref || req.body.branch || req.body.pull_request?.head?.ref,
+            req.body.title || req.body.pull_request?.title,
+            req.body.body || req.body.pull_request?.body,
+            req.body.head_commit?.message
+          );
+        if (earlyTaskKey) {
+          const taskDoc = await TaskModel.findOne({
+            $or: [{ id: earlyTaskKey }, { key: earlyTaskKey }],
+          });
+          if (taskDoc) {
+            orgId = taskDoc.organizationId;
+          }
+        }
+      }
+
+      // Fallback: If only 1 configured GitHub organization exists in DB, route to it
+      if (!orgId || orgId === "org-default") {
+        const anyConfigured = await IntegrationSettingsModel.findOne({ "github.enabled": true });
+        if (anyConfigured) {
+          orgId = anyConfigured.organizationId;
+        }
+      }
+
       if (!orgId) {
         orgId = "org-default";
       }
@@ -288,6 +331,30 @@ export const webhookController = {
           }
         }
 
+        // Dispatch persistent notifications to active organization members
+        try {
+          const orgMembers = await OrganizationMemberModel.find({ organizationId: orgId, deletedAt: null });
+          const notifTitle = `GitHub PR #${ghPR.number} ${prAction}`;
+          const notifMsg = `${authorName} ${prAction} pull request #${ghPR.number}: "${ghPR.title}"`;
+          for (const member of orgMembers) {
+            await notificationService.createNotification(
+              {
+                userId: member.userId,
+                organizationId: orgId,
+                type: "git_webhook",
+                title: notifTitle,
+                body: notifMsg,
+                entityType: "pr",
+                entityId: prId,
+                link: "/app/pull-requests",
+              },
+              { broadcast: false }
+            );
+          }
+        } catch (notifErr) {
+          console.warn("[Webhook PR Notification Warning]:", notifErr);
+        }
+
         broadcastEvent({
           type: "git_webhook",
           category: "git",
@@ -334,6 +401,30 @@ export const webhookController = {
             taskDoc.updatedAt = new Date().toISOString();
             await taskDoc.save();
           }
+        }
+
+        // Dispatch persistent notifications to active organization members
+        try {
+          const orgMembers = await OrganizationMemberModel.find({ organizationId: orgId, deletedAt: null });
+          const notifTitle = `GitHub Push to ${branchName}`;
+          const notifMsg = `${commitAuthor} pushed commits to ${branchName}${taskKey ? ` (Task ${taskKey})` : ""}`;
+          for (const member of orgMembers) {
+            await notificationService.createNotification(
+              {
+                userId: member.userId,
+                organizationId: orgId,
+                type: "git_webhook",
+                title: notifTitle,
+                body: notifMsg,
+                entityType: "task",
+                entityId: taskKey,
+                link: taskKey ? "/app/tasks" : "/app/pull-requests",
+              },
+              { broadcast: false }
+            );
+          }
+        } catch (notifErr) {
+          console.warn("[Webhook Push Notification Warning]:", notifErr);
         }
 
         broadcastEvent({

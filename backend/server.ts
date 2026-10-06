@@ -1,16 +1,14 @@
 import app from "./app";
 import { connectMongoDB } from "./config/db";
-// import { seedMongoDB } from "./seed";
 import { ENV } from "./config/env";
 
 export async function startServer() {
   try {
     await connectMongoDB();
-    // await seedMongoDB(false);
   } catch {
     console.warn("[Express Server] MongoDB unavailable. Operating in resilient persistent fallback mode.");
   }
-  
+    
 
   const server = await new Promise<any>((resolve) => {
     const s = app.listen(ENV.PORT, () => {

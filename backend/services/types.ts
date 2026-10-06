@@ -125,24 +125,6 @@ export interface AnalyticsData {
   tasksByPriority: Record<TaskPriority, number>;
 }
 
-export interface WorkspaceDB {
-  projects: Project[];
-  tasks: Task[];
-  specs: Spec[];
-  releases: Release[];
-  team: TeamMember[];
-  activities: ActivityItem[];
-  settings: {
-    workspaceName: string;
-    slug: string;
-    defaultBranch: string;
-    githubConnected: boolean;
-    gitlabConnected: boolean;
-    linearSync: boolean;
-    autoAssignReviewers: boolean;
-  };
-}
-
 export interface OutgoingWebhook {
   id: string;
   name: string;
