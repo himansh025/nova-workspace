@@ -1,8 +1,12 @@
 import { TaskModel, ITaskDocument } from "../models/Task";
+import { ProjectModel } from "../models/Project";
+import { getDefaultProjectIdForOrg } from "./projectDefaultService";
 import { ActivityItemModel } from "../models/Activity";
 import { TeamMemberModel } from "../models/TeamMember";
 import { broadcastEvent } from "./events";
 import { TaskStatus, TaskPriority } from "./types";
+import { SprintModel } from "../models/Sprint";
+import { sprintService } from "./sprintService";
 
 export interface TaskFilter {
   organizationId: string;
@@ -121,12 +125,28 @@ export const taskService = {
       }
     }
 
+    let resolvedProjectId = input.projectId;
+    if (!resolvedProjectId) {
+      resolvedProjectId = (await getDefaultProjectIdForOrg(input.organizationId)) || undefined;
+    }
+    if (!resolvedProjectId) {
+      throw new Error("Project is required. Select a project or set a default project for new tasks.");
+    }
+
+    const projectExists = await ProjectModel.exists({
+      organizationId: input.organizationId,
+      id: resolvedProjectId,
+    });
+    if (!projectExists) {
+      throw new Error("The selected project does not exist in this organization.");
+    }
+
     const now = new Date().toISOString();
     const task = await TaskModel.create({
       id: `tsk-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
       key: taskKey,
       organizationId: input.organizationId,
-      projectId: input.projectId || "prj-1",
+      projectId: resolvedProjectId,
       title: input.title.trim(),
       description: input.description || "",
       status: input.status || "backlog",
@@ -173,6 +193,7 @@ export const taskService = {
       tags: string[];
       branch: string;
       estimate: string;
+      projectId: string;
     }>,
     updaterName: string = "System",
     updaterInitials: string = "SY"
@@ -195,6 +216,17 @@ export const taskService = {
     if (updates.branch !== undefined) task.branch = updates.branch;
     if (updates.estimate !== undefined) task.estimate = updates.estimate;
 
+    if (updates.projectId && updates.projectId !== task.projectId) {
+      const projectExists = await ProjectModel.exists({
+        organizationId,
+        id: updates.projectId,
+      });
+      if (!projectExists) {
+        throw new Error("The selected project does not exist in this organization.");
+      }
+      task.projectId = updates.projectId;
+    }
+
     if (updates.assigneeId && updates.assigneeId !== task.assignee.id) {
       const member = await TeamMemberModel.findOne({
         organizationId,
@@ -212,6 +244,17 @@ export const taskService = {
 
     task.updatedAt = now;
     await task.save();
+
+    if (updates.status !== undefined || updates.estimate !== undefined) {
+      try {
+        const affectedSprints = await SprintModel.find({ organizationId, taskIds: task.id });
+        for (const sp of affectedSprints) {
+          await sprintService.recalculateSprintPoints(organizationId, sp.id);
+        }
+      } catch (err) {
+        console.error("Failed to recalculate sprint points:", err);
+      }
+    }
 
     // Log status change
     if (updates.status && updates.status !== oldStatus) {

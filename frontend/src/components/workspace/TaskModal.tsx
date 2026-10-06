@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { X, Sparkles } from "lucide-react";
-import { Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
+import { Task, TaskPriority, TaskStatus, TeamMember, Project } from "@/types";
+import { apiFetchInit } from "@/lib/apiHeaders";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -12,12 +13,28 @@ interface TaskModalProps {
   projectId?: string;
 }
 
+function pickInitialProjectId(
+  projects: Project[],
+  propProjectId?: string,
+  taskProjectId?: string
+): string {
+  if (taskProjectId) return taskProjectId;
+  if (propProjectId) return propProjectId;
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("nova_tasks_project");
+    if (saved && saved !== "all") return saved;
+  }
+  const defaultProject = projects.find((p) => p.isDefaultForTasks);
+  if (defaultProject) return defaultProject.id;
+  return projects[0]?.id || "";
+}
+
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
   onClose,
   onTaskSaved,
   taskToEdit,
-  projectId
+  projectId,
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -28,16 +45,27 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [estimate, setEstimate] = useState("3 pts");
   const [tagsInput, setTagsInput] = useState("Core, Feature");
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch("/api/team")
+    if (!isOpen) return;
+    fetch("/api/team", apiFetchInit())
       .then((res) => res.json())
       .then((data) => data.team && setTeam(data.team))
       .catch(() => {});
-  }, []);
+
+    fetch("/api/projects", apiFetchInit())
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.projects) setProjects(data.projects);
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) return;
     if (taskToEdit) {
       setTitle(taskToEdit.title);
       setDescription(taskToEdit.description);
@@ -47,6 +75,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setBranch(taskToEdit.branch || "");
       setEstimate(taskToEdit.estimate || "3 pts");
       setTagsInput(taskToEdit.tags.join(", "));
+      setSelectedProjectId(taskToEdit.projectId);
     } else {
       setTitle("");
       setDescription("");
@@ -59,11 +88,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   }, [taskToEdit, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || projects.length === 0) return;
+    if (taskToEdit) {
+      setSelectedProjectId(taskToEdit.projectId || pickInitialProjectId(projects, projectId));
+    } else {
+      setSelectedProjectId(pickInitialProjectId(projects, projectId));
+    }
+  }, [isOpen, taskToEdit, projectId, projects]);
+
+  const projectOptions = useMemo(() => projects, [projects]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !selectedProjectId) return;
 
     setIsSubmitting(true);
     const tags = tagsInput
@@ -73,16 +113,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
     try {
       if (taskToEdit) {
-        // Update
         const selectedMember = team.find((m) => m.id === assigneeId);
         await fetch(`/api/tasks/${taskToEdit.id}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          ...apiFetchInit({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             title,
             description,
             priority,
             status,
+            projectId: selectedProjectId,
             branch: branch || undefined,
             estimate,
             tags,
@@ -92,17 +132,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     id: selectedMember.id,
                     name: selectedMember.name,
                     avatar: selectedMember.avatar,
-                    initials: selectedMember.initials
-                  }
+                    initials: selectedMember.initials,
+                  },
                 }
-              : {})
-          })
+              : {}),
+          }),
         });
       } else {
-        // Create
         await fetch("/api/tasks", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          ...apiFetchInit({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             title,
             description,
@@ -112,8 +151,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             branch: branch || undefined,
             estimate,
             tags,
-            projectId: projectId || undefined
-          })
+            projectId: selectedProjectId,
+          }),
         });
       }
 
@@ -130,7 +169,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(15,23,42,0.4)] backdrop-blur-xs">
       <div className="fixed inset-0" onClick={onClose} />
       <div className="relative w-full max-w-lg sm:max-w-2xl mx-4 sm:mx-auto bg-[var(--nova-surface)] border border-[var(--nova-border)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] rounded-xl overflow-hidden z-10 text-[var(--nova-text-primary)] text-xs">
-        {/* Modal Header */}
         <div className="px-5 py-4 border-b border-[var(--nova-border)] bg-[var(--nova-surface)] flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm text-[var(--nova-text-primary)]">
@@ -145,9 +183,27 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto no-scrollbar">
-          {/* Title */}
+          <div>
+            <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
+              Project <span className="text-rose-500">*</span>
+            </label>
+            <select
+              required
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded-md focus:outline-hidden focus:border-[var(--nova-accent)]"
+            >
+              <option value="" disabled>Select a project</option>
+              {projectOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.isDefaultForTasks ? " (default)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
               Issue Title <span className="text-rose-500">*</span>
@@ -162,7 +218,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
               Description & Acceptance Criteria
@@ -176,9 +231,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             />
           </div>
 
-          {/* Two column grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Status */}
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Lifecycle Status
@@ -195,7 +248,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </select>
             </div>
 
-            {/* Priority */}
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Priority SLA
@@ -214,7 +266,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Assignee */}
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Assignee
@@ -232,7 +283,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </select>
             </div>
 
-            {/* Story Points / Estimate */}
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
                 Estimate
@@ -247,7 +297,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          {/* Git Branch & Tags */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] mb-1">
@@ -275,7 +324,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          {/* Form Actions */}
           <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--nova-border)]">
             <button
               type="button"
@@ -286,7 +334,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !title.trim()}
+              disabled={isSubmitting || !title.trim() || !selectedProjectId}
               className="px-4 py-1.5 rounded-md bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white font-medium shadow-xs disabled:opacity-50 transition-colors flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />

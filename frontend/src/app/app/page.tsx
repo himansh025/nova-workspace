@@ -158,7 +158,7 @@ export default function OverviewPage() {
             <Clock className="w-[14px] h-[14px] text-[var(--nova-info-text)]" />
           </div>
           <div className="text-[24px] font-semibold font-mono text-[var(--nova-text-primary)] tracking-tight leading-none">
-            {project?.cycleTime || (tasks.length > 0 ? "1.4d" : "0.0d")}
+            {project?.cycleTime && project.cycleTime !== "--" ? project.cycleTime : "—"}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--nova-success)] shrink-0" />

@@ -22,6 +22,7 @@ export default function ProjectsPage() {
   const [sprint, setSprint] = useState("Sprint 1");
   const [repository, setRepository] = useState("");
   const [teamGroupId, setTeamGroupId] = useState("");
+  const [isDefaultForTasks, setIsDefaultForTasks] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
 
   const squadNameById = (id?: string | null) =>
@@ -86,6 +87,7 @@ export default function ProjectsPage() {
     setSprint("Sprint 1");
     setRepository("");
     setTeamGroupId("");
+    setIsDefaultForTasks(false);
     setIsModalOpen(true);
   };
 
@@ -96,6 +98,7 @@ export default function ProjectsPage() {
     setSprint(p.sprint);
     setRepository(p.repository);
     setTeamGroupId(p.teamGroupId || "");
+    setIsDefaultForTasks(Boolean(p.isDefaultForTasks));
     setIsModalOpen(true);
   };
 
@@ -119,22 +122,45 @@ export default function ProjectsPage() {
           method: "PATCH",
           headers: { ...buildHeaders(), "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ name, description, sprint, repository, teamGroupId: teamGroupId || null })
+          body: JSON.stringify({
+            name,
+            description,
+            sprint,
+            repository,
+            teamGroupId: teamGroupId || null,
+            isDefaultForTasks,
+          }),
         });
         const data = await res.json();
         if (data.project) {
-          setProjects(projects.map(p => p.id === projectToEdit.id ? data.project : p));
+          setProjects(
+            projects.map((p) => {
+              if (p.id === projectToEdit.id) return data.project;
+              if (isDefaultForTasks) return { ...p, isDefaultForTasks: false };
+              return p;
+            })
+          );
         }
       } else {
         const res = await fetch("/api/projects", {
           method: "POST",
           headers: { ...buildHeaders(), "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ name, description, sprint, repository, teamGroupId: teamGroupId || null })
+          body: JSON.stringify({
+            name,
+            description,
+            sprint,
+            repository,
+            teamGroupId: teamGroupId || null,
+            isDefaultForTasks,
+          }),
         });
         const data = await res.json();
         if (data.project) {
-          setProjects([data.project, ...projects]);
+          const next = isDefaultForTasks
+            ? projects.map((p) => ({ ...p, isDefaultForTasks: false }))
+            : projects;
+          setProjects([data.project, ...next]);
         }
       }
       setIsModalOpen(false);
@@ -207,7 +233,10 @@ export default function ProjectsPage() {
                   <span className="text-[10px] font-mono text-[var(--nova-accent)] uppercase px-2 py-0.5 rounded bg-[var(--nova-accent-subtle)] border border-[var(--nova-accent-border)] font-medium">
                     {p.sprint}
                   </span>
-                  <span className="text-[10px] font-mono text-[var(--nova-success-text)] font-semibold">
+                  <span
+                    className="text-[10px] font-mono text-[var(--nova-success-text)] font-semibold"
+                    title="Story points completed (done tasks)"
+                  >
                     {p.velocity}
                   </span>
                 </div>
@@ -436,6 +465,20 @@ export default function ProjectsPage() {
                 </select>
               </div>
 
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isDefaultForTasks}
+                  onChange={(e) => setIsDefaultForTasks(e.target.checked)}
+                  className="mt-0.5 rounded border-[var(--nova-border)]"
+                />
+                <span className="text-[11px] text-[var(--nova-text-secondary)]">
+                  <span className="font-medium text-[var(--nova-text-primary)]">Default for new tasks</span>
+                  <br />
+                  Pre-select this project when creating issues and on the tasks board (one default per org).
+                </span>
+              </label>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[var(--nova-text-secondary)] text-[11px] mb-1 font-medium">Sprint Milestone</label>
@@ -471,7 +514,7 @@ export default function ProjectsPage() {
                   type="submit"
                   className="px-4 py-1.5 rounded bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white font-medium text-xs transition-colors"
                 >
-                  Create Workspace
+                  {projectToEdit ? "Save changes" : "Create Workspace"}
                 </button>
               </div>
             </form>

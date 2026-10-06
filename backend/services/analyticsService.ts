@@ -64,10 +64,12 @@ export const analyticsService = {
 
     return {
       insufficientData: !hasSufficientData,
-      cycleTimeDays: hasSufficientData ? cycleTimeDays : (completedTasks.length > 0 ? 1.4 : 0),
-      cycleTimeDelta: hasSufficientData ? "-18% vs previous window" : "Baseline computing",
-      velocitySprintDelta: activeSprint ? `Sprint committed ${activeSprint.totalPoints} pts` : "No active sprint",
-      reviewLatencyHours: 2.1,
+      cycleTimeDays: hasSufficientData ? cycleTimeDays : 0,
+      cycleTimeDelta: hasSufficientData ? `${cycleTimeDays}d avg` : "Need 3+ completed tasks",
+      velocitySprintDelta: activeSprint
+        ? `Sprint committed ${activeSprint.totalPoints} pts`
+        : "No active sprint",
+      reviewLatencyHours: 0,
       throughputPerSprint: completedTasks.length,
       chartPoints,
       tasksByStatus,

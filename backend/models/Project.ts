@@ -20,6 +20,7 @@ const ProjectSchema = new Schema<IProjectDocument>(
     activeBranch: { type: String, default: "main" },
     repository: { type: String, required: true },
     teamGroupId: { type: String, default: null },
+    isDefaultForTasks: { type: Boolean, default: false },
     createdAt: { type: String, required: true },
     updatedAt: { type: String, required: true },
   },

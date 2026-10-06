@@ -98,6 +98,12 @@ export const taskController = {
         return res.status(403).json({ success: false, error: "You do not have access to this task's project." });
       }
 
+      if (updates.projectId && typeof updates.projectId === "string") {
+        if (!(await canAccessProject(access, updates.projectId))) {
+          return res.status(403).json({ success: false, error: "You cannot move this task to that project." });
+        }
+      }
+
       const task = await taskService.updateTask(
         orgId,
         id,

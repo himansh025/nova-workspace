@@ -162,12 +162,29 @@ export default function TasksPage() {
     }
   };
 
-  const fetchProjectsList = async () => {
+  const fetchProjectsList = async (): Promise<Project[]> => {
     try {
       const res = await fetch("/api/projects", apiFetchInit());
       const data = await res.json();
-      if (data.projects) setProjects(data.projects);
+      if (data.projects) {
+        setProjects(data.projects);
+        return data.projects as Project[];
+      }
     } catch (e) {}
+    return [];
+  };
+
+  const resolveInitialProjectFilter = (projectList: Project[]): string => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlProject = urlParams.get("projectId");
+      if (urlProject) return urlProject;
+      const saved = localStorage.getItem("nova_tasks_project");
+      if (saved) return saved;
+    }
+    const defaultProject =
+      projectList.find((p) => p.isDefaultForTasks) || projectList[0];
+    return defaultProject?.id || "all";
   };
 
   const fetchTeam = async () => {
@@ -184,11 +201,16 @@ export default function TasksPage() {
   const loadInitialData = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([
-        fetchTasks(),
-        fetchTeam(),
-        fetchProjectsList(),
-      ]);
+      const projectList = await fetchProjectsList();
+      await fetchTeam();
+      const initialFilter = resolveInitialProjectFilter(projectList);
+      if (initialFilter !== "all") {
+        setSelectedProject(initialFilter);
+        localStorage.setItem("nova_tasks_project", initialFilter);
+      } else {
+        setSelectedProject("all");
+      }
+      await fetchTasks(initialFilter);
     } finally {
       setIsLoading(false);
     }
@@ -396,9 +418,12 @@ export default function TasksPage() {
       const matchesAssignee =
         selectedAssignee === "all" || t.assignee.id === selectedAssignee;
 
-      return matchesSearch && matchesPriority && matchesAssignee;
+      const matchesProject =
+        selectedProject === "all" || t.projectId === selectedProject;
+
+      return matchesSearch && matchesPriority && matchesAssignee && matchesProject;
     });
-  }, [tasks, searchQuery, selectedPriority, selectedAssignee]);
+  }, [tasks, searchQuery, selectedPriority, selectedAssignee, selectedProject]);
 
   /* ════════════════════════════════════════════════════════════════════════
      Render
@@ -488,6 +513,7 @@ export default function TasksPage() {
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
+                {p.isDefaultForTasks ? " (default)" : ""}
               </option>
             ))}
           </select>
