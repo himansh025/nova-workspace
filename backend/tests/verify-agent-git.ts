@@ -17,6 +17,7 @@ import { getWorkspaceDir } from "../services/ai/agent/agentWorkspaceService";
 import { connectMongoDB } from "../config/db";
 import mongoose from "mongoose";
 import { AgentRunModel } from "../models/AgentRun";
+import { resolveRunLimits } from "../services/ai/agent/agentRunLimits";
 import { gitWorkflowService } from "../services/ai/agent/gitWorkflowService";
 
 async function runGit(cwd: string, args: string[]) {
@@ -114,6 +115,7 @@ async function main() {
       enableGitWorkflow: true,
       gitWorkflowStatus: "idle",
       tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, toolCalls: 0, iterations: 0 },
+      limits: resolveRunLimits(),
     });
 
     await fs.writeFile(path.join(root, "src/app.ts"), "export const v = 2;\n", "utf8");

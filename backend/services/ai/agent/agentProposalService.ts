@@ -49,7 +49,7 @@ export const agentProposalService = {
       status: params.autonomousMode ? "APPROVED" : "PENDING",
       linesAdded: params.linesAdded,
       linesRemoved: params.linesRemoved,
-      diffPreview: redactSecrets(params.diffPreview).slice(0, 8000),
+      diffPreview: redactSecrets(params.diffPreview).sanitized.slice(0, 8000),
     });
 
     await agentAuditService.record({

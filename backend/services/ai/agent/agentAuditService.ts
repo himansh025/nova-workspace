@@ -4,7 +4,7 @@ import { redactSecrets } from "../secretRedactor";
 
 function summarize(value: unknown, max = 500): string {
   const raw = typeof value === "string" ? value : JSON.stringify(value);
-  return redactSecrets(raw).slice(0, max);
+  return redactSecrets(raw).sanitized.slice(0, max);
 }
 
 export const agentAuditService = {

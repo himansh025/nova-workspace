@@ -11,6 +11,10 @@ import type {
   IPlanStep,
   IAgentTokenUsage,
   IAgentDiffSummary,
+  IAgentTokenBudget,
+  IAgentContextOptimization,
+  IAgentRunLimits,
+  TaskComplexity,
 } from "../services/ai/agent/agentTypes";
 
 export interface IAgentRun {
@@ -50,6 +54,11 @@ export interface IAgentRun {
   pullRequestNumber?: number;
   pullRequestUrl?: string;
   publishError?: string;
+  tokenBudget?: IAgentTokenBudget;
+  contextOptimization?: IAgentContextOptimization;
+  limits: IAgentRunLimits;
+  taskComplexity?: TaskComplexity;
+  stopReason?: string;
   finalResult?: string;
   error?: string;
   createdAt: Date;
@@ -93,11 +102,48 @@ export interface IAgentRunDocument extends Document {
   pullRequestNumber?: number;
   pullRequestUrl?: string;
   publishError?: string;
+  tokenBudget?: IAgentTokenBudget;
+  contextOptimization?: IAgentContextOptimization;
+  limits: IAgentRunLimits;
+  taskComplexity?: TaskComplexity;
+  stopReason?: string;
   finalResult?: string;
   error?: string;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const TokenBudgetSchema = new Schema(
+  {
+    planning: { type: Number, default: 0 },
+    decision: { type: Number, default: 0 },
+    tools: { type: Number, default: 0 },
+    final: { type: Number, default: 0 },
+    total: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
+const RunLimitsSchema = new Schema(
+  {
+    maxInputTokens: { type: Number, required: true },
+    maxOutputTokens: { type: Number, required: true },
+    maxIterations: { type: Number, required: true },
+    maxToolCalls: { type: Number, required: true },
+    maxExecutionTimeMs: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
+const ContextOptimizationSchema = new Schema(
+  {
+    sentFilePaths: { type: [String], default: [] },
+    toolResultHashes: { type: [String], default: [] },
+    contentKeys: { type: [String], default: [] },
+    stateSummary: { type: String },
+  },
+  { _id: false }
+);
 
 const DiffSummarySchema = new Schema(
   {
@@ -205,6 +251,11 @@ const AgentRunSchema = new Schema<IAgentRunDocument>(
     pullRequestNumber: { type: Number },
     pullRequestUrl: { type: String },
     publishError: { type: String },
+    tokenBudget: { type: TokenBudgetSchema },
+    contextOptimization: { type: ContextOptimizationSchema },
+    limits: { type: RunLimitsSchema, required: true },
+    taskComplexity: { type: String, enum: ["simple", "complex"] },
+    stopReason: { type: String },
     finalResult: { type: String },
     error: { type: String },
   },

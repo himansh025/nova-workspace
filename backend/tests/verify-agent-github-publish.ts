@@ -2,6 +2,7 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import { connectMongoDB } from "../config/db";
 import { AgentRunModel } from "../models/AgentRun";
+import { resolveRunLimits } from "../services/ai/agent/agentRunLimits";
 import {
   assertPublishPreconditions,
   buildPullRequestBody,
@@ -87,6 +88,7 @@ async function main() {
     publishMode: "pr",
     publishStatus: "idle",
     tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, toolCalls: 0, iterations: 0 },
+    limits: resolveRunLimits(),
   });
 
   __setPushExecutorForTests(async () => ({

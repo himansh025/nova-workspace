@@ -6,6 +6,7 @@ import { validateAgentFilePath, sliceFileContent } from "../services/ai/agent/ag
 import { AGENT_CONFIG } from "../services/ai/agent/agentConfig";
 import { getAgentTool, listAgentTools } from "../services/ai/agent/toolRegistry";
 import { agentOrchestrator } from "../services/ai/agent/agentOrchestrator";
+import { resolveRunLimits } from "../services/ai/agent/agentRunLimits";
 
 async function runAgentFoundationTests() {
   console.log("🤖 =========================================================");
@@ -111,6 +112,7 @@ async function runAgentFoundationTests() {
       toolCalls: 0,
       iterations: 0,
     },
+    limits: resolveRunLimits(),
   });
 
   const foundA = await agentOrchestrator.getRun(orgA, userA, runId);

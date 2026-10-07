@@ -19,6 +19,7 @@ export function buildPlanningPrompt(params: {
   repositoryMetadata: string;
   repositoryStructure: string;
   codeContext: string;
+  symbolIndex?: string;
   enableEdits: boolean;
 }): string {
   return `Create an implementation plan for the following coding task.
@@ -32,8 +33,11 @@ ${params.repositoryMetadata}
 REPOSITORY STRUCTURE (partial):
 ${params.repositoryStructure}
 
-RELEVANT CODE CONTEXT:
+RELEVANT CODE CONTEXT (bounded sections only):
 ${params.codeContext}
+
+SYMBOL INDEX (partial):
+${params.symbolIndex || "(not available)"}
 
 ${params.enableEdits ? "Edits are enabled in an isolated workspace. Include implementation steps that use apply_patch where possible." : "This run is analysis-only."}
 
@@ -52,27 +56,17 @@ Use 3-8 steps.`;
 }
 
 export function buildAgentDecisionPrompt(params: {
-  task: string;
-  planJson: string;
-  compactState: string;
+  compactContextJson: string;
   toolCatalog: string;
-  pendingStep?: string;
   loopPhase?: string;
 }): string {
-  return `Continue the agent loop for this task (phase: ${params.loopPhase || "ANALYZE"}).
+  return `Continue the agent loop (phase: ${params.loopPhase || "ANALYZE"}).
 
-TASK: ${params.task}
-
-CURRENT PLAN (JSON):
-${params.planJson}
-
-AGENT STATE:
-${params.compactState}
+Use ONLY this compact state (not prior chat history):
+${params.compactContextJson}
 
 AVAILABLE TOOLS:
 ${params.toolCatalog}
-
-${params.pendingStep ? `Focus on plan step: ${params.pendingStep}` : ""}
 
 Respond with ONLY valid JSON (no markdown):
 {

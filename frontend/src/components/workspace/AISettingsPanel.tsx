@@ -150,26 +150,31 @@ export default function AISettingsPanel() {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header Banner */}
-      <div className="p-6 rounded-2xl border border-white/10 bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-transparent flex items-start justify-between gap-4">
+      <div
+        className="p-6 rounded-xl border border-[var(--nova-border)] bg-[var(--nova-surface)] flex items-start justify-between gap-4 shadow-xs"
+      >
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <span className="p-2 rounded-xl bg-[var(--nova-ai-subtle)] text-[var(--nova-ai-text)] border border-[var(--nova-ai-border)]">
               <Sparkles className="w-5 h-5" />
             </span>
-            <h2 className="text-xl font-bold text-white tracking-tight">Gemini AI Provider Settings</h2>
+            <h2 className="text-[15px] font-semibold text-[var(--nova-text-primary)] tracking-tight">
+              Gemini AI Provider Settings
+            </h2>
           </div>
-          <p className="text-sm text-neutral-400">
-            Configure server-side Google Gemini credentials for high-throughput streaming AI reasoning and repository context analysis.
+          <p className="text-[12px] text-[var(--nova-text-secondary)] leading-relaxed max-w-2xl">
+            Configure server-side Google Gemini credentials for high-throughput streaming AI reasoning and
+            repository context analysis.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {isConfigured ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Connected
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-[var(--nova-warning-subtle)] text-[var(--nova-warning-text)] border border-[var(--nova-warning-border)]">
               <AlertCircle className="w-3.5 h-3.5" />
               Not Configured
             </span>
@@ -179,68 +184,71 @@ export default function AISettingsPanel() {
 
       {/* Security & Isolation Notice */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl border border-white/5 bg-neutral-900/40 space-y-1.5">
-          <div className="flex items-center gap-2 text-emerald-400 text-xs font-medium">
-            <ShieldCheck className="w-4 h-4" />
+        <div className="p-4 rounded-xl border border-[var(--nova-border)] bg-[var(--nova-bg)] space-y-1.5">
+          <div className="flex items-center gap-2 text-[var(--nova-success-text)] text-[11px] font-semibold">
+            <ShieldCheck className="w-4 h-4 shrink-0" />
             <span>AES-256-GCM Encryption</span>
           </div>
-          <p className="text-xs text-neutral-400">
+          <p className="text-[11px] text-[var(--nova-text-secondary)] leading-relaxed">
             API keys are encrypted at rest with server-side keys. Raw tokens are never returned to client apps.
           </p>
         </div>
-        <div className="p-4 rounded-xl border border-white/5 bg-neutral-900/40 space-y-1.5">
-          <div className="flex items-center gap-2 text-blue-400 text-xs font-medium">
-            <Cpu className="w-4 h-4" />
+        <div className="p-4 rounded-xl border border-[var(--nova-border)] bg-[var(--nova-bg)] space-y-1.5">
+          <div className="flex items-center gap-2 text-[var(--nova-info-text)] text-[11px] font-semibold">
+            <Cpu className="w-4 h-4 shrink-0" />
             <span>Organization Scoped</span>
           </div>
-          <p className="text-xs text-neutral-400">
+          <p className="text-[11px] text-[var(--nova-text-secondary)] leading-relaxed">
             Sessions and keys are strictly partitioned by organization ID to prevent cross-tenant access.
           </p>
         </div>
-        <div className="p-4 rounded-xl border border-white/5 bg-neutral-900/40 space-y-1.5">
-          <div className="flex items-center gap-2 text-purple-400 text-xs font-medium">
-            <Zap className="w-4 h-4" />
+        <div className="p-4 rounded-xl border border-[var(--nova-border)] bg-[var(--nova-bg)] space-y-1.5">
+          <div className="flex items-center gap-2 text-[var(--nova-ai-text)] text-[11px] font-semibold">
+            <Zap className="w-4 h-4 shrink-0" />
             <span>Automated Secret Redaction</span>
           </div>
-          <p className="text-xs text-neutral-400">
+          <p className="text-[11px] text-[var(--nova-text-secondary)] leading-relaxed">
             Prompts and attached repository files are scanned to redact tokens, DB strings, and private keys.
           </p>
         </div>
       </div>
 
       {/* Settings Form */}
-      <form onSubmit={handleSave} className="p-6 rounded-2xl border border-white/10 bg-neutral-900/30 space-y-6">
+      <form
+        onSubmit={handleSave}
+        className="p-6 rounded-xl border border-[var(--nova-border)] bg-[var(--nova-surface)] space-y-6 shadow-xs"
+      >
         <div className="space-y-4">
-          {/* Provider Selection (Gemini Official) */}
           <div>
-            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+            <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] uppercase tracking-wider mb-2">
               AI Provider
             </label>
-            <div className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/5 flex items-center justify-between">
+            <div className="p-3 rounded-xl border border-[var(--nova-accent-border)] bg-[var(--nova-accent-subtle)] flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <Bot className="w-5 h-5 text-blue-400" />
+                <Bot className="w-5 h-5 text-[var(--nova-accent-text)] shrink-0" />
                 <div>
-                  <div className="text-sm font-medium text-white">Google Gemini</div>
-                  <div className="text-xs text-neutral-400">Official Google Gen AI SDK (@google/genai)</div>
+                  <div className="text-[12px] font-medium text-[var(--nova-text-primary)]">Google Gemini</div>
+                  <div className="text-[11px] text-[var(--nova-text-secondary)]">
+                    Official Google Gen AI SDK (@google/genai)
+                  </div>
                 </div>
               </div>
-              <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">
+              <span className="text-[10px] bg-[var(--nova-accent-subtle)] text-[var(--nova-accent-text)] px-2 py-0.5 rounded border border-[var(--nova-accent-border)] shrink-0">
                 Active Provider
               </span>
             </div>
           </div>
 
-          {/* Model Selection */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+              <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] uppercase tracking-wider">
                 Default Model
               </label>
               <button
                 type="button"
                 onClick={fetchModels}
                 disabled={isLoadingModels}
-                className="text-xs text-neutral-400 hover:text-white flex items-center gap-1 transition"
+                className="text-[11px] text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] flex items-center gap-1 transition"
               >
                 <RefreshCw className={`w-3 h-3 ${isLoadingModels ? "animate-spin" : ""}`} />
                 Refresh Catalog
@@ -249,7 +257,7 @@ export default function AISettingsPanel() {
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full bg-neutral-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+              className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-4 py-2.5 text-[12px] text-[var(--nova-text-primary)] focus:outline-none focus:border-[var(--nova-accent)]"
             >
               {models.length > 0 ? (
                 models.map((m) => (
@@ -269,13 +277,12 @@ export default function AISettingsPanel() {
             </select>
           </div>
 
-          {/* API Key */}
           <div>
-            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+            <label className="block text-[11px] font-medium text-[var(--nova-text-secondary)] uppercase tracking-wider mb-2">
               Gemini API Key
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--nova-text-muted)]">
                 <Key className="w-4 h-4" />
               </div>
               <input
@@ -283,41 +290,45 @@ export default function AISettingsPanel() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder={maskedKey ? `Stored key: ${maskedKey}` : "Enter your Google AI Studio API key (AIza...)"}
-                className="w-full bg-neutral-950 border border-white/10 rounded-xl pl-10 pr-20 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500/50"
+                className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg pl-10 pr-20 py-2.5 text-[12px] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)]"
               />
               <div className="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/5 transition"
+                  className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] rounded-lg hover:bg-[var(--nova-elevated)] transition"
                   title={showApiKey ? "Hide key" : "Show key"}
                 >
                   {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-            <p className="text-xs text-neutral-500 mt-1.5">
-              Get an API key from Google AI Studio (aistudio.google.com). Keys are encrypted before writing to database.
+            <p className="text-[11px] text-[var(--nova-text-muted)] mt-1.5">
+              Get an API key from Google AI Studio (aistudio.google.com). Keys are encrypted before writing to
+              database.
             </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+        <div className="pt-4 border-t border-[var(--nova-border)] flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={handleTestConnection}
             disabled={isTesting || (!apiKey && !maskedKey)}
-            className="px-4 py-2 rounded-xl text-xs font-medium border border-white/10 bg-neutral-800/80 text-white hover:bg-neutral-700 disabled:opacity-50 transition flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-[12px] font-medium border border-[var(--nova-border)] bg-[var(--nova-bg)] text-[var(--nova-text-primary)] hover:bg-[var(--nova-elevated)] disabled:opacity-50 transition flex items-center gap-2"
           >
-            {isTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />}
+            {isTesting ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5 text-[var(--nova-accent-text)]" />
+            )}
             Test Connection
           </button>
 
           <button
             type="submit"
             disabled={isSaving}
-            className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition flex items-center gap-2"
+            className="px-5 py-2 rounded-lg text-[12px] font-semibold bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white disabled:opacity-50 transition flex items-center gap-2"
           >
             {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             Save Configuration

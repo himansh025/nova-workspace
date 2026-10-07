@@ -19,6 +19,28 @@ import { GIT_TOOL_NAMES } from "./gitToolRegistry";
 import { GITHUB_PUBLISH_TOOL_NAMES } from "./githubPublishToolRegistry";
 import { agentSelfFixService } from "./agentSelfFixService";
 import type { ISandboxRunResult } from "./sandboxExecutorService";
+import {
+  clearRunDedupState,
+  getRunDedupState,
+  hydrateDedupState,
+  serializeDedupState,
+  shouldSkipToolResult,
+} from "./agentContextDeduplication";
+import { compressToolResult } from "./agentToolResultCompressor";
+import { emptyLedger, recordTokenUsage, type ITokenBudgetLedger } from "./agentTokenBudget";
+import { compactToolDigest } from "./agentStateSummarizer";
+import { rankRelevantFiles } from "./agentRelevanceService";
+import {
+  buildCompactAgentContext,
+  serializeCompactAgentContext,
+} from "./agentContextCompaction";
+import { classifyTaskComplexity, type TaskComplexity } from "./agentModelRouting";
+import {
+  checkRunLimits,
+  resolveRunLimits,
+  type IRunLimitCheck,
+  type IAgentRunLimits,
+} from "./agentRunLimits";
 
 const activeRunAbort = new Map<string, { cancelled: boolean }>();
 const runModelById = new Map<string, string | undefined>();
@@ -49,38 +71,85 @@ function mergeTokenUsage(
   };
 }
 
-function compactStateForPrompt(run: IAgentRunDocument, toolDigest: string): string {
-  const pending = run.plan.filter((s) => s.status === "PENDING" || s.status === "IN_PROGRESS");
-  const completed = run.plan
-    .filter((s) => s.status === "COMPLETED")
-    .map((s) => ({ id: s.id, description: s.description, result: s.result?.slice(0, 400) }));
+function ensureRunLimits(run: IAgentRunDocument): IAgentRunLimits {
+  if (run.limits?.maxIterations) return run.limits;
+  const resolved = resolveRunLimits();
+  run.limits = resolved;
+  return resolved;
+}
 
-  return JSON.stringify(
-    {
-      status: run.status,
-      iterationCount: run.iterationCount,
-      currentStep: run.currentStep,
-      relevantFiles: run.relevantFiles.slice(0, 20),
-      modifiedFiles: run.modifiedFiles.slice(0, 20),
-      loopPhase: run.loopPhase,
-      diffSummary: run.diffSummary,
-      verificationStatus: run.verificationStatus,
-      lastExecution: run.lastExecution,
-      selfFixIterationCount: run.selfFixIterationCount,
-      gitWorkflowStatus: run.gitWorkflowStatus,
-      gitBranch: run.gitBranch,
-      gitCommitSha: run.gitCommitSha,
-      publishStatus: run.publishStatus,
-      pullRequestNumber: run.pullRequestNumber,
-      pullRequestUrl: run.pullRequestUrl,
-      pendingSteps: pending.map((s) => ({ id: s.id, description: s.description })),
-      completedSteps: completed,
-      recentToolResults: toolDigest.slice(0, 3000),
-      recentDiffs: toolDigest.includes("get_workspace_diff") ? "see tool results" : undefined,
-    },
-    null,
-    0
+function getRunLimitViolation(
+  run: IAgentRunDocument,
+  startedAtMs: number
+): IRunLimitCheck | null {
+  const check = checkRunLimits({
+    limits: ensureRunLimits(run),
+    tokenUsage: run.tokenUsage,
+    iterationCount: run.iterationCount,
+    startedAtMs,
+  });
+  return check.exceeded ? check : null;
+}
+
+function remainingOutputTokenBudget(run: IAgentRunDocument, cap: number): number {
+  const limits = ensureRunLimits(run);
+  const remaining = limits.maxOutputTokens - run.tokenUsage.outputTokens;
+  return Math.max(256, Math.min(cap, remaining));
+}
+
+function complexityForRun(run: IAgentRunDocument): TaskComplexity {
+  return (
+    run.taskComplexity ||
+    classifyTaskComplexity(run.task, {
+      planStepCount: run.plan.length,
+      modifiedFileCount: run.modifiedFiles.length,
+    })
   );
+}
+
+function persistOptimizationState(run: IAgentRunDocument, runId: string): void {
+  const dedup = serializeDedupState(getRunDedupState(runId));
+  run.contextOptimization = {
+    ...run.contextOptimization,
+    sentFilePaths: dedup.sentFilePaths,
+    toolResultHashes: dedup.toolResultHashes,
+    contentKeys: dedup.contentKeys,
+    stateSummary: run.contextOptimization?.stateSummary,
+  };
+}
+
+function trackModelUsage(
+  ledger: ITokenBudgetLedger,
+  phase: "planning" | "decision" | "final",
+  usage?: { totalTokens?: number }
+): ITokenBudgetLedger {
+  const tokens = usage?.totalTokens || 0;
+  return recordTokenUsage(ledger, phase, tokens);
+}
+
+async function stopRunGracefully(
+  run: IAgentRunDocument,
+  runId: string,
+  reason: string,
+  toolDigest: string
+): Promise<void> {
+  run.stopReason = reason;
+  if (!run.finalResult) {
+    run.finalResult = `Run stopped within configured limits: ${reason}`;
+    if (toolDigest.trim()) {
+      run.finalResult += `\n\nRecent activity:\n${toolDigest.slice(-2000)}`;
+    }
+  }
+  for (const step of run.plan) {
+    if (step.status === "PENDING" || step.status === "IN_PROGRESS") {
+      step.status = "FAILED";
+      step.result = step.result || "Not completed (run limit reached).";
+    }
+  }
+  run.status = "COMPLETED";
+  run.currentStep = undefined;
+  persistOptimizationState(run, runId);
+  await run.save();
 }
 
 export class AgentOrchestrator {
@@ -98,6 +167,7 @@ export class AgentOrchestrator {
     enableGitWorkflow?: boolean;
     enableGithubPublish?: boolean;
     publishMode?: "pr" | "push_only";
+    limits?: Partial<IAgentRunLimits>;
   }): Promise<IAgentRunDocument> {
     const id = `agent-${crypto.randomUUID()}`;
     const enableEdits = params.enableEdits !== false;
@@ -131,6 +201,8 @@ export class AgentOrchestrator {
         params.enableGithubPublish !== false && AGENT_CONFIG.defaultEnableGithubPublish,
       publishMode: params.publishMode || AGENT_CONFIG.defaultPublishMode,
       publishStatus: "idle",
+      limits: resolveRunLimits(params.limits),
+      taskComplexity: classifyTaskComplexity(params.task.trim()),
       tokenUsage: {
         inputTokens: 0,
         outputTokens: 0,
@@ -186,8 +258,23 @@ export class AgentOrchestrator {
       return;
     }
 
+    let tokenLedger = emptyLedger();
+    if (run.tokenBudget) {
+      tokenLedger = { ...run.tokenBudget };
+    }
+    hydrateDedupState(runId, run.contextOptimization);
+    const toolDigestParts: string[] = isResume ? [] : [];
+    const runLimits = ensureRunLimits(run);
+    let toolDigest = "";
+
     try {
       if (await this.isCancelled(runId)) return;
+
+      const limitBefore = getRunLimitViolation(run, started);
+      if (limitBefore?.message) {
+        await stopRunGracefully(run, runId, limitBefore.message, toolDigest);
+        return;
+      }
 
       if (!isResume) {
       const ctx = await repositoryContextManager.buildInitialContext({
@@ -195,16 +282,26 @@ export class AgentOrchestrator {
         repositoryId: run.repositoryId,
         branch: run.branch,
         task: run.task,
+        runId: run.id,
       });
 
       run.discoveredFiles = ctx.discoveredFiles;
-      run.relevantFiles = ctx.relevantFiles;
+      run.relevantFiles = rankRelevantFiles({
+        task: run.task,
+        discovered: ctx.discoveredFiles,
+        planFiles: [],
+        modified: run.modifiedFiles,
+        limit: AGENT_CONFIG.maxFilesInContext,
+      });
       await run.save();
 
       // ─── Planning ───────────────────────────────────────────────────────
       const planning = await modelRouter.generate({
         organizationId: run.organizationId,
         model,
+        task: "planning",
+        complexity: complexityForRun(run),
+        taskText: run.task,
         options: {
           systemInstruction: AGENT_SYSTEM_INSTRUCTION,
           messages: [
@@ -215,18 +312,22 @@ export class AgentOrchestrator {
                 repositoryMetadata: ctx.metadataBlock,
                 repositoryStructure: ctx.structureBlock,
                 codeContext: ctx.codeContextBlock,
+                symbolIndex: ctx.symbolIndexBlock,
                 enableEdits: run.enableEdits,
               }),
             },
           ],
           temperature: 0.2,
-          maxTokens: AGENT_CONFIG.planningMaxOutputTokens,
-          timeoutMs: AGENT_CONFIG.runTimeoutMs,
+          maxTokens: remainingOutputTokenBudget(run, AGENT_CONFIG.planningMaxOutputTokens),
+          timeoutMs: ensureRunLimits(run).maxExecutionTimeMs,
         },
       });
 
+      tokenLedger = trackModelUsage(tokenLedger, "planning", planning.usage);
+      run.tokenBudget = tokenLedger;
       run.tokenUsage = mergeTokenUsage(run.tokenUsage, planning.usage, { iterations: 1 });
       run.iterationCount += 1;
+      run.taskComplexity = classifyTaskComplexity(run.task, { planStepCount: 0 });
 
       const planResult = parseJsonFromModel<IPlanningResult>(planning.text);
       const steps: IPlanStep[] = (planResult.steps || []).map((s, idx) => ({
@@ -242,10 +343,18 @@ export class AgentOrchestrator {
       }
 
       run.plan = steps;
+      run.taskComplexity = classifyTaskComplexity(run.task, { planStepCount: steps.length });
       run.status = "ANALYZING";
       run.loopPhase = "SEARCH";
       run.currentStep = steps[0].id;
       await run.save();
+
+      const afterPlanLimit = getRunLimitViolation(run, started);
+      if (afterPlanLimit?.message) {
+        toolDigest = compactToolDigest(toolDigestParts, AGENT_CONFIG.compressedToolMaxChars);
+        await stopRunGracefully(run, runId, afterPlanLimit.message, toolDigest);
+        return;
+      }
       }
 
       const { githubRepositoryExplorerService } = await import(
@@ -285,14 +394,20 @@ export class AgentOrchestrator {
         publishMode: run.publishMode,
       };
 
-      let toolDigest = isResume ? "" : "";
+      toolDigest = compactToolDigest(toolDigestParts, AGENT_CONFIG.compressedToolMaxChars);
       const seenToolKeys = new Set<string>();
 
       // ─── Analysis iterations ──────────────────────────────────────────────
       while (
-        run.iterationCount < AGENT_CONFIG.maxIterations &&
-        Date.now() - started < AGENT_CONFIG.runTimeoutMs
+        run.iterationCount < runLimits.maxIterations &&
+        Date.now() - started < runLimits.maxExecutionTimeMs
       ) {
+        const loopLimit = getRunLimitViolation(run, started);
+        if (loopLimit?.message) {
+          await stopRunGracefully(run, runId, loopLimit.message, toolDigest);
+          return;
+        }
+
         if (await this.isCancelled(runId)) {
           run.status = "CANCELLED";
           await run.save();
@@ -308,32 +423,51 @@ export class AgentOrchestrator {
           await run.save();
         }
 
+        const decisionTask =
+          run.verificationStatus === "failed" || run.loopPhase === "EDIT" ? "repair" : "decision";
+
+        const compactCtx = serializeCompactAgentContext(
+          buildCompactAgentContext(run, toolDigest)
+        );
+
         const decisionResult = await modelRouter.generate({
           organizationId: run.organizationId,
           model,
+          task: decisionTask,
+          complexity: complexityForRun(run),
+          taskText: run.task,
+          complexityHints: {
+            planStepCount: run.plan.length,
+            modifiedFileCount: run.modifiedFiles.length,
+          },
           options: {
             systemInstruction: AGENT_SYSTEM_INSTRUCTION,
             messages: [
               {
                 role: "user",
                 content: buildAgentDecisionPrompt({
-                  task: run.task,
-                  planJson: JSON.stringify(run.plan),
-                  compactState: compactStateForPrompt(run, toolDigest),
+                  compactContextJson: compactCtx,
                   toolCatalog: formatToolCatalogForPrompt(),
-                  pendingStep: `${pendingStep.id}: ${pendingStep.description}`,
                   loopPhase: run.loopPhase,
                 }),
               },
             ],
             temperature: 0.2,
-            maxTokens: AGENT_CONFIG.decisionMaxOutputTokens,
-            timeoutMs: AGENT_CONFIG.runTimeoutMs,
+            maxTokens: remainingOutputTokenBudget(run, AGENT_CONFIG.decisionMaxOutputTokens),
+            timeoutMs: runLimits.maxExecutionTimeMs,
           },
         });
 
+        tokenLedger = trackModelUsage(tokenLedger, "decision", decisionResult.usage);
+        run.tokenBudget = tokenLedger;
         run.tokenUsage = mergeTokenUsage(run.tokenUsage, decisionResult.usage, { iterations: 1 });
         run.iterationCount += 1;
+
+        const afterDecisionLimit = getRunLimitViolation(run, started);
+        if (afterDecisionLimit?.message) {
+          await stopRunGracefully(run, runId, afterDecisionLimit.message, toolDigest);
+          return;
+        }
 
         const decision = parseJsonFromModel<IAgentDecision>(decisionResult.text);
 
@@ -361,18 +495,33 @@ export class AgentOrchestrator {
             toolDigest += `\n[skipped duplicate tool ${decision.toolName}]`;
           } else {
             seenToolKeys.add(toolKey);
-            const output = await executeAgentTool(
-              toolCtx,
-              decision.toolName,
-              decision.toolInput || {}
-            );
-            run.tokenUsage = mergeTokenUsage(run.tokenUsage, undefined, { toolCalls: 1 });
-            const outStr = JSON.stringify(output).slice(0, 1500);
-            toolDigest = `${toolDigest}\n[${decision.toolName}] ${outStr}`.slice(-6000);
+            const toolInput = decision.toolInput || {};
+            let output: unknown;
+            if (shouldSkipToolResult(runId, decision.toolName, toolInput)) {
+              toolDigestParts.push(`[skipped duplicate tool result ${decision.toolName}]`);
+            } else {
+              output = await executeAgentTool(toolCtx, decision.toolName, toolInput);
+              run.tokenUsage = mergeTokenUsage(run.tokenUsage, undefined, { toolCalls: 1 });
+              tokenLedger = recordTokenUsage(
+                tokenLedger,
+                "tools",
+                AGENT_CONFIG.toolResultTokenEstimate
+              );
+              run.tokenBudget = tokenLedger;
+              const compressed = compressToolResult(decision.toolName, output);
+              toolDigestParts.push(`[${decision.toolName}] ${JSON.stringify(compressed)}`);
+            }
+            toolDigest = compactToolDigest(toolDigestParts, AGENT_CONFIG.compressedToolMaxChars);
+
+            const afterToolLimit = getRunLimitViolation(run, started);
+            if (afterToolLimit?.message) {
+              await stopRunGracefully(run, runId, afterToolLimit.message, toolDigest);
+              return;
+            }
 
             // Track paths from tool results
-            if (decision.toolName === "read_file" && decision.toolInput?.path) {
-              const p = String(decision.toolInput.path);
+            if (decision.toolName === "read_file" && toolInput?.path) {
+              const p = String(toolInput.path);
               if (!run.relevantFiles.includes(p)) run.relevantFiles.push(p);
             }
             if (decision.toolName === "search_code" && output && typeof output === "object") {
@@ -407,10 +556,14 @@ export class AgentOrchestrator {
 
               if (agentSelfFixService.shouldAttemptSelfFix(run, exec)) {
                 agentSelfFixService.recordSelfFixAttempt(run);
-                toolDigest = `${toolDigest}\n[SELF_FIX_CONTEXT] ${agentSelfFixService.buildFailureDigest(run, exec)}`.slice(-6000);
+                toolDigestParts.push(
+                  `[SELF_FIX_CONTEXT] ${agentSelfFixService.buildFailureDigest(run, exec)}`
+                );
+                toolDigest = compactToolDigest(toolDigestParts, AGENT_CONFIG.compressedToolMaxChars);
               }
             }
           }
+          persistOptimizationState(run, runId);
           await run.save();
           const refreshed = await AgentRunModel.findOne({ id: runId });
           if (refreshed?.status === "WAITING") {
@@ -458,11 +611,19 @@ export class AgentOrchestrator {
         }
       }
 
-      if (!run.finalResult) {
+      if (!run.finalResult && !run.stopReason) {
         const testsVerified = run.verificationStatus === "passed" && run.lastExecution?.success;
+        const finalLimit = getRunLimitViolation(run, started);
+        if (finalLimit?.message) {
+          await stopRunGracefully(run, runId, finalLimit.message, toolDigest);
+          return;
+        }
         const finalGen = await modelRouter.generate({
           organizationId: run.organizationId,
           model,
+          task: "final",
+          complexity: complexityForRun(run),
+          taskText: run.task,
           options: {
             systemInstruction: AGENT_SYSTEM_INSTRUCTION,
             messages: [
@@ -480,10 +641,12 @@ export class AgentOrchestrator {
               },
             ],
             temperature: 0.3,
-            maxTokens: AGENT_CONFIG.finalMaxOutputTokens,
-            timeoutMs: AGENT_CONFIG.runTimeoutMs,
+            maxTokens: remainingOutputTokenBudget(run, AGENT_CONFIG.finalMaxOutputTokens),
+            timeoutMs: runLimits.maxExecutionTimeMs,
           },
         });
+        tokenLedger = trackModelUsage(tokenLedger, "final", finalGen.usage);
+        run.tokenBudget = tokenLedger;
         run.tokenUsage = mergeTokenUsage(run.tokenUsage, finalGen.usage, { iterations: 1 });
         let finalText = finalGen.text;
         if (/tests?\s+passed/i.test(finalText) && !testsVerified) {
@@ -499,6 +662,8 @@ export class AgentOrchestrator {
         run.status = "COMPLETED";
         run.currentStep = undefined;
       }
+      persistOptimizationState(run, runId);
+      run.tokenBudget = tokenLedger;
       await run.save();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Agent run failed.";
@@ -506,8 +671,10 @@ export class AgentOrchestrator {
       run.error = message;
       await run.save();
     } finally {
-      if ((await AgentRunModel.findOne({ id: runId }))?.status !== "WAITING") {
+      const finalStatus = (await AgentRunModel.findOne({ id: runId }))?.status;
+      if (finalStatus !== "WAITING") {
         activeRunAbort.delete(runId);
+        clearRunDedupState(runId);
       }
     }
   }

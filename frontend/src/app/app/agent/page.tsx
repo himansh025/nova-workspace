@@ -66,6 +66,22 @@ interface AgentRun {
     toolCalls: number;
     iterations: number;
   };
+  tokenBudget?: {
+    planning: number;
+    decision: number;
+    tools: number;
+    final: number;
+    total: number;
+  };
+  limits?: {
+    maxInputTokens: number;
+    maxOutputTokens: number;
+    maxIterations: number;
+    maxToolCalls: number;
+    maxExecutionTimeMs: number;
+  };
+  taskComplexity?: "simple" | "complex";
+  stopReason?: string;
   finalResult?: string;
   error?: string;
   repositoryId: string;
@@ -230,7 +246,7 @@ export default function CodingAgentPage() {
           <Bot className="w-5 h-5 text-[var(--nova-ai)]" />
           <h1 className="text-xl font-bold text-[var(--nova-text-primary)]">Coding Agent</h1>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-600 border border-violet-500/20">
-            GITHUB PR · PHASE 8
+            CONTEXT · PHASE 9
           </span>
         </div>
         <p className="text-xs text-[var(--nova-text-secondary)]">
@@ -396,6 +412,22 @@ export default function CodingAgentPage() {
               <div>In: {run.tokenUsage?.inputTokens ?? 0}</div>
               <div>Out: {run.tokenUsage?.outputTokens ?? 0}</div>
               <div>Tools: {run.tokenUsage?.toolCalls ?? 0} · Iter: {run.tokenUsage?.iterations ?? 0}</div>
+              {run.tokenBudget && (
+                <div className="mt-1 text-[var(--nova-text-secondary)]">
+                  Budget est.: {run.tokenBudget.total} (plan {run.tokenBudget.planning} · decide{" "}
+                  {run.tokenBudget.decision} · tools {run.tokenBudget.tools} · final {run.tokenBudget.final})
+                </div>
+              )}
+              {run.limits && (
+                <div className="mt-1 text-[var(--nova-text-secondary)]">
+                  Limits: in {run.limits.maxInputTokens} · out {run.limits.maxOutputTokens} · iter{" "}
+                  {run.limits.maxIterations} · tools {run.limits.maxToolCalls}
+                  {run.taskComplexity ? ` · ${run.taskComplexity} task` : ""}
+                </div>
+              )}
+              {run.stopReason && (
+                <div className="mt-1 text-amber-600">Stopped: {run.stopReason}</div>
+              )}
             </div>
             <div className="p-3 rounded-lg border border-[var(--nova-border)] sm:col-span-2">
               <div className="text-[var(--nova-text-secondary)] mb-1">Current step</div>

@@ -35,6 +35,7 @@ export const agentController = {
         enableGitWorkflow,
         enableGithubPublish,
         publishMode,
+        limits,
       } = req.body;
 
       const run = await agentService.createRun(orgId, userId, {
@@ -49,6 +50,7 @@ export const agentController = {
         enableGitWorkflow,
         enableGithubPublish,
         publishMode,
+        limits,
       });
 
       return res.status(201).json({ success: true, run });

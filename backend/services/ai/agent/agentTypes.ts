@@ -54,6 +54,31 @@ export interface IAgentTokenUsage {
   iterations: number;
 }
 
+export interface IAgentTokenBudget {
+  planning: number;
+  decision: number;
+  tools: number;
+  final: number;
+  total: number;
+}
+
+export interface IAgentContextOptimization {
+  sentFilePaths: string[];
+  toolResultHashes: string[];
+  contentKeys: string[];
+  stateSummary?: string;
+}
+
+export interface IAgentRunLimits {
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  maxIterations: number;
+  maxToolCalls: number;
+  maxExecutionTimeMs: number;
+}
+
+export type TaskComplexity = "simple" | "complex";
+
 export interface IAgentToolContext {
   organizationId: string;
   userId: string;

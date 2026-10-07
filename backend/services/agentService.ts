@@ -4,6 +4,7 @@ import { agentAuditService } from "./ai/agent/agentAuditService";
 import { collectWorkspaceDiff } from "./ai/agent/agentWorkspaceService";
 import { githubRepositoryExplorerService } from "./githubRepositoryExplorerService";
 import { AGENT_CONFIG } from "./ai/agent/agentConfig";
+import type { IAgentRunLimits } from "./ai/agent/agentTypes";
 
 export const agentService = {
   async createRun(
@@ -21,6 +22,7 @@ export const agentService = {
       enableGitWorkflow?: boolean;
       enableGithubPublish?: boolean;
       publishMode?: "pr" | "push_only";
+      limits?: Partial<IAgentRunLimits>;
     }
   ) {
     if (!params.task || !params.task.trim()) {
@@ -60,6 +62,7 @@ export const agentService = {
       enableGitWorkflow: params.enableGitWorkflow,
       enableGithubPublish: params.enableGithubPublish,
       publishMode: params.publishMode,
+      limits: params.limits,
     });
 
     return this.toSafeRun(run);
@@ -178,6 +181,11 @@ export const agentService = {
     pullRequestNumber?: number;
     pullRequestUrl?: string;
     publishError?: string;
+    tokenBudget?: unknown;
+    contextOptimization?: unknown;
+    limits?: unknown;
+    taskComplexity?: string;
+    stopReason?: string;
     finalResult?: string;
     error?: string;
     createdAt: Date;
@@ -219,6 +227,11 @@ export const agentService = {
       pullRequestNumber: run.pullRequestNumber,
       pullRequestUrl: run.pullRequestUrl,
       publishError: run.publishError,
+      tokenBudget: run.tokenBudget,
+      contextOptimization: run.contextOptimization,
+      limits: run.limits,
+      taskComplexity: run.taskComplexity,
+      stopReason: run.stopReason,
       finalResult: run.finalResult,
       error: run.error,
       createdAt: run.createdAt,
