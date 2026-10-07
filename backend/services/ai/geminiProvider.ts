@@ -8,7 +8,54 @@ import {
   AIChatMessage,
 } from "./aiProviderTypes";
 
+/**
+ * Maps UI labels like "3.6 flash" or "Gemini 3.6 Flash" to API id `gemini-3.6-flash`.
+ */
+export function normalizeGeminiModelId(raw?: string): string | undefined {
+  if (!raw?.trim()) return undefined;
+  let s = raw.trim().toLowerCase().replace(/^models\//, "");
+  s = s.replace(/\s+/g, "-");
+  if (/^\d+\.\d+(-flash.*)?$/.test(s)) {
+    s = `gemini-${s.replace(/-flash.*/, "")}-flash`;
+  } else if (!s.startsWith("gemini-") && /^\d+\.\d+-flash/.test(s)) {
+    s = `gemini-${s}`;
+  } else if (s.startsWith("gemini") && !s.startsWith("gemini-")) {
+    s = s.replace(/^gemini/, "gemini-");
+  }
+  return s;
+}
+
 export const ALLOWED_GEMINI_MODELS: AIModelInfo[] = [
+  {
+    id: "gemini-3.6-flash",
+    name: "Gemini 3.6 Flash",
+    provider: "gemini",
+    description: "Frontier-class fast model for agentic workflows and coding (GA).",
+    maxInputTokens: 1048576,
+    maxOutputTokens: 65536,
+    capabilities: {
+      textGeneration: true,
+      streaming: true,
+      multimodal: true,
+      longContext: true,
+    },
+    isDefault: true,
+  },
+  {
+    id: "gemini-3.5-flash",
+    name: "Gemini 3.5 Flash",
+    provider: "gemini",
+    description: "Balanced speed and reasoning in the Gemini 3 family.",
+    maxInputTokens: 1048576,
+    maxOutputTokens: 65536,
+    capabilities: {
+      textGeneration: true,
+      streaming: true,
+      multimodal: true,
+      longContext: true,
+    },
+    isDefault: false,
+  },
   {
     id: "gemini-2.5-flash",
     name: "Gemini 2.5 Flash",
@@ -22,7 +69,7 @@ export const ALLOWED_GEMINI_MODELS: AIModelInfo[] = [
       multimodal: true,
       longContext: true,
     },
-    isDefault: true,
+    isDefault: false,
   },
   {
     id: "gemini-2.5-pro",
@@ -101,12 +148,29 @@ export class GeminiProvider implements AIProvider {
       }));
   }
 
+  private parseErrorPayload(message: string): { status?: number; apiStatus?: string } {
+    try {
+      const jsonStart = message.indexOf("{");
+      if (jsonStart === -1) return {};
+      const parsed = JSON.parse(message.slice(jsonStart));
+      const err = parsed?.error ?? parsed;
+      const status = typeof err?.code === "number" ? err.code : undefined;
+      const apiStatus = typeof err?.status === "string" ? err.status : undefined;
+      return { status, apiStatus };
+    } catch {
+      return {};
+    }
+  }
+
   /**
    * Translates SDK or network errors into clean, structured user-safe error messages.
    */
   private handleGeminiError(error: any): Error {
     const message = error?.message || String(error);
-    const status = error?.status || error?.statusCode || error?.response?.status;
+    const parsed = this.parseErrorPayload(message);
+    const status =
+      error?.status || error?.statusCode || error?.response?.status || parsed.status;
+    const apiStatus = parsed.apiStatus || "";
 
     if (
       status === 400 ||
@@ -127,8 +191,25 @@ export class GeminiProvider implements AIProvider {
       return err;
     }
 
-    if (status === 404 || message.includes("NOT_FOUND") || message.includes("models/")) {
-      const err = new Error(`Requested Gemini model not found or unavailable.`);
+    if (
+      status === 503 ||
+      apiStatus === "UNAVAILABLE" ||
+      message.includes("high demand") ||
+      message.includes("UNAVAILABLE")
+    ) {
+      const err = new Error(
+        "This Gemini model is temporarily overloaded (high demand). Wait a minute and retry, or switch to another model (e.g. gemini-2.5-flash or gemini-3.5-flash) in AI Settings."
+      );
+      (err as any).statusCode = 503;
+      (err as any).code = "SERVICE_UNAVAILABLE";
+      return err;
+    }
+
+    if (status === 404 || apiStatus === "NOT_FOUND" || message.includes("NOT_FOUND")) {
+      const detail = message.length < 220 ? message : message.slice(0, 220);
+      const err = new Error(
+        `Requested Gemini model was not found. Use the exact id (e.g. gemini-3.6-flash). ${detail}`
+      );
       (err as any).statusCode = 404;
       (err as any).code = "MODEL_NOT_FOUND";
       return err;
@@ -158,39 +239,102 @@ export class GeminiProvider implements AIProvider {
    * Resolves target model ID or falls back to default.
    */
   public resolveModelId(modelId?: string): string {
-    if (modelId && this.isModelSupported(modelId)) {
-      return modelId;
+    const id = normalizeGeminiModelId(modelId);
+    if (!id) {
+      return ALLOWED_GEMINI_MODELS.find((m) => m.isDefault)?.id || "gemini-3.6-flash";
     }
-    return ALLOWED_GEMINI_MODELS.find((m) => m.isDefault)?.id || "gemini-2.5-flash";
+    if (this.isModelSupported(id)) {
+      return id;
+    }
+    // Allow any Gemini API model id saved in settings (e.g. from live catalog or custom).
+    if (/^gemini-[a-z0-9][a-z0-9._-]*$/i.test(id)) {
+      return id;
+    }
+    return ALLOWED_GEMINI_MODELS.find((m) => m.isDefault)?.id || "gemini-3.6-flash";
   }
 
+  private static readonly CREDENTIAL_TEST_FALLBACK_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+  ];
+
   /**
-   * Tests API key connectivity and authentication against the Gemini API.
+   * Tests API key connectivity against the Gemini API using the requested model (with safe fallbacks).
    */
-  public async validateCredentials(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+  public async validateCredentials(
+    apiKey: string,
+    preferredModelId?: string
+  ): Promise<{ valid: boolean; error?: string; modelUsed?: string }> {
     if (!apiKey || typeof apiKey !== "string" || apiKey.trim() === "") {
       return { valid: false, error: "API key is required" };
     }
 
-    try {
-      const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: "Respond with 'ok'",
-        config: {
-          maxOutputTokens: 5,
-          temperature: 0.1,
-        },
-      });
+    const trimmedKey = apiKey.trim();
+    const preferred = preferredModelId?.trim()
+      ? this.resolveModelId(preferredModelId)
+      : undefined;
 
-      if (response && response.text) {
-        return { valid: true };
+    const modelsToTry = [
+      ...(preferred ? [preferred] : []),
+      ...GeminiProvider.CREDENTIAL_TEST_FALLBACK_MODELS.filter((m) => m !== preferred),
+    ];
+    const tried: string[] = [];
+
+    const ai = new GoogleGenAI({ apiKey: trimmedKey });
+    let lastError: Error | null = null;
+
+    for (const model of modelsToTry) {
+      tried.push(model);
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: "Respond with ok",
+          config: {
+            maxOutputTokens: 5,
+            temperature: 0.1,
+          },
+        });
+        if (response) {
+          return { valid: true, modelUsed: model };
+        }
+        return { valid: true, modelUsed: model };
+      } catch (err: any) {
+        lastError = this.handleGeminiError(err);
+        const code = (lastError as any).code;
+        if (
+          code === "MODEL_NOT_FOUND" ||
+          code === "SERVICE_UNAVAILABLE" ||
+          code === "RATE_LIMIT_EXCEEDED"
+        ) {
+          continue;
+        }
+        return { valid: false, error: lastError.message };
       }
-      return { valid: true };
-    } catch (err: any) {
-      const mappedError = this.handleGeminiError(err);
-      return { valid: false, error: mappedError.message };
     }
+
+    const retiredHint =
+      preferred && /gemini-1\.0/i.test(preferred)
+        ? ` Model "${preferred}" is retired — use gemini-2.5-flash or pick from Refresh Catalog.`
+        : preferred
+          ? ` None of the tried models worked for "${preferred}". Use Refresh Catalog or gemini-2.5-flash.`
+          : " Check the key from Google AI Studio (aistudio.google.com) and that Generative Language API is enabled.";
+
+    const overloadHint =
+      (lastError as any)?.code === "SERVICE_UNAVAILABLE"
+        ? " All tried models were busy — your API key is likely valid; retry later or pick a less busy model."
+        : "";
+
+    return {
+      valid: false,
+      error:
+        (lastError?.message || "Gemini connection failed.") +
+        overloadHint +
+        retiredHint +
+        ` Tried models: ${tried.join(", ")}.`,
+    };
   }
 
   /**

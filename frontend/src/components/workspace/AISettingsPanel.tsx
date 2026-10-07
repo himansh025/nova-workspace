@@ -22,12 +22,29 @@ interface ModelOption {
   description?: string;
 }
 
+/** Must match Google API id, e.g. gemini-3.6-flash (not "3.6 flash"). */
+function normalizeGeminiModelId(raw: string): string {
+  let s = raw.trim().toLowerCase().replace(/^models\//, "");
+  if (!s) return s;
+  s = s.replace(/\s+/g, "-");
+  if (/^\d+\.\d+(-flash.*)?$/.test(s)) {
+    s = `gemini-${s.replace(/-flash.*/, "")}-flash`;
+  } else if (!s.startsWith("gemini-") && /^\d+\.\d+-flash/.test(s)) {
+    s = `gemini-${s}`;
+  } else if (s.startsWith("gemini") && !s.startsWith("gemini-")) {
+    s = s.replace(/^gemini/, "gemini-");
+  }
+  return s;
+}
+
 export default function AISettingsPanel() {
   const { addToast } = useToast();
   const [provider, setProvider] = useState<string>("google");
   const [apiKey, setApiKey] = useState<string>("");
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-2.5-flash");
+  const [useCustomModel, setUseCustomModel] = useState(false);
+  const [customModelId, setCustomModelId] = useState("");
   const [models, setModels] = useState<ModelOption[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState<boolean>(false);
   const [isTesting, setIsTesting] = useState<boolean>(false);
@@ -36,22 +53,51 @@ export default function AISettingsPanel() {
   const [maskedKey, setMaskedKey] = useState<string>("");
 
   useEffect(() => {
-    fetchSettings();
-    fetchModels();
+    void loadPanel();
   }, []);
 
-  const fetchSettings = async () => {
+  function applySavedModel(modelId: string, catalog: ModelOption[]) {
+    const id = modelId || "gemini-2.5-flash";
+    const inCatalog = catalog.some((m) => m.id === id);
+    if (inCatalog) {
+      setUseCustomModel(false);
+      setSelectedModel(id);
+      setCustomModelId("");
+    } else {
+      setUseCustomModel(true);
+      setCustomModelId(id);
+      setSelectedModel(id);
+    }
+  }
+
+  const loadPanel = async () => {
+    setIsLoadingModels(true);
+    let catalog: ModelOption[] = [];
+    let savedModel = "gemini-2.5-flash";
     try {
-      const res = await fetch("/api/ai/settings");
-      const data = await res.json();
-      if (data.success && data.settings) {
-        setIsConfigured(data.settings.configured);
-        setProvider(data.settings.provider || "google");
-        setSelectedModel(data.settings.selectedModel || "gemini-2.5-flash");
-        setMaskedKey(data.settings.maskedKey || "");
+      const [settingsRes, modelsRes] = await Promise.all([
+        fetch("/api/ai/settings"),
+        fetch("/api/ai/models"),
+      ]);
+      const settingsData = await settingsRes.json();
+      const modelsData = await modelsRes.json();
+
+      if (modelsData.success && Array.isArray(modelsData.models)) {
+        catalog = modelsData.models;
+        setModels(catalog);
       }
+
+      if (settingsData.success && settingsData.settings) {
+        setIsConfigured(settingsData.settings.configured);
+        setProvider(settingsData.settings.provider || "google");
+        savedModel = settingsData.settings.selectedModel || "gemini-2.5-flash";
+        setMaskedKey(settingsData.settings.maskedKey || "");
+      }
+      applySavedModel(savedModel, catalog);
     } catch (err) {
       console.error("Failed to load AI settings:", err);
+    } finally {
+      setIsLoadingModels(false);
     }
   };
 
@@ -70,6 +116,10 @@ export default function AISettingsPanel() {
     }
   };
 
+  const effectiveModelId = normalizeGeminiModelId(
+    (useCustomModel ? customModelId : selectedModel).trim()
+  );
+
   const handleTestConnection = async () => {
     setIsTesting(true);
     try {
@@ -79,6 +129,7 @@ export default function AISettingsPanel() {
         body: JSON.stringify({
           apiKey: apiKey || undefined,
           provider: "google",
+          selectedModel: effectiveModelId || undefined,
         }),
       });
       const data = await res.json();
@@ -108,6 +159,14 @@ export default function AISettingsPanel() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!effectiveModelId) {
+      addToast({
+        title: "Model required",
+        message: "Choose a model from the catalog or enter a custom Gemini model ID.",
+        type: "warning",
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       const res = await fetch("/api/ai/settings", {
@@ -116,7 +175,7 @@ export default function AISettingsPanel() {
         body: JSON.stringify({
           provider: "google",
           apiKey: apiKey || undefined,
-          selectedModel,
+          selectedModel: effectiveModelId,
         }),
       });
 
@@ -128,7 +187,7 @@ export default function AISettingsPanel() {
           type: "accent",
         });
         setApiKey("");
-        fetchSettings();
+        void loadPanel();
       } else {
         addToast({
           title: "Save Failed",
@@ -254,27 +313,63 @@ export default function AISettingsPanel() {
                 Refresh Catalog
               </button>
             </div>
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-4 py-2.5 text-[12px] text-[var(--nova-text-primary)] focus:outline-none focus:border-[var(--nova-accent)]"
-            >
-              {models.length > 0 ? (
-                models.map((m) => (
+            {!useCustomModel ? (
+              <select
+                value={models.some((m) => m.id === selectedModel) ? selectedModel : models[0]?.id || "gemini-2.5-flash"}
+                onChange={(e) => {
+                  if (e.target.value === "__custom__") {
+                    setUseCustomModel(true);
+                    setCustomModelId(selectedModel.startsWith("gemini-") ? selectedModel : "");
+                  } else {
+                    setSelectedModel(e.target.value);
+                  }
+                }}
+                className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-4 py-2.5 text-[12px] text-[var(--nova-text-primary)] focus:outline-none focus:border-[var(--nova-accent)]"
+              >
+                {(models.length > 0
+                  ? models
+                  : [
+                      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+                      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+                      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
+                      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
+                      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash" },
+                    ]
+                ).map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} ({m.id})
                   </option>
-                ))
-              ) : (
-                <>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Default fast)</option>
-                  <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced reasoning)</option>
-                  <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                  <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                  <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                </>
-              )}
-            </select>
+                ))}
+                <option value="__custom__">Custom model ID…</option>
+              </select>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={customModelId}
+                  onChange={(e) => setCustomModelId(e.target.value)}
+                  placeholder="Exact id: gemini-3.6-flash"
+                  className="w-full bg-[var(--nova-bg)] border border-[var(--nova-border)] rounded-lg px-4 py-2.5 text-[12px] font-mono text-[var(--nova-text-primary)] placeholder-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseCustomModel(false);
+                    if (models.some((m) => m.id === customModelId)) {
+                      setSelectedModel(customModelId);
+                    }
+                  }}
+                  className="text-[11px] text-[var(--nova-accent-text)] hover:underline"
+                >
+                  Back to catalog list
+                </button>
+              </div>
+            )}
+            <p className="text-[11px] text-[var(--nova-text-muted)] mt-1.5">
+              This workspace uses <strong className="font-medium text-[var(--nova-text-secondary)]">Google Gemini only</strong>{" "}
+              (not OpenAI/Claude). Save an API key, then use <strong className="font-medium">Refresh Catalog</strong> to load
+              all models your key can access, or pick <strong className="font-medium">Custom model ID</strong> to type one.
+            </p>
           </div>
 
           <div>

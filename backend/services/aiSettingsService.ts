@@ -1,5 +1,6 @@
 import { AISettingsModel, IAISettingsDocument, AIProvider } from "../models/AISettings";
 import { encryptSecret, decryptSecret } from "./cryptoService";
+import { normalizeGeminiModelId } from "./ai/geminiProvider";
 
 export const aiSettingsService = {
   async getSettings(organizationId: string) {
@@ -53,7 +54,7 @@ export const aiSettingsService = {
       {
         provider: input.provider,
         encryptedApiKey,
-        selectedModel: input.selectedModel.trim(),
+        selectedModel: normalizeGeminiModelId(input.selectedModel) || input.selectedModel.trim(),
         baseUrl: input.baseUrl?.trim() || "",
       },
       { upsert: true, returnDocument: "after" }

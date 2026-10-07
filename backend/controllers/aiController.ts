@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { aiSettingsService } from "../services/aiSettingsService";
 import { geminiProvider, ALLOWED_GEMINI_MODELS } from "../services/ai/geminiProvider";
 import { aiService } from "../services/aiService";
+import { aiModelFetcher } from "../services/aiModelFetcher";
 
 export const aiController = {
   // ─── SETTINGS & CREDENTIALS ──────────────────────────────────────────────────
@@ -42,13 +43,14 @@ export const aiController = {
   async testCredentials(req: Request, res: Response) {
     try {
       const orgId = (req as any).organizationId;
-      let { apiKey, provider = "google" } = req.body;
+      let { apiKey, provider = "google", selectedModel } = req.body;
 
-      if (!apiKey) {
-        const saved = await aiSettingsService.getDecryptedApiKey(orgId);
-        if (saved && saved.apiKey) {
-          apiKey = saved.apiKey;
-        }
+      const saved = await aiSettingsService.getDecryptedApiKey(orgId);
+      if (!apiKey && saved?.apiKey) {
+        apiKey = saved.apiKey;
+      }
+      if (!selectedModel && saved?.selectedModel) {
+        selectedModel = saved.selectedModel;
       }
 
       if (!apiKey) {
@@ -58,7 +60,7 @@ export const aiController = {
         });
       }
 
-      const result = await geminiProvider.validateCredentials(apiKey);
+      const result = await geminiProvider.validateCredentials(apiKey, selectedModel);
       if (!result.valid) {
         return res.status(400).json({
           success: false,
@@ -68,7 +70,9 @@ export const aiController = {
 
       return res.json({
         success: true,
-        message: "Gemini API key is valid and connected.",
+        message: result.modelUsed
+          ? `Gemini API key is valid (verified with model ${result.modelUsed}).`
+          : "Gemini API key is valid and connected.",
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
@@ -77,8 +81,37 @@ export const aiController = {
 
   async fetchModels(req: Request, res: Response) {
     try {
-      const models = ALLOWED_GEMINI_MODELS;
-      return res.json({ success: true, count: models.length, models });
+      const orgId = (req as any).organizationId;
+      const seen = new Set<string>();
+      const models: Array<{ id: string; name: string; description?: string }> = [];
+
+      for (const m of ALLOWED_GEMINI_MODELS) {
+        if (!seen.has(m.id)) {
+          seen.add(m.id);
+          models.push({ id: m.id, name: m.name, description: m.description });
+        }
+      }
+
+      const credentials = await aiSettingsService.getDecryptedApiKey(orgId);
+      if (credentials?.apiKey) {
+        const live = await aiModelFetcher.fetchGoogleModels(credentials.apiKey);
+        for (const m of live) {
+          if (!seen.has(m.id)) {
+            seen.add(m.id);
+            models.push({ id: m.id, name: m.name, description: m.description });
+          }
+        }
+      }
+
+      models.sort((a, b) => a.id.localeCompare(b.id));
+
+      return res.json({
+        success: true,
+        count: models.length,
+        models,
+        allowCustom: true,
+        provider: "google",
+      });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }
