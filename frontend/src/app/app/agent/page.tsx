@@ -70,6 +70,19 @@ interface AgentRun {
   error?: string;
   repositoryId: string;
   branch?: string;
+  verificationStatus?: string;
+  lastExecution?: {
+    tool: string;
+    success: boolean;
+    exitCode: number;
+    errorSummary?: string;
+    sandbox?: string;
+  };
+  selfFixIterationCount?: number;
+  gitWorkflowStatus?: string;
+  gitBranch?: string;
+  gitCommitSha?: string;
+  gitError?: string;
 }
 
 const TERMINAL = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
@@ -213,7 +226,7 @@ export default function CodingAgentPage() {
           <Bot className="w-5 h-5 text-[var(--nova-ai)]" />
           <h1 className="text-xl font-bold text-[var(--nova-text-primary)]">Coding Agent</h1>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-600 border border-violet-500/20">
-            WORKSPACE EDITS · PHASE 5
+            GIT WORKFLOW · PHASE 7
           </span>
         </div>
         <p className="text-xs text-[var(--nova-text-secondary)]">
@@ -293,6 +306,29 @@ export default function CodingAgentPage() {
             {run.status === "COMPLETED" && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
             {run.status === "FAILED" && <AlertCircle className="w-4 h-4 text-red-500" />}
           </div>
+
+          {run.verificationStatus && run.verificationStatus !== "not_run" && (
+            <div className="text-xs p-3 rounded-lg border border-[var(--nova-border)]">
+              Verification: <strong>{run.verificationStatus}</strong>
+              {run.lastExecution && (
+                <span className="ml-2 text-[var(--nova-text-secondary)]">
+                  {run.lastExecution.tool} exit {run.lastExecution.exitCode} ({run.lastExecution.sandbox})
+                </span>
+              )}
+              {run.selfFixIterationCount ? (
+                <span className="ml-2">Self-fix attempts: {run.selfFixIterationCount}</span>
+              ) : null}
+            </div>
+          )}
+
+          {run.gitBranch && (
+            <div className="text-xs p-3 rounded-lg border border-[var(--nova-border)] font-mono">
+              Branch: {run.gitBranch}
+              {run.gitCommitSha && <div className="mt-1">Commit: {run.gitCommitSha}</div>}
+              {run.gitWorkflowStatus && <div className="mt-1">Git: {run.gitWorkflowStatus}</div>}
+              {run.gitError && <div className="mt-1 text-red-500">{run.gitError}</div>}
+            </div>
+          )}
 
           {run.diffSummary && (
             <div className="text-xs p-3 rounded-lg border border-[var(--nova-border)]">

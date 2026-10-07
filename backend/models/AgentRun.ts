@@ -3,6 +3,9 @@ import type {
   AgentRunStatus,
   AgentLoopPhase,
   AgentEditMode,
+  VerificationStatus,
+  GitWorkflowStatus,
+  IAgentLastExecution,
   IPlanStep,
   IAgentTokenUsage,
   IAgentDiffSummary,
@@ -29,6 +32,15 @@ export interface IAgentRun {
   loopPhase?: AgentLoopPhase;
   waitingForProposalId?: string;
   diffSummary?: IAgentDiffSummary;
+  enableVerification: boolean;
+  verificationStatus: VerificationStatus;
+  lastExecution?: IAgentLastExecution;
+  selfFixIterationCount: number;
+  enableGitWorkflow: boolean;
+  gitWorkflowStatus: GitWorkflowStatus;
+  gitBranch?: string;
+  gitCommitSha?: string;
+  gitError?: string;
   finalResult?: string;
   error?: string;
   createdAt: Date;
@@ -56,6 +68,15 @@ export interface IAgentRunDocument extends Document {
   loopPhase?: AgentLoopPhase;
   waitingForProposalId?: string;
   diffSummary?: IAgentDiffSummary;
+  enableVerification: boolean;
+  verificationStatus: VerificationStatus;
+  lastExecution?: IAgentLastExecution;
+  selfFixIterationCount: number;
+  enableGitWorkflow: boolean;
+  gitWorkflowStatus: GitWorkflowStatus;
+  gitBranch?: string;
+  gitCommitSha?: string;
+  gitError?: string;
   finalResult?: string;
   error?: string;
   createdAt: Date;
@@ -125,10 +146,38 @@ const AgentRunSchema = new Schema<IAgentRunDocument>(
     workspaceInitialized: { type: Boolean, default: false },
     loopPhase: {
       type: String,
-      enum: ["PLAN", "SEARCH", "READ", "EDIT", "DIFF", "REVIEW"],
+      enum: ["PLAN", "SEARCH", "READ", "EDIT", "DIFF", "REVIEW", "TEST", "VERIFY", "GIT"],
     },
     waitingForProposalId: { type: String },
     diffSummary: { type: DiffSummarySchema },
+    enableVerification: { type: Boolean, default: true },
+    verificationStatus: {
+      type: String,
+      enum: ["not_run", "passed", "failed"],
+      default: "not_run",
+    },
+    lastExecution: {
+      type: {
+        tool: String,
+        command: String,
+        exitCode: Number,
+        success: Boolean,
+        durationMs: Number,
+        errorSummary: String,
+        sandbox: String,
+      },
+      _id: false,
+    },
+    selfFixIterationCount: { type: Number, default: 0 },
+    enableGitWorkflow: { type: Boolean, default: true },
+    gitWorkflowStatus: {
+      type: String,
+      enum: ["idle", "branch_created", "committed", "failed"],
+      default: "idle",
+    },
+    gitBranch: { type: String },
+    gitCommitSha: { type: String },
+    gitError: { type: String },
     finalResult: { type: String },
     error: { type: String },
   },

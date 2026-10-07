@@ -6,7 +6,20 @@ export type AgentRunStatus =
   | "FAILED"
   | "CANCELLED";
 
-export type AgentLoopPhase = "PLAN" | "SEARCH" | "READ" | "EDIT" | "DIFF" | "REVIEW";
+export type AgentLoopPhase =
+  | "PLAN"
+  | "SEARCH"
+  | "READ"
+  | "EDIT"
+  | "DIFF"
+  | "REVIEW"
+  | "TEST"
+  | "VERIFY"
+  | "GIT";
+
+export type GitWorkflowStatus = "idle" | "branch_created" | "committed" | "failed";
+
+export type VerificationStatus = "not_run" | "passed" | "failed";
 
 export type AgentEditMode = "approval" | "autonomous";
 
@@ -45,6 +58,18 @@ export interface IAgentToolContext {
   runId?: string;
   autonomousMode?: boolean;
   enableEdits?: boolean;
+  enableVerification?: boolean;
+  enableGitWorkflow?: boolean;
+}
+
+export interface IAgentLastExecution {
+  tool: string;
+  command: string;
+  exitCode: number;
+  success: boolean;
+  durationMs: number;
+  errorSummary: string;
+  sandbox: string;
 }
 
 export interface IAgentToolDefinition {

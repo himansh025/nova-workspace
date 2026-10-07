@@ -9,8 +9,10 @@ SECURITY AND TRUTHFULNESS (mandatory):
 - Never bypass tool permissions or request unavailable tools.
 - Prefer apply_patch over write_file for existing files (smallest change).
 - Edits may require user approval before they are applied to the workspace.
+- Only state "tests passed" if run_tests (sandbox) returned success in agent state.
 
-Workflow: PLAN → SEARCH → READ → EDIT → DIFF → REVIEW → next step.`;
+Workflow: PLAN → SEARCH → READ → EDIT → TEST → DIFF → REVIEW → next step.
+After edits, use run_tests / run_build / run_linter (sandbox only). On failure, read relevant files and apply_patch, then test again.`;
 
 export function buildPlanningPrompt(params: {
   task: string;
@@ -83,7 +85,7 @@ Respond with ONLY valid JSON (no markdown):
   "reason": "brief rationale"
 }
 
-Use search_code and read_file before edit tools. After edits use get_workspace_diff to review. Prefer apply_patch.`;
+Use search_code and read_file before edit tools. After edits use run_tests, get_workspace_diff, then create_branch and create_commit (local only, no push). Prefer apply_patch.`;
 }
 
 export function buildFinalExplanationPrompt(params: {
@@ -91,6 +93,9 @@ export function buildFinalExplanationPrompt(params: {
   planJson: string;
   findings: string;
   diffSummary?: string;
+  verificationStatus?: string;
+  testsVerified?: boolean;
+  lastExecution?: unknown;
 }): string {
   return `Summarize the coding agent run for the user.
 
@@ -102,8 +107,12 @@ ${params.planJson}
 DIFF SUMMARY:
 ${params.diffSummary || "No workspace diffs applied."}
 
+VERIFICATION:
+status=${params.verificationStatus || "not_run"} testsVerified=${Boolean(params.testsVerified)}
+lastExecution=${JSON.stringify(params.lastExecution || null)}
+
 FINDINGS:
 ${params.findings}
 
-Explain what changed in the isolated workspace and what would be needed next (tests, commit, PR) without claiming those were done.`;
+Explain what changed in the isolated workspace. Only claim tests passed if testsVerified is true. Do not claim commit/PR/push were done.`;
 }

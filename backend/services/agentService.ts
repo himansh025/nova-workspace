@@ -17,6 +17,8 @@ export const agentService = {
       enableEdits?: boolean;
       editMode?: "approval" | "autonomous";
       autonomousMode?: boolean;
+      enableVerification?: boolean;
+      enableGitWorkflow?: boolean;
     }
   ) {
     if (!params.task || !params.task.trim()) {
@@ -52,6 +54,8 @@ export const agentService = {
       enableEdits: params.enableEdits,
       editMode,
       autonomousMode: editMode === "autonomous",
+      enableVerification: params.enableVerification,
+      enableGitWorkflow: params.enableGitWorkflow,
     });
 
     return this.toSafeRun(run);
@@ -155,6 +159,15 @@ export const agentService = {
     loopPhase?: string;
     waitingForProposalId?: string;
     diffSummary?: unknown;
+    enableVerification?: boolean;
+    verificationStatus?: string;
+    lastExecution?: unknown;
+    selfFixIterationCount?: number;
+    enableGitWorkflow?: boolean;
+    gitWorkflowStatus?: string;
+    gitBranch?: string;
+    gitCommitSha?: string;
+    gitError?: string;
     finalResult?: string;
     error?: string;
     createdAt: Date;
@@ -181,6 +194,15 @@ export const agentService = {
       loopPhase: run.loopPhase,
       waitingForProposalId: run.waitingForProposalId,
       diffSummary: run.diffSummary,
+      enableVerification: run.enableVerification,
+      verificationStatus: run.verificationStatus,
+      lastExecution: run.lastExecution,
+      selfFixIterationCount: run.selfFixIterationCount,
+      enableGitWorkflow: run.enableGitWorkflow,
+      gitWorkflowStatus: run.gitWorkflowStatus,
+      gitBranch: run.gitBranch,
+      gitCommitSha: run.gitCommitSha,
+      gitError: run.gitError,
       finalResult: run.finalResult,
       error: run.error,
       createdAt: run.createdAt,

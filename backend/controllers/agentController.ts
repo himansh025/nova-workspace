@@ -23,8 +23,17 @@ export const agentController = {
     try {
       const orgId = (req as any).organizationId;
       const userId = getUserId(req);
-      const { repositoryId, task, branch, model, enableEdits, editMode, autonomousMode } =
-        req.body;
+      const {
+        repositoryId,
+        task,
+        branch,
+        model,
+        enableEdits,
+        editMode,
+        autonomousMode,
+        enableVerification,
+        enableGitWorkflow,
+      } = req.body;
 
       const run = await agentService.createRun(orgId, userId, {
         repositoryId,
@@ -34,6 +43,8 @@ export const agentController = {
         enableEdits,
         editMode,
         autonomousMode,
+        enableVerification,
+        enableGitWorkflow,
       });
 
       return res.status(201).json({ success: true, run });

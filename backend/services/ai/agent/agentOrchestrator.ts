@@ -14,6 +14,10 @@ import {
   executeAgentTool,
   formatToolCatalogForPrompt,
 } from "./toolRegistry";
+import { EXECUTION_TOOL_NAMES } from "./executionToolRegistry";
+import { GIT_TOOL_NAMES } from "./gitToolRegistry";
+import { agentSelfFixService } from "./agentSelfFixService";
+import type { ISandboxRunResult } from "./sandboxExecutorService";
 
 const activeRunAbort = new Map<string, { cancelled: boolean }>();
 const runModelById = new Map<string, string | undefined>();
@@ -59,6 +63,12 @@ function compactStateForPrompt(run: IAgentRunDocument, toolDigest: string): stri
       modifiedFiles: run.modifiedFiles.slice(0, 20),
       loopPhase: run.loopPhase,
       diffSummary: run.diffSummary,
+      verificationStatus: run.verificationStatus,
+      lastExecution: run.lastExecution,
+      selfFixIterationCount: run.selfFixIterationCount,
+      gitWorkflowStatus: run.gitWorkflowStatus,
+      gitBranch: run.gitBranch,
+      gitCommitSha: run.gitCommitSha,
       pendingSteps: pending.map((s) => ({ id: s.id, description: s.description })),
       completedSteps: completed,
       recentToolResults: toolDigest.slice(0, 3000),
@@ -80,6 +90,8 @@ export class AgentOrchestrator {
     enableEdits?: boolean;
     editMode?: "approval" | "autonomous";
     autonomousMode?: boolean;
+    enableVerification?: boolean;
+    enableGitWorkflow?: boolean;
   }): Promise<IAgentRunDocument> {
     const id = `agent-${crypto.randomUUID()}`;
     const enableEdits = params.enableEdits !== false;
@@ -103,6 +115,12 @@ export class AgentOrchestrator {
       enableEdits,
       editMode,
       workspaceInitialized: false,
+      enableVerification: params.enableVerification !== false,
+      verificationStatus: "not_run",
+      selfFixIterationCount: 0,
+      enableGitWorkflow:
+        params.enableGitWorkflow !== false && AGENT_CONFIG.defaultEnableGitWorkflow,
+      gitWorkflowStatus: "idle",
       tokenUsage: {
         inputTokens: 0,
         outputTokens: 0,
@@ -251,6 +269,8 @@ export class AgentOrchestrator {
         runId: run.id,
         enableEdits: run.enableEdits,
         autonomousMode: run.editMode === "autonomous",
+        enableVerification: run.enableVerification,
+        enableGitWorkflow: run.enableGitWorkflow,
       };
 
       let toolDigest = isResume ? "" : "";
@@ -316,6 +336,10 @@ export class AgentOrchestrator {
             run.loopPhase = "EDIT";
           } else if (decision.toolName === "get_workspace_diff") {
             run.loopPhase = "DIFF";
+          } else if (EXECUTION_TOOL_NAMES.has(decision.toolName)) {
+            run.loopPhase = "TEST";
+          } else if (GIT_TOOL_NAMES.has(decision.toolName)) {
+            run.loopPhase = "GIT";
           }
 
           const toolKey = `${decision.toolName}:${JSON.stringify(decision.toolInput || {})}`;
@@ -351,6 +375,26 @@ export class AgentOrchestrator {
               run.loopPhase = "REVIEW";
               await run.save();
               return;
+            }
+
+            if (EXECUTION_TOOL_NAMES.has(decision.toolName) && output && typeof output === "object") {
+              const exec = output as ISandboxRunResult;
+              run.lastExecution = {
+                tool: exec.tool,
+                command: exec.command,
+                exitCode: exec.exitCode,
+                success: exec.success,
+                durationMs: exec.durationMs,
+                errorSummary: exec.errorSummary,
+                sandbox: exec.sandbox,
+              };
+              run.verificationStatus = exec.success ? "passed" : "failed";
+              run.loopPhase = exec.success ? "VERIFY" : "EDIT";
+
+              if (agentSelfFixService.shouldAttemptSelfFix(run, exec)) {
+                agentSelfFixService.recordSelfFixAttempt(run);
+                toolDigest = `${toolDigest}\n[SELF_FIX_CONTEXT] ${agentSelfFixService.buildFailureDigest(run, exec)}`.slice(-6000);
+              }
             }
           }
           await run.save();
@@ -401,6 +445,7 @@ export class AgentOrchestrator {
       }
 
       if (!run.finalResult) {
+        const testsVerified = run.verificationStatus === "passed" && run.lastExecution?.success;
         const finalGen = await modelRouter.generate({
           organizationId: run.organizationId,
           model,
@@ -414,6 +459,9 @@ export class AgentOrchestrator {
                   planJson: JSON.stringify(run.plan),
                   findings: toolDigest,
                   diffSummary: JSON.stringify(run.diffSummary || {}),
+                  verificationStatus: run.verificationStatus,
+                  testsVerified,
+                  lastExecution: run.lastExecution,
                 }),
               },
             ],
@@ -423,7 +471,11 @@ export class AgentOrchestrator {
           },
         });
         run.tokenUsage = mergeTokenUsage(run.tokenUsage, finalGen.usage, { iterations: 1 });
-        run.finalResult = finalGen.text;
+        let finalText = finalGen.text;
+        if (/tests?\s+passed/i.test(finalText) && !testsVerified) {
+          finalText = `${finalText}\n\n(Note: sandbox tests did not pass — do not treat this run as verified.)`;
+        }
+        run.finalResult = finalText;
         run.iterationCount += 1;
       }
 

@@ -6,6 +6,8 @@ import { AGENT_CONFIG } from "./agentConfig";
 import { validateAgentFilePath, sliceFileContent } from "./agentPathUtils";
 import type { IAgentToolContext, IAgentToolDefinition } from "./agentTypes";
 import { writeTools } from "./writeToolRegistry";
+import { executionTools, EXECUTION_TOOL_NAMES } from "./executionToolRegistry";
+import { gitTools, GIT_TOOL_NAMES } from "./gitToolRegistry";
 import { readWorkspaceFile } from "./agentWorkspaceService";
 import { agentAuditService } from "./agentAuditService";
 
@@ -217,6 +219,8 @@ const tools: IAgentToolDefinition[] = [
     },
   },
   ...writeTools,
+  ...executionTools,
+  ...gitTools,
 ];
 
 const toolMap = new Map(tools.map((t) => [t.name, t]));
@@ -253,6 +257,22 @@ export async function executeAgentTool(
     }
     if (!ctx.runId) {
       throw new Error("Workspace run context is required for write tools.");
+    }
+  }
+  if (EXECUTION_TOOL_NAMES.has(toolName)) {
+    if (!ctx.enableVerification) {
+      throw new Error("Sandbox verification is disabled for this agent run.");
+    }
+    if (!ctx.runId) {
+      throw new Error("Workspace run context is required for execution tools.");
+    }
+  }
+  if (GIT_TOOL_NAMES.has(toolName)) {
+    if (!ctx.enableGitWorkflow) {
+      throw new Error("Git workflow is disabled for this agent run.");
+    }
+    if (!ctx.runId) {
+      throw new Error("Workspace run context is required for git tools.");
     }
   }
   try {
