@@ -19,6 +19,7 @@ import {
   LogOut,
   ChevronDown,
   FolderGit2,
+  Bot,
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { ProfileModal } from "./ProfileModal";
@@ -157,6 +158,12 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           label: "AI Copilot",
           href: "/app/ai",
           icon: <Sparkles size={14} />,
+          iconClass: "text-[var(--nova-ai)]",
+        },
+        {
+          label: "Coding Agent",
+          href: "/app/agent",
+          icon: <Bot size={14} />,
           iconClass: "text-[var(--nova-ai)]",
         },
         {

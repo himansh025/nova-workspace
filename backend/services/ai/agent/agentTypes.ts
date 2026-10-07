@@ -1,0 +1,60 @@
+export type AgentRunStatus =
+  | "PLANNING"
+  | "ANALYZING"
+  | "WAITING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
+
+export type PlanStepStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+
+export interface IPlanStep {
+  id: string;
+  description: string;
+  status: PlanStepStatus;
+  relevantFiles: string[];
+  reason?: string;
+  result?: string;
+}
+
+export interface IAgentTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  toolCalls: number;
+  iterations: number;
+}
+
+export interface IAgentToolContext {
+  organizationId: string;
+  userId: string;
+  repositoryId: string;
+  branch: string;
+}
+
+export interface IAgentToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  authorize: (ctx: IAgentToolContext) => void | Promise<void>;
+  execute: (ctx: IAgentToolContext, input: Record<string, unknown>) => Promise<unknown>;
+  maxOutputChars: number;
+}
+
+export interface IAgentDecision {
+  action: "tool" | "complete_step" | "finish";
+  toolName?: string;
+  toolInput?: Record<string, unknown>;
+  stepId?: string;
+  stepResult?: string;
+  finalSummary?: string;
+  reason?: string;
+}
+
+export interface IPlanningResult {
+  steps: Array<{
+    description: string;
+    relevantFiles?: string[];
+    reason?: string;
+  }>;
+}

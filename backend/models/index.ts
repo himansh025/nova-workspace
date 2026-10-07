@@ -22,3 +22,4 @@ export * from "./Repository";
 export * from "./GitHubWebhookDelivery";
 export * from "./AIConversation";
 export * from "./AIMessage";
+export * from "./AgentRun";
