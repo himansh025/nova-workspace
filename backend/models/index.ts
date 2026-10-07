@@ -23,3 +23,5 @@ export * from "./GitHubWebhookDelivery";
 export * from "./AIConversation";
 export * from "./AIMessage";
 export * from "./AgentRun";
+export * from "./AgentChangeProposal";
+export * from "./AgentAuditLog";

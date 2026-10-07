@@ -41,5 +41,17 @@ router.post(
   agentController.cancelRun
 );
 router.get("/agent/runs/:id/plan", requirePermission("ai:use"), agentController.getPlan);
+router.get("/agent/runs/:id/proposals", requirePermission("ai:use"), agentController.listProposals);
+router.post(
+  "/agent/runs/:id/proposals/:proposalId/approve",
+  requirePermission("ai:use"),
+  agentController.approveProposal
+);
+router.post(
+  "/agent/runs/:id/proposals/:proposalId/reject",
+  requirePermission("ai:use"),
+  agentController.rejectProposal
+);
+router.get("/agent/runs/:id/diff", requirePermission("ai:use"), agentController.getDiff);
 
 export default router;

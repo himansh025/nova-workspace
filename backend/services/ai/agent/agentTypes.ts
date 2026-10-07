@@ -6,6 +6,18 @@ export type AgentRunStatus =
   | "FAILED"
   | "CANCELLED";
 
+export type AgentLoopPhase = "PLAN" | "SEARCH" | "READ" | "EDIT" | "DIFF" | "REVIEW";
+
+export type AgentEditMode = "approval" | "autonomous";
+
+export interface IAgentDiffSummary {
+  filesAdded: number;
+  filesModified: number;
+  filesDeleted: number;
+  linesAdded: number;
+  linesRemoved: number;
+}
+
 export type PlanStepStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
 
 export interface IPlanStep {
@@ -30,6 +42,9 @@ export interface IAgentToolContext {
   userId: string;
   repositoryId: string;
   branch: string;
+  runId?: string;
+  autonomousMode?: boolean;
+  enableEdits?: boolean;
 }
 
 export interface IAgentToolDefinition {

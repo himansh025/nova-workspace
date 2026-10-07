@@ -16,6 +16,7 @@ import {
 } from "./toolRegistry";
 
 const activeRunAbort = new Map<string, { cancelled: boolean }>();
+const runModelById = new Map<string, string | undefined>();
 
 function parseJsonFromModel<T>(text: string): T {
   const trimmed = text.trim();
@@ -55,9 +56,13 @@ function compactStateForPrompt(run: IAgentRunDocument, toolDigest: string): stri
       iterationCount: run.iterationCount,
       currentStep: run.currentStep,
       relevantFiles: run.relevantFiles.slice(0, 20),
+      modifiedFiles: run.modifiedFiles.slice(0, 20),
+      loopPhase: run.loopPhase,
+      diffSummary: run.diffSummary,
       pendingSteps: pending.map((s) => ({ id: s.id, description: s.description })),
       completedSteps: completed,
-      recentToolResults: toolDigest.slice(0, 4000),
+      recentToolResults: toolDigest.slice(0, 3000),
+      recentDiffs: toolDigest.includes("get_workspace_diff") ? "see tool results" : undefined,
     },
     null,
     0
@@ -72,8 +77,15 @@ export class AgentOrchestrator {
     task: string;
     branch?: string;
     model?: string;
+    enableEdits?: boolean;
+    editMode?: "approval" | "autonomous";
+    autonomousMode?: boolean;
   }): Promise<IAgentRunDocument> {
     const id = `agent-${crypto.randomUUID()}`;
+    const enableEdits = params.enableEdits !== false;
+    const editMode =
+      params.editMode ||
+      (params.autonomousMode || AGENT_CONFIG.defaultAutonomousMode ? "autonomous" : "approval");
     const run = await AgentRunModel.create({
       id,
       organizationId: params.organizationId,
@@ -82,11 +94,15 @@ export class AgentOrchestrator {
       branch: params.branch,
       task: params.task.trim(),
       status: "PLANNING",
+      loopPhase: "PLAN",
       plan: [],
       discoveredFiles: [],
       relevantFiles: [],
       modifiedFiles: [],
       iterationCount: 0,
+      enableEdits,
+      editMode,
+      workspaceInitialized: false,
       tokenUsage: {
         inputTokens: 0,
         outputTokens: 0,
@@ -97,6 +113,7 @@ export class AgentOrchestrator {
     });
 
     activeRunAbort.set(id, { cancelled: false });
+    runModelById.set(id, params.model);
     setImmediate(() => {
       this.executeRun(id, params.model).catch((err) => {
         console.error(`[AgentOrchestrator] Run ${id} failed:`, err);
@@ -123,18 +140,28 @@ export class AgentOrchestrator {
     return AgentRunModel.findOne({ id: runId, organizationId, userId });
   }
 
+  async resumeRun(runId: string): Promise<void> {
+    const model = runModelById.get(runId);
+    await this.executeRun(runId, model, true);
+  }
+
   private async isCancelled(runId: string): Promise<boolean> {
     return activeRunAbort.get(runId)?.cancelled === true;
   }
 
-  async executeRun(runId: string, model?: string): Promise<void> {
+  async executeRun(runId: string, model?: string, isResume = false): Promise<void> {
     const started = Date.now();
     const run = await AgentRunModel.findOne({ id: runId });
     if (!run) return;
 
+    if (run.status === "WAITING" && !isResume) {
+      return;
+    }
+
     try {
       if (await this.isCancelled(runId)) return;
 
+      if (!isResume) {
       const ctx = await repositoryContextManager.buildInitialContext({
         organizationId: run.organizationId,
         repositoryId: run.repositoryId,
@@ -160,6 +187,7 @@ export class AgentOrchestrator {
                 repositoryMetadata: ctx.metadataBlock,
                 repositoryStructure: ctx.structureBlock,
                 codeContext: ctx.codeContextBlock,
+                enableEdits: run.enableEdits,
               }),
             },
           ],
@@ -187,25 +215,45 @@ export class AgentOrchestrator {
 
       run.plan = steps;
       run.status = "ANALYZING";
+      run.loopPhase = "SEARCH";
       run.currentStep = steps[0].id;
       await run.save();
+      }
 
       const { githubRepositoryExplorerService } = await import(
         "../../githubRepositoryExplorerService"
       );
+      const { initWorkspace, saveWorkspaceBaseline } = await import("./agentWorkspaceService");
       const { repository } = await githubRepositoryExplorerService.verifyAndGetRepository(
         run.organizationId,
         run.repositoryId
       );
 
+      const branch = run.branch || repository.selectedBranch || repository.defaultBranch || "main";
+
+      if (run.enableEdits && !run.workspaceInitialized) {
+        await initWorkspace({
+          runId: run.id,
+          organizationId: run.organizationId,
+          repositoryId: run.repositoryId,
+          branch,
+        });
+        await saveWorkspaceBaseline(run.id);
+        run.workspaceInitialized = true;
+        await run.save();
+      }
+
       const toolCtx = {
         organizationId: run.organizationId,
         userId: run.userId,
         repositoryId: run.repositoryId,
-        branch: run.branch || repository.selectedBranch || repository.defaultBranch || "main",
+        branch,
+        runId: run.id,
+        enableEdits: run.enableEdits,
+        autonomousMode: run.editMode === "autonomous",
       };
 
-      let toolDigest = "";
+      let toolDigest = isResume ? "" : "";
       const seenToolKeys = new Set<string>();
 
       // ─── Analysis iterations ──────────────────────────────────────────────
@@ -242,6 +290,7 @@ export class AgentOrchestrator {
                   compactState: compactStateForPrompt(run, toolDigest),
                   toolCatalog: formatToolCatalogForPrompt(),
                   pendingStep: `${pendingStep.id}: ${pendingStep.description}`,
+                  loopPhase: run.loopPhase,
                 }),
               },
             ],
@@ -257,6 +306,18 @@ export class AgentOrchestrator {
         const decision = parseJsonFromModel<IAgentDecision>(decisionResult.text);
 
         if (decision.action === "tool" && decision.toolName) {
+          if (["search_code", "list_files"].includes(decision.toolName)) {
+            run.loopPhase = "SEARCH";
+          } else if (decision.toolName === "read_file") {
+            run.loopPhase = "READ";
+          } else if (
+            ["apply_patch", "write_file", "delete_file", "rename_file"].includes(decision.toolName)
+          ) {
+            run.loopPhase = "EDIT";
+          } else if (decision.toolName === "get_workspace_diff") {
+            run.loopPhase = "DIFF";
+          }
+
           const toolKey = `${decision.toolName}:${JSON.stringify(decision.toolInput || {})}`;
           if (seenToolKeys.has(toolKey)) {
             toolDigest += `\n[skipped duplicate tool ${decision.toolName}]`;
@@ -268,8 +329,8 @@ export class AgentOrchestrator {
               decision.toolInput || {}
             );
             run.tokenUsage = mergeTokenUsage(run.tokenUsage, undefined, { toolCalls: 1 });
-            const outStr = JSON.stringify(output).slice(0, 2000);
-            toolDigest = `${toolDigest}\n[${decision.toolName}] ${outStr}`.slice(-8000);
+            const outStr = JSON.stringify(output).slice(0, 1500);
+            toolDigest = `${toolDigest}\n[${decision.toolName}] ${outStr}`.slice(-6000);
 
             // Track paths from tool results
             if (decision.toolName === "read_file" && decision.toolInput?.path) {
@@ -282,8 +343,21 @@ export class AgentOrchestrator {
                 if (!run.discoveredFiles.includes(item.path)) run.discoveredFiles.push(item.path);
               }
             }
+            if (
+              output &&
+              typeof output === "object" &&
+              (output as { requiresApproval?: boolean }).requiresApproval
+            ) {
+              run.loopPhase = "REVIEW";
+              await run.save();
+              return;
+            }
           }
           await run.save();
+          const refreshed = await AgentRunModel.findOne({ id: runId });
+          if (refreshed?.status === "WAITING") {
+            return;
+          }
           continue;
         }
 
@@ -339,6 +413,7 @@ export class AgentOrchestrator {
                   task: run.task,
                   planJson: JSON.stringify(run.plan),
                   findings: toolDigest,
+                  diffSummary: JSON.stringify(run.diffSummary || {}),
                 }),
               },
             ],
@@ -365,7 +440,9 @@ export class AgentOrchestrator {
       run.error = message;
       await run.save();
     } finally {
-      activeRunAbort.delete(runId);
+      if ((await AgentRunModel.findOne({ id: runId }))?.status !== "WAITING") {
+        activeRunAbort.delete(runId);
+      }
     }
   }
 }

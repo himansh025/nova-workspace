@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import type { AgentRunStatus, IPlanStep, IAgentTokenUsage } from "../services/ai/agent/agentTypes";
+import type {
+  AgentRunStatus,
+  AgentLoopPhase,
+  AgentEditMode,
+  IPlanStep,
+  IAgentTokenUsage,
+  IAgentDiffSummary,
+} from "../services/ai/agent/agentTypes";
 
 export interface IAgentRun {
   id: string;
@@ -16,6 +23,12 @@ export interface IAgentRun {
   modifiedFiles: string[];
   iterationCount: number;
   tokenUsage: IAgentTokenUsage;
+  enableEdits: boolean;
+  editMode: AgentEditMode;
+  workspaceInitialized: boolean;
+  loopPhase?: AgentLoopPhase;
+  waitingForProposalId?: string;
+  diffSummary?: IAgentDiffSummary;
   finalResult?: string;
   error?: string;
   createdAt: Date;
@@ -37,11 +50,28 @@ export interface IAgentRunDocument extends Document {
   modifiedFiles: string[];
   iterationCount: number;
   tokenUsage: IAgentTokenUsage;
+  enableEdits: boolean;
+  editMode: AgentEditMode;
+  workspaceInitialized: boolean;
+  loopPhase?: AgentLoopPhase;
+  waitingForProposalId?: string;
+  diffSummary?: IAgentDiffSummary;
   finalResult?: string;
   error?: string;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const DiffSummarySchema = new Schema(
+  {
+    filesAdded: { type: Number, default: 0 },
+    filesModified: { type: Number, default: 0 },
+    filesDeleted: { type: Number, default: 0 },
+    linesAdded: { type: Number, default: 0 },
+    linesRemoved: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
 
 const PlanStepSchema = new Schema(
   {
@@ -90,6 +120,15 @@ const AgentRunSchema = new Schema<IAgentRunDocument>(
     modifiedFiles: { type: [String], default: [] },
     iterationCount: { type: Number, default: 0 },
     tokenUsage: { type: TokenUsageSchema, default: () => ({}) },
+    enableEdits: { type: Boolean, default: true },
+    editMode: { type: String, enum: ["approval", "autonomous"], default: "approval" },
+    workspaceInitialized: { type: Boolean, default: false },
+    loopPhase: {
+      type: String,
+      enum: ["PLAN", "SEARCH", "READ", "EDIT", "DIFF", "REVIEW"],
+    },
+    waitingForProposalId: { type: String },
+    diffSummary: { type: DiffSummarySchema },
     finalResult: { type: String },
     error: { type: String },
   },

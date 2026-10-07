@@ -55,12 +55,9 @@ async function runAgentFoundationTests() {
 
   // ─── Tool registry ───────────────────────────────────────────────────────
   const toolNames = listAgentTools().map((t) => t.name).sort();
-  assert(
-    toolNames.join(",") ===
-      "get_git_diff,get_repository_info,list_files,read_file,search_code",
-    "Read-only tool registry",
-    toolNames.join(", ")
-  );
+  assert(toolNames.includes("apply_patch"), "apply_patch registered");
+  assert(toolNames.includes("write_file"), "write_file registered");
+  assert(toolNames.includes("read_file"), "read_file registered");
   assert(getAgentTool("read_file") !== undefined, "read_file tool registered");
   assert(getAgentTool("write_file") === undefined, "No write_file tool");
 

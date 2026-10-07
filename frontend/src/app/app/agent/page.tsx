@@ -34,11 +34,30 @@ interface PlanStep {
   result?: string;
 }
 
+interface Proposal {
+  id: string;
+  tool: string;
+  path: string;
+  status: string;
+  linesAdded: number;
+  linesRemoved: number;
+  diffPreview: string;
+}
+
 interface AgentRun {
   id: string;
   task: string;
   status: string;
   currentStep?: string;
+  loopPhase?: string;
+  waitingForProposalId?: string;
+  diffSummary?: {
+    linesAdded: number;
+    linesRemoved: number;
+    filesAdded: number;
+    filesModified: number;
+    filesDeleted: number;
+  };
   plan: PlanStep[];
   tokenUsage: {
     inputTokens: number;
@@ -62,6 +81,7 @@ export default function CodingAgentPage() {
   const [selectedBranch, setSelectedBranch] = useState("main");
   const [task, setTask] = useState("");
   const [run, setRun] = useState<AgentRun | null>(null);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -94,6 +114,13 @@ export default function CodingAgentPage() {
     const data = await res.json();
     if (data.success && data.run) {
       setRun(data.run);
+      if (data.run.status === "WAITING" || data.run.waitingForProposalId) {
+        const pRes = await fetch(`/api/ai/agent/runs/${runId}/proposals`, apiFetchInit());
+        const pData = await pRes.json();
+        if (pData.success && Array.isArray(pData.proposals)) {
+          setProposals(pData.proposals);
+        }
+      }
       if (TERMINAL.has(data.run.status) && pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
@@ -159,6 +186,24 @@ export default function CodingAgentPage() {
     }
   };
 
+  const approveProposal = async (proposalId: string) => {
+    if (!run) return;
+    try {
+      const res = await fetch(
+        `/api/ai/agent/runs/${run.id}/proposals/${proposalId}/approve`,
+        { ...apiFetchInit(), method: "POST" }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setRun(data.run);
+        addToast({ type: "success", title: "Changes approved", message: "Applied to workspace." });
+        startPolling(run.id);
+      }
+    } catch {
+      addToast({ type: "warning", title: "Approval failed", message: "Could not apply changes." });
+    }
+  };
+
   const currentStep = run?.plan.find((s) => s.id === run.currentStep);
 
   return (
@@ -168,11 +213,11 @@ export default function CodingAgentPage() {
           <Bot className="w-5 h-5 text-[var(--nova-ai)]" />
           <h1 className="text-xl font-bold text-[var(--nova-text-primary)]">Coding Agent</h1>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-600 border border-violet-500/20">
-            READ-ONLY · PHASE 4
+            WORKSPACE EDITS · PHASE 5
           </span>
         </div>
         <p className="text-xs text-[var(--nova-text-secondary)]">
-          Analyze your repository, build a plan, and explain intended changes. No file edits, commits, or PRs in this phase.
+          Modify code in an isolated workspace per run. GitHub is never written directly. Approve proposed patches before they apply (default).
         </p>
       </div>
 
@@ -242,9 +287,49 @@ export default function CodingAgentPage() {
             <span className="px-2 py-0.5 rounded-full text-xs border border-[var(--nova-border)]">
               {run.status}
             </span>
+            {run.loopPhase && (
+              <span className="text-xs text-[var(--nova-text-secondary)]">Phase: {run.loopPhase}</span>
+            )}
             {run.status === "COMPLETED" && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
             {run.status === "FAILED" && <AlertCircle className="w-4 h-4 text-red-500" />}
           </div>
+
+          {run.diffSummary && (
+            <div className="text-xs p-3 rounded-lg border border-[var(--nova-border)]">
+              Workspace diff: +{run.diffSummary.linesAdded} / -{run.diffSummary.linesRemoved} lines
+              ({run.diffSummary.filesModified} modified, {run.diffSummary.filesAdded} added)
+            </div>
+          )}
+
+          {proposals.filter((p) => p.status === "PENDING").length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Pending approval</h3>
+              {proposals
+                .filter((p) => p.status === "PENDING")
+                .map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-sm"
+                  >
+                    <div className="flex justify-between gap-2 mb-2">
+                      <span className="font-mono text-xs">{p.path}</span>
+                      <span className="text-xs text-emerald-600">+{p.linesAdded}</span>
+                      <span className="text-xs text-red-500">-{p.linesRemoved}</span>
+                    </div>
+                    <pre className="text-xs overflow-x-auto max-h-32 text-[var(--nova-text-secondary)]">
+                      {p.diffPreview}
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={() => approveProposal(p.id)}
+                      className="mt-2 px-3 py-1.5 rounded-lg bg-[var(--nova-ai)] text-white text-xs"
+                    >
+                      Approve changes
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
 
           <div className="grid sm:grid-cols-3 gap-3 text-xs">
             <div className="p-3 rounded-lg border border-[var(--nova-border)]">

@@ -11,4 +11,9 @@ export const AGENT_CONFIG = {
   decisionMaxOutputTokens: Number(process.env.AGENT_DECISION_MAX_TOKENS || 2048),
   finalMaxOutputTokens: Number(process.env.AGENT_FINAL_MAX_TOKENS || 4096),
   githubMaxFileSize: ENV.GITHUB_MAX_SOURCE_FILE_SIZE,
+  workspaceMaxFiles: Number(process.env.AGENT_WORKSPACE_MAX_FILES || 200),
+  workspaceMaxBytes: Number(process.env.AGENT_WORKSPACE_MAX_BYTES || 5 * 1024 * 1024),
+  workspaceMaxFileBytes: Number(process.env.AGENT_WORKSPACE_MAX_FILE_BYTES || 512 * 1024),
+  maxPatchChars: Number(process.env.AGENT_MAX_PATCH_CHARS || 32_000),
+  defaultAutonomousMode: process.env.AGENT_AUTONOMOUS_MODE === "true",
 };

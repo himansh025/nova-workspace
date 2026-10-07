@@ -5,6 +5,11 @@ import {
 import { AGENT_CONFIG } from "./agentConfig";
 import { validateAgentFilePath, sliceFileContent } from "./agentPathUtils";
 import type { IAgentToolContext, IAgentToolDefinition } from "./agentTypes";
+import { writeTools } from "./writeToolRegistry";
+import { readWorkspaceFile } from "./agentWorkspaceService";
+import { agentAuditService } from "./agentAuditService";
+
+const WRITE_TOOL_NAMES = new Set(writeTools.map((t) => t.name));
 
 function boundOutput(data: unknown, maxChars: number): unknown {
   const json = JSON.stringify(data);
@@ -102,6 +107,30 @@ const tools: IAgentToolDefinition[] = [
     authorize: assertRepoAccess,
     async execute(ctx, input) {
       const path = validateAgentFilePath(input.path);
+
+      if (ctx.runId) {
+        const local = await readWorkspaceFile(ctx.runId, path);
+        if (local.exists && local.content !== undefined) {
+          const sliced = sliceFileContent(
+            local.content,
+            input.startLine as number | undefined,
+            input.endLine as number | undefined,
+            AGENT_CONFIG.maxReadFileLines
+          );
+          return boundOutput(
+            {
+              path,
+              source: "workspace",
+              startLine: sliced.startLine,
+              endLine: sliced.endLine,
+              truncated: sliced.truncated,
+              content: sliced.content,
+            },
+            AGENT_CONFIG.maxToolOutputChars
+          );
+        }
+      }
+
       const file = await githubRepositoryExplorerService.getFile(
         ctx.organizationId,
         ctx.repositoryId,
@@ -187,6 +216,7 @@ const tools: IAgentToolDefinition[] = [
       return boundOutput(bounded, AGENT_CONFIG.maxToolOutputChars);
     },
   },
+  ...writeTools,
 ];
 
 const toolMap = new Map(tools.map((t) => [t.name, t]));
@@ -217,8 +247,28 @@ export async function executeAgentTool(
     throw new Error(`Tool '${toolName}' is not available.`);
   }
   await tool.authorize(ctx);
+  if (WRITE_TOOL_NAMES.has(toolName)) {
+    if (!ctx.enableEdits) {
+      throw new Error("File modifications are disabled for this agent run.");
+    }
+    if (!ctx.runId) {
+      throw new Error("Workspace run context is required for write tools.");
+    }
+  }
   try {
-    return await tool.execute(ctx, input);
+    const output = await tool.execute(ctx, input);
+    if (ctx.runId) {
+      await agentAuditService.record({
+        agentRunId: ctx.runId,
+        organizationId: ctx.organizationId,
+        userId: ctx.userId,
+        tool: toolName,
+        path: typeof input.path === "string" ? input.path : undefined,
+        input,
+        output,
+      });
+    }
+    return output;
   } catch (err: unknown) {
     if (err instanceof GitHubExplorerError) {
       throw new Error(err.message);

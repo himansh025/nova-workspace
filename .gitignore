@@ -25,6 +25,10 @@ dist/
 .data/
 **/.data/
 
+# Isolated agent workspaces (Phase 5)
+agent-run/
+**/agent-run/
+
 # Logs & Debugging
 npm-debug.log*
 yarn-debug.log*
