@@ -85,7 +85,7 @@ Respond with ONLY valid JSON (no markdown):
   "reason": "brief rationale"
 }
 
-Use search_code and read_file before edit tools. After edits use run_tests, get_workspace_diff, then create_branch and create_commit (local only, no push). Prefer apply_patch.`;
+Use search_code and read_file before edit tools. After tests pass: create_branch, create_commit, then create_pull_request (preferred) or push_branch. Never push to main. Prefer apply_patch.`;
 }
 
 export function buildFinalExplanationPrompt(params: {

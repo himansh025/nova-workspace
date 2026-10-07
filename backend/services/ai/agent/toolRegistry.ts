@@ -8,6 +8,7 @@ import type { IAgentToolContext, IAgentToolDefinition } from "./agentTypes";
 import { writeTools } from "./writeToolRegistry";
 import { executionTools, EXECUTION_TOOL_NAMES } from "./executionToolRegistry";
 import { gitTools, GIT_TOOL_NAMES } from "./gitToolRegistry";
+import { githubPublishTools, GITHUB_PUBLISH_TOOL_NAMES } from "./githubPublishToolRegistry";
 import { readWorkspaceFile } from "./agentWorkspaceService";
 import { agentAuditService } from "./agentAuditService";
 
@@ -221,6 +222,7 @@ const tools: IAgentToolDefinition[] = [
   ...writeTools,
   ...executionTools,
   ...gitTools,
+  ...githubPublishTools,
 ];
 
 const toolMap = new Map(tools.map((t) => [t.name, t]));
@@ -273,6 +275,14 @@ export async function executeAgentTool(
     }
     if (!ctx.runId) {
       throw new Error("Workspace run context is required for git tools.");
+    }
+  }
+  if (GITHUB_PUBLISH_TOOL_NAMES.has(toolName)) {
+    if (!ctx.enableGithubPublish) {
+      throw new Error("GitHub publish is disabled for this agent run.");
+    }
+    if (!ctx.runId) {
+      throw new Error("Workspace run context is required for publish tools.");
     }
   }
   try {

@@ -33,6 +33,8 @@ export const agentController = {
         autonomousMode,
         enableVerification,
         enableGitWorkflow,
+        enableGithubPublish,
+        publishMode,
       } = req.body;
 
       const run = await agentService.createRun(orgId, userId, {
@@ -45,6 +47,8 @@ export const agentController = {
         autonomousMode,
         enableVerification,
         enableGitWorkflow,
+        enableGithubPublish,
+        publishMode,
       });
 
       return res.status(201).json({ success: true, run });

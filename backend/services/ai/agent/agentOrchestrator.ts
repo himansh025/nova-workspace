@@ -16,6 +16,7 @@ import {
 } from "./toolRegistry";
 import { EXECUTION_TOOL_NAMES } from "./executionToolRegistry";
 import { GIT_TOOL_NAMES } from "./gitToolRegistry";
+import { GITHUB_PUBLISH_TOOL_NAMES } from "./githubPublishToolRegistry";
 import { agentSelfFixService } from "./agentSelfFixService";
 import type { ISandboxRunResult } from "./sandboxExecutorService";
 
@@ -69,6 +70,9 @@ function compactStateForPrompt(run: IAgentRunDocument, toolDigest: string): stri
       gitWorkflowStatus: run.gitWorkflowStatus,
       gitBranch: run.gitBranch,
       gitCommitSha: run.gitCommitSha,
+      publishStatus: run.publishStatus,
+      pullRequestNumber: run.pullRequestNumber,
+      pullRequestUrl: run.pullRequestUrl,
       pendingSteps: pending.map((s) => ({ id: s.id, description: s.description })),
       completedSteps: completed,
       recentToolResults: toolDigest.slice(0, 3000),
@@ -92,6 +96,8 @@ export class AgentOrchestrator {
     autonomousMode?: boolean;
     enableVerification?: boolean;
     enableGitWorkflow?: boolean;
+    enableGithubPublish?: boolean;
+    publishMode?: "pr" | "push_only";
   }): Promise<IAgentRunDocument> {
     const id = `agent-${crypto.randomUUID()}`;
     const enableEdits = params.enableEdits !== false;
@@ -121,6 +127,10 @@ export class AgentOrchestrator {
       enableGitWorkflow:
         params.enableGitWorkflow !== false && AGENT_CONFIG.defaultEnableGitWorkflow,
       gitWorkflowStatus: "idle",
+      enableGithubPublish:
+        params.enableGithubPublish !== false && AGENT_CONFIG.defaultEnableGithubPublish,
+      publishMode: params.publishMode || AGENT_CONFIG.defaultPublishMode,
+      publishStatus: "idle",
       tokenUsage: {
         inputTokens: 0,
         outputTokens: 0,
@@ -271,6 +281,8 @@ export class AgentOrchestrator {
         autonomousMode: run.editMode === "autonomous",
         enableVerification: run.enableVerification,
         enableGitWorkflow: run.enableGitWorkflow,
+        enableGithubPublish: run.enableGithubPublish,
+        publishMode: run.publishMode,
       };
 
       let toolDigest = isResume ? "" : "";
@@ -340,6 +352,8 @@ export class AgentOrchestrator {
             run.loopPhase = "TEST";
           } else if (GIT_TOOL_NAMES.has(decision.toolName)) {
             run.loopPhase = "GIT";
+          } else if (GITHUB_PUBLISH_TOOL_NAMES.has(decision.toolName)) {
+            run.loopPhase = "PUBLISH";
           }
 
           const toolKey = `${decision.toolName}:${JSON.stringify(decision.toolInput || {})}`;

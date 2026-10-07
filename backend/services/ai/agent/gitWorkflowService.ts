@@ -17,7 +17,7 @@ export interface IGitCommandResult {
   stderr: string;
 }
 
-async function runGit(runId: string, args: string[]): Promise<IGitCommandResult> {
+export async function runGit(runId: string, args: string[]): Promise<IGitCommandResult> {
   if (args.some((a) => a.includes(";") || a.includes("&&") || a.includes("|"))) {
     throw new Error("Invalid git argument.");
   }

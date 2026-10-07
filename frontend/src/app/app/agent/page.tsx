@@ -83,6 +83,10 @@ interface AgentRun {
   gitBranch?: string;
   gitCommitSha?: string;
   gitError?: string;
+  publishStatus?: string;
+  pullRequestNumber?: number;
+  pullRequestUrl?: string;
+  publishError?: string;
 }
 
 const TERMINAL = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
@@ -226,7 +230,7 @@ export default function CodingAgentPage() {
           <Bot className="w-5 h-5 text-[var(--nova-ai)]" />
           <h1 className="text-xl font-bold text-[var(--nova-text-primary)]">Coding Agent</h1>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-600 border border-violet-500/20">
-            GIT WORKFLOW · PHASE 7
+            GITHUB PR · PHASE 8
           </span>
         </div>
         <p className="text-xs text-[var(--nova-text-secondary)]">
@@ -318,6 +322,23 @@ export default function CodingAgentPage() {
               {run.selfFixIterationCount ? (
                 <span className="ml-2">Self-fix attempts: {run.selfFixIterationCount}</span>
               ) : null}
+            </div>
+          )}
+
+          {run.pullRequestUrl && (
+            <a
+              href={run.pullRequestUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-[var(--nova-ai)] underline block"
+            >
+              Pull Request #{run.pullRequestNumber}
+            </a>
+          )}
+          {run.publishStatus && run.publishStatus !== "idle" && (
+            <div className="text-xs text-[var(--nova-text-secondary)]">
+              Publish: {run.publishStatus}
+              {run.publishError && <span className="text-red-500 ml-2">{run.publishError}</span>}
             </div>
           )}
 

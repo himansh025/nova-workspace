@@ -19,6 +19,8 @@ export const agentService = {
       autonomousMode?: boolean;
       enableVerification?: boolean;
       enableGitWorkflow?: boolean;
+      enableGithubPublish?: boolean;
+      publishMode?: "pr" | "push_only";
     }
   ) {
     if (!params.task || !params.task.trim()) {
@@ -56,6 +58,8 @@ export const agentService = {
       autonomousMode: editMode === "autonomous",
       enableVerification: params.enableVerification,
       enableGitWorkflow: params.enableGitWorkflow,
+      enableGithubPublish: params.enableGithubPublish,
+      publishMode: params.publishMode,
     });
 
     return this.toSafeRun(run);
@@ -168,6 +172,12 @@ export const agentService = {
     gitBranch?: string;
     gitCommitSha?: string;
     gitError?: string;
+    enableGithubPublish?: boolean;
+    publishMode?: string;
+    publishStatus?: string;
+    pullRequestNumber?: number;
+    pullRequestUrl?: string;
+    publishError?: string;
     finalResult?: string;
     error?: string;
     createdAt: Date;
@@ -203,6 +213,12 @@ export const agentService = {
       gitBranch: run.gitBranch,
       gitCommitSha: run.gitCommitSha,
       gitError: run.gitError,
+      enableGithubPublish: run.enableGithubPublish,
+      publishMode: run.publishMode,
+      publishStatus: run.publishStatus,
+      pullRequestNumber: run.pullRequestNumber,
+      pullRequestUrl: run.pullRequestUrl,
+      publishError: run.publishError,
       finalResult: run.finalResult,
       error: run.error,
       createdAt: run.createdAt,

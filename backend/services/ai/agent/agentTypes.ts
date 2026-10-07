@@ -15,7 +15,11 @@ export type AgentLoopPhase =
   | "REVIEW"
   | "TEST"
   | "VERIFY"
-  | "GIT";
+  | "GIT"
+  | "PUBLISH";
+
+export type AgentPublishMode = "pr" | "push_only";
+export type PublishStatus = "idle" | "pushed" | "pr_created" | "failed";
 
 export type GitWorkflowStatus = "idle" | "branch_created" | "committed" | "failed";
 
@@ -60,6 +64,8 @@ export interface IAgentToolContext {
   enableEdits?: boolean;
   enableVerification?: boolean;
   enableGitWorkflow?: boolean;
+  enableGithubPublish?: boolean;
+  publishMode?: AgentPublishMode;
 }
 
 export interface IAgentLastExecution {

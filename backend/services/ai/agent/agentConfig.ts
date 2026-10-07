@@ -29,4 +29,6 @@ export const AGENT_CONFIG = {
   sandboxTmpfsMb: Number(process.env.AGENT_SANDBOX_TMPFS_MB || 64),
   gitMaxOutputChars: Number(process.env.AGENT_GIT_MAX_OUTPUT_CHARS || 24_000),
   defaultEnableGitWorkflow: process.env.AGENT_ENABLE_GIT_WORKFLOW !== "false",
+  defaultEnableGithubPublish: process.env.AGENT_ENABLE_GITHUB_PUBLISH !== "false",
+  defaultPublishMode: (process.env.AGENT_PUBLISH_MODE || "pr") as "pr" | "push_only",
 };

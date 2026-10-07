@@ -5,6 +5,8 @@ import type {
   AgentEditMode,
   VerificationStatus,
   GitWorkflowStatus,
+  AgentPublishMode,
+  PublishStatus,
   IAgentLastExecution,
   IPlanStep,
   IAgentTokenUsage,
@@ -41,6 +43,13 @@ export interface IAgentRun {
   gitBranch?: string;
   gitCommitSha?: string;
   gitError?: string;
+  enableGithubPublish: boolean;
+  publishMode: AgentPublishMode;
+  publishStatus: PublishStatus;
+  githubPushSha?: string;
+  pullRequestNumber?: number;
+  pullRequestUrl?: string;
+  publishError?: string;
   finalResult?: string;
   error?: string;
   createdAt: Date;
@@ -77,6 +86,13 @@ export interface IAgentRunDocument extends Document {
   gitBranch?: string;
   gitCommitSha?: string;
   gitError?: string;
+  enableGithubPublish: boolean;
+  publishMode: AgentPublishMode;
+  publishStatus: PublishStatus;
+  githubPushSha?: string;
+  pullRequestNumber?: number;
+  pullRequestUrl?: string;
+  publishError?: string;
   finalResult?: string;
   error?: string;
   createdAt: Date;
@@ -146,7 +162,7 @@ const AgentRunSchema = new Schema<IAgentRunDocument>(
     workspaceInitialized: { type: Boolean, default: false },
     loopPhase: {
       type: String,
-      enum: ["PLAN", "SEARCH", "READ", "EDIT", "DIFF", "REVIEW", "TEST", "VERIFY", "GIT"],
+      enum: ["PLAN", "SEARCH", "READ", "EDIT", "DIFF", "REVIEW", "TEST", "VERIFY", "GIT", "PUBLISH"],
     },
     waitingForProposalId: { type: String },
     diffSummary: { type: DiffSummarySchema },
@@ -178,6 +194,17 @@ const AgentRunSchema = new Schema<IAgentRunDocument>(
     gitBranch: { type: String },
     gitCommitSha: { type: String },
     gitError: { type: String },
+    enableGithubPublish: { type: Boolean, default: true },
+    publishMode: { type: String, enum: ["pr", "push_only"], default: "pr" },
+    publishStatus: {
+      type: String,
+      enum: ["idle", "pushed", "pr_created", "failed"],
+      default: "idle",
+    },
+    githubPushSha: { type: String },
+    pullRequestNumber: { type: Number },
+    pullRequestUrl: { type: String },
+    publishError: { type: String },
     finalResult: { type: String },
     error: { type: String },
   },
