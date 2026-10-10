@@ -72,7 +72,7 @@ export const projectController = {
       const { id } = req.params;
       const updates = req.body;
       const access = await resolveProjectAccess(req);
-      if (!(await canAccessProject(access, id as string))) {
+      if (!access.isPrivileged && !(await canAccessProject(access, id as string))) {
         return res.status(403).json({ success: false, error: "You do not have access to this project." });
       }
 
@@ -103,7 +103,7 @@ export const projectController = {
       const orgId = (req as any).organizationId || "org-default";
       const { id } = req.params;
       const access = await resolveProjectAccess(req);
-      if (!(await canAccessProject(access, id as string))) {
+      if (!access.isPrivileged && !(await canAccessProject(access, id as string))) {
         return res.status(403).json({ success: false, error: "You do not have access to this project." });
       }
 

@@ -36,10 +36,13 @@ export async function resolveProjectAccess(req: Request): Promise<ProjectAccessC
     return cached.ctx;
   }
 
-  const member = await TeamMemberModel.findOne({
-    organizationId,
-    $or: [{ id: user.id }, { email: String(user.email).toLowerCase().trim() }],
-  }).lean();
+  const email = user.email ? String(user.email).toLowerCase().trim() : "";
+  const member = email
+    ? await TeamMemberModel.findOne({
+        organizationId,
+        email,
+      }).lean()
+    : null;
 
   if (!member || (member as any).status === "pending") {
     const ctx = {
@@ -73,17 +76,14 @@ export function projectVisibilityFilter(access: ProjectAccessContext): Record<st
   if (access.teamGroupId) {
     return {
       ...base,
-      $or: [
-        { teamGroupId: null },
-        { teamGroupId: { $exists: false } },
-        { teamGroupId: access.teamGroupId },
-      ],
+      teamGroupId: access.teamGroupId,
     };
   }
 
+  // Member without a squad assignment — no squad-scoped projects
   return {
     ...base,
-    $or: [{ teamGroupId: null }, { teamGroupId: { $exists: false } }],
+    id: { $exists: false },
   };
 }
 

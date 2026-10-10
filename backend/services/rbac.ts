@@ -76,7 +76,6 @@ const ROLE_PERMISSIONS: Record<OrgRole, Permission[]> = {
   ],
   member: [
     "project:read",
-    "project:write",
     "task:read",
     "task:create",
     "task:update",

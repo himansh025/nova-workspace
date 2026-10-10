@@ -12,6 +12,7 @@ import {
   listPendingInvitesForUser,
   notifyUserOfTeamInvite,
 } from "../services/teamInviteService";
+import { resolveProjectAccess } from "../services/projectAccessService";
 
 function sanitizeMember(doc: any) {
   const m = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
@@ -207,7 +208,14 @@ export const teamController = {
   async getGroups(req: Request, res: Response) {
     try {
       const orgId = (req as any).organizationId || "org-default";
-      const groups = await TeamGroupModel.find({ organizationId: orgId }).sort({ createdAt: 1 });
+      const access = await resolveProjectAccess(req);
+      const filter: Record<string, unknown> = { organizationId: orgId };
+      if (!access.isPrivileged && access.teamGroupId) {
+        filter.id = access.teamGroupId;
+      } else if (!access.isPrivileged && !access.memberFound) {
+        return res.json({ success: true, groups: [] });
+      }
+      const groups = await TeamGroupModel.find(filter).sort({ createdAt: 1 });
       return res.json({ success: true, groups });
     } catch (error: any) {
       return res.status(500).json({ success: false, error: error.message });

@@ -10,6 +10,7 @@ import {
   resetPasswordWithToken,
 } from "../services/auth";
 import { getUserOrganizations, getOrganizationMembership } from "../services/organizationService";
+import { getRolePermissions } from "../services/rbac";
 import { syncTeamInviteNotificationsForUser } from "../services/teamInviteService";
 import { broadcastEvent } from "../services/events";
 import { parseCookies } from "../middlewares/auth";
@@ -134,8 +135,16 @@ export const authController = {
 
       // Fetch all organizations the user is a member of
       const userOrgs = await getUserOrganizations(sessionData.user.id);
-      const activeOrgId = sessionData.organizationId;
-      const activeRole = activeOrgId ? await getOrganizationMembership(activeOrgId, sessionData.user.id) : null;
+      const requestedOrgId =
+        (req.headers["x-organization-id"] as string) || sessionData.organizationId;
+      const activeOrgId =
+        requestedOrgId &&
+        userOrgs.some((o) => o.organization.id === requestedOrgId)
+          ? requestedOrgId
+          : sessionData.organizationId;
+      const activeRole = activeOrgId
+        ? await getOrganizationMembership(activeOrgId, sessionData.user.id)
+        : null;
 
       return res.json({
         success: true,
@@ -143,6 +152,7 @@ export const authController = {
         user: sessionData.user,
         organizationId: activeOrgId,
         role: activeRole,
+        permissions: activeRole ? getRolePermissions(activeRole) : [],
         organizations: userOrgs.map((o) => ({
           id: o.organization.id,
           name: o.organization.name,

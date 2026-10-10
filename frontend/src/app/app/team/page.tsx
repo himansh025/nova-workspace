@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { TeamMember } from "@/types";
 import { TeamSkeleton } from "@/components/workspace/Skeletons";
+import { useOrgPermissions } from "@/hooks/useOrgPermissions";
 
 interface TeamGroup {
   id: string;
@@ -25,6 +26,7 @@ interface TeamGroup {
 type PageTab = "squads" | "members";
 
 export default function TeamPage() {
+  const { canManageTeam } = useOrgPermissions();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -327,7 +329,7 @@ export default function TeamPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        {member.status === "pending" && (
+        {canManageTeam && member.status === "pending" && (
           <button
             type="button"
             onClick={() => handleResendInvite(member)}
@@ -338,26 +340,30 @@ export default function TeamPage() {
         )}
         <Link
           href="/app/tasks"
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md border border-[var(--nova-border)] text-xs font-medium hover:bg-[var(--nova-deep)]"
+          className={`flex items-center justify-center gap-1 py-1.5 rounded-md border border-[var(--nova-border)] text-xs font-medium hover:bg-[var(--nova-deep)] ${canManageTeam ? "flex-1" : "w-full"}`}
         >
           Issues <ArrowUpRight className="w-3 h-3" />
         </Link>
-        <button
-          type="button"
-          onClick={() => openEditMember(member)}
-          className="p-1.5 rounded-md border border-[var(--nova-border)] hover:bg-[var(--nova-deep)] text-[var(--nova-text-secondary)]"
-          title="Edit member"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleDeleteMember(member)}
-          className="p-1.5 rounded-md border border-[var(--nova-danger-border)] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)]"
-          title="Remove member"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        {canManageTeam && (
+          <>
+            <button
+              type="button"
+              onClick={() => openEditMember(member)}
+              className="p-1.5 rounded-md border border-[var(--nova-border)] hover:bg-[var(--nova-deep)] text-[var(--nova-text-secondary)]"
+              title="Edit member"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeleteMember(member)}
+              className="p-1.5 rounded-md border border-[var(--nova-danger-border)] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)]"
+              title="Remove member"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -395,25 +401,26 @@ export default function TeamPage() {
                 </button>
               </div>
             )}
-            {activeTab === "squads" ? (
-              <button
-                type="button"
-                onClick={openCreateGroup}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] text-white rounded text-xs font-medium"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Create Squad
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={openCreateMember}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] text-white rounded text-xs font-medium"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Member
-              </button>
-            )}
+            {canManageTeam &&
+              (activeTab === "squads" ? (
+                <button
+                  type="button"
+                  onClick={openCreateGroup}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] text-white rounded text-xs font-medium"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Create Squad
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openCreateMember}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] text-white rounded text-xs font-medium"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Member
+                </button>
+              ))}
           </div>
         </div>
 
@@ -458,9 +465,11 @@ export default function TeamPage() {
             <div className="rounded-xl border border-dashed border-[var(--nova-border)] bg-[var(--nova-surface)] p-8 text-center space-y-3">
               <UsersRound className="w-8 h-8 mx-auto text-[var(--nova-text-muted)]" />
               <p className="text-sm text-[var(--nova-text-secondary)]">No squads yet. Create one to organize your team.</p>
-              <button type="button" onClick={openCreateGroup} className="text-xs text-[var(--nova-accent)] font-medium">
-                + Create first squad
-              </button>
+              {canManageTeam && (
+                <button type="button" onClick={openCreateGroup} className="text-xs text-[var(--nova-accent)] font-medium">
+                  + Create first squad
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -482,22 +491,24 @@ export default function TeamPage() {
                         {count} members
                       </span>
                     </div>
-                    <div className="flex gap-2 pt-2 border-t border-[var(--nova-border)]">
-                      <button
-                        type="button"
-                        onClick={() => openEditGroup(group)}
-                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs rounded-md border border-[var(--nova-border)] hover:bg-[var(--nova-deep)]"
-                      >
-                        <Pencil className="w-3 h-3" /> Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteGroup(group)}
-                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs rounded-md border border-[var(--nova-danger-border)] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)]"
-                      >
-                        <Trash2 className="w-3 h-3" /> Delete
-                      </button>
-                    </div>
+                    {canManageTeam && (
+                      <div className="flex gap-2 pt-2 border-t border-[var(--nova-border)]">
+                        <button
+                          type="button"
+                          onClick={() => openEditGroup(group)}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs rounded-md border border-[var(--nova-border)] hover:bg-[var(--nova-deep)]"
+                        >
+                          <Pencil className="w-3 h-3" /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteGroup(group)}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs rounded-md border border-[var(--nova-danger-border)] text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)]"
+                        >
+                          <Trash2 className="w-3 h-3" /> Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -537,7 +548,7 @@ export default function TeamPage() {
                     <th className="py-3 px-4">Email</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4 text-right">Tasks</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    {canManageTeam && <th className="py-3 px-4 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--nova-border)]">
@@ -559,20 +570,22 @@ export default function TeamPage() {
                       <td className="py-3 px-4 font-mono text-[11px]">{member.email}</td>
                       <td className="py-3 px-4 capitalize">{member.status}</td>
                       <td className="py-3 px-4 text-right font-mono">{member.activeTasksCount}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex justify-end gap-1">
-                          <button type="button" onClick={() => openEditMember(member)} className="p-1 rounded hover:bg-[var(--nova-deep)]">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMember(member)}
-                            className="p-1 rounded text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)]"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+                      {canManageTeam && (
+                        <td className="py-3 px-4">
+                          <div className="flex justify-end gap-1">
+                            <button type="button" onClick={() => openEditMember(member)} className="p-1 rounded hover:bg-[var(--nova-deep)]">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMember(member)}
+                              className="p-1 rounded text-[var(--nova-danger-text)] hover:bg-[var(--nova-danger-subtle)]"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

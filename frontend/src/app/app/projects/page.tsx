@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FolderKanban, Plus, GitBranch, ArrowUpRight, X, Layers, Clock, LayoutGrid, List, Trash2, Edit2 } from "lucide-react";
 import { Project } from "@/types";
 import { ProjectsSkeleton } from "@/components/workspace/Skeletons";
+import { useOrgPermissions } from "@/hooks/useOrgPermissions";
 
 interface TeamGroup {
   id: string;
@@ -12,6 +13,7 @@ interface TeamGroup {
 }
 
 export default function ProjectsPage() {
+  const { canWriteProjects } = useOrgPermissions();
   const [projects, setProjects] = useState<Project[]>([]);
   const [squads, setSquads] = useState<TeamGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,13 +212,15 @@ export default function ProjectsPage() {
             </button>
           </div>
 
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-xs font-medium shadow-xs transition-colors duration-150"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Project</span>
-          </button>
+          {canWriteProjects && (
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--nova-accent)] hover:bg-[var(--nova-accent-hover)] text-white rounded text-xs font-medium shadow-xs transition-colors duration-150"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Project</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -281,20 +285,24 @@ export default function ProjectsPage() {
                     <span>Enter Project Workspace</span>
                     <ArrowUpRight className="w-3.5 h-3.5 text-[var(--nova-text-secondary)]" />
                   </Link>
-                  <button
-                    onClick={() => openEditModal(p)}
-                    className="p-2 border border-[var(--nova-border)] text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded-md transition-colors"
-                    title="Edit Project"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteProject(p.id)}
-                    className="p-2 border border-[var(--nova-border)] text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded-md transition-colors"
-                    title="Delete Project"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {canWriteProjects && (
+                    <>
+                      <button
+                        onClick={() => openEditModal(p)}
+                        className="p-2 border border-[var(--nova-border)] text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded-md transition-colors"
+                        title="Edit Project"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProject(p.id)}
+                        className="p-2 border border-[var(--nova-border)] text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded-md transition-colors"
+                        title="Delete Project"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -324,7 +332,7 @@ export default function ProjectsPage() {
                 <th className="py-3 px-4 font-medium">Progress</th>
                 <th className="py-3 px-4 font-medium">Active Branch</th>
                 <th className="py-3 px-4 font-medium">Velocity</th>
-                <th className="py-3 px-4 font-medium text-right">Actions</th>
+                {canWriteProjects && <th className="py-3 px-4 font-medium text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="text-xs divide-y divide-[var(--nova-border)]">
@@ -388,20 +396,24 @@ export default function ProjectsPage() {
                           <span>Workspace</span>
                           <ArrowUpRight className="w-3 h-3 text-[var(--nova-text-secondary)]" />
                         </Link>
-                        <button
-                          onClick={() => openEditModal(p)}
-                          className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded transition-colors"
-                          title="Edit Project"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProject(p.id)}
-                          className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded transition-colors"
-                          title="Delete Project"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canWriteProjects && (
+                          <>
+                            <button
+                              onClick={() => openEditModal(p)}
+                              className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] rounded transition-colors"
+                              title="Edit Project"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProject(p.id)}
+                              className="p-1.5 text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded transition-colors"
+                              title="Delete Project"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

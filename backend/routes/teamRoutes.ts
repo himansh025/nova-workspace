@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { teamController } from "../controllers/teamController";
-import { authGuard, optionalAuth } from "../middlewares/auth";
+import { authGuard, optionalAuth, requirePermission } from "../middlewares/auth";
 
 const router = Router();
 
@@ -13,14 +13,14 @@ router.get("/my-invites", teamController.getMyInvites);
 router.post("/invites/accept-authenticated", teamController.acceptInviteAuthenticated);
 
 router.get("/groups", teamController.getGroups);
-router.post("/groups", teamController.createGroup);
-router.patch("/groups/:id", teamController.updateGroup);
-router.delete("/groups/:id", teamController.deleteGroup);
+router.post("/groups", requirePermission("team:manage"), teamController.createGroup);
+router.patch("/groups/:id", requirePermission("team:manage"), teamController.updateGroup);
+router.delete("/groups/:id", requirePermission("team:manage"), teamController.deleteGroup);
 
 router.get("/", teamController.getTeam);
-router.post("/", teamController.addMember);
-router.post("/:id/resend-invite", teamController.resendInvite);
-router.patch("/:id", teamController.updateMember);
-router.delete("/:id", teamController.deleteMember);
+router.post("/", requirePermission("team:manage"), teamController.addMember);
+router.post("/:id/resend-invite", requirePermission("team:manage"), teamController.resendInvite);
+router.patch("/:id", requirePermission("team:manage"), teamController.updateMember);
+router.delete("/:id", requirePermission("team:manage"), teamController.deleteMember);
 
 export default router;
