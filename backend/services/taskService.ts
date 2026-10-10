@@ -84,6 +84,7 @@ export const taskService = {
     estimate?: string;
     creatorName: string;
     creatorInitials: string;
+    creatorUserId?: string;
   }): Promise<ITaskDocument> {
     // Generate next task key sequence globally to respect unique index
     const latestTask = await TaskModel.findOne({})
@@ -155,6 +156,7 @@ export const taskService = {
       tags: input.tags && input.tags.length > 0 ? input.tags : ["General"],
       branch: input.branch,
       estimate: input.estimate || "3 pts",
+      creatorUserId: input.creatorUserId || null,
       createdAt: now,
       updatedAt: now,
     });

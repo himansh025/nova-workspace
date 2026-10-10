@@ -35,6 +35,7 @@ const TaskSchema = new Schema<ITaskDocument>(
     tags: [{ type: String }],
     branch: { type: String },
     estimate: { type: String, default: "3 pts" },
+    creatorUserId: { type: String, default: null, index: true },
     createdAt: { type: String, required: true },
     updatedAt: { type: String, required: true },
   },

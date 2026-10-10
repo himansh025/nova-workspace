@@ -50,6 +50,7 @@ export interface Task {
   tags: string[];
   branch?: string;
   estimate?: string;
+  creatorUserId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

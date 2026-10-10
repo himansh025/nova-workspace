@@ -24,6 +24,13 @@ import {
 import { Project, Task, TaskPriority, TaskStatus, TeamMember } from "@/types";
 import TaskModal from "@/components/workspace/TaskModal";
 import { apiFetchInit, getApiHeaders } from "@/lib/apiHeaders";
+import { useAuth } from "@/context/AuthContext";
+import { useOrgPermissions } from "@/hooks/useOrgPermissions";
+import {
+  buildMyAssigneeIds,
+  canModifyTask as canUserModifyTask,
+  canDeleteTask as canUserDeleteTask,
+} from "@/lib/taskPermissions";
 
 /* ─── Status helpers ─────────────────────────────────────────────────────── */
 const STATUS_DOT: Record<TaskStatus, string> = {
@@ -106,6 +113,8 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
    TasksPage
    ════════════════════════════════════════════════════════════════════════════ */
 export default function TasksPage() {
+  const { user } = useAuth();
+  const { isAdmin, can } = useOrgPermissions();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -246,8 +255,26 @@ export default function TasksPage() {
     };
   }, []);
 
+  const myAssigneeIds = useMemo(() => buildMyAssigneeIds(user, team), [user, team]);
+
+  const taskPermOpts = useMemo(
+    () => ({
+      isAdmin,
+      user,
+      assigneeIds: myAssigneeIds,
+      canUpdateTasks: can("task:update"),
+      canDeleteTasks: can("task:delete"),
+    }),
+    [isAdmin, user, myAssigneeIds, can]
+  );
+
+  const canModifyTask = (task: Task) => canUserModifyTask(task, taskPermOpts);
+  const canDeleteTask = (task: Task) => canUserDeleteTask(task, taskPermOpts);
+
   /* ── Status / delete handlers ───────────────────────────────────────────── */
   const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
+    const target = tasks.find((t) => t.id === taskId);
+    if (target && !canModifyTask(target)) return;
     try {
       // Optimistic update
       setTasks((prev) =>
@@ -275,6 +302,8 @@ export default function TasksPage() {
     targetCol: TaskStatus
   ) => {
     if (!draggedId || draggedId === targetCardId) return;
+    const dragged = tasks.find((t) => t.id === draggedId);
+    if (dragged && !canModifyTask(dragged)) return;
 
     // Optimistic reorder: place dragged task right after target card
     setTasks((prev) => {
@@ -312,6 +341,8 @@ export default function TasksPage() {
 
   const handleDropAtBottom = async (draggedId: string, targetCol: TaskStatus) => {
     if (!draggedId) return;
+    const dragged = tasks.find((t) => t.id === draggedId);
+    if (dragged && !canModifyTask(dragged)) return;
 
     // Optimistic reorder: place dragged task at the end of targetCol
     setTasks((prev) => {
@@ -356,6 +387,8 @@ export default function TasksPage() {
   };
 
   const handleUpdateAssignee = async (taskId: string, assigneeId: string) => {
+    const target = tasks.find((t) => t.id === taskId);
+    if (target && !isAdmin && !canModifyTask(target)) return;
     try {
       let newAssignee = { id: "unassigned", name: "Unassigned", avatar: "", initials: "--" };
       if (assigneeId !== "unassigned") {
@@ -391,6 +424,8 @@ export default function TasksPage() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    const target = tasks.find((t) => t.id === taskId);
+    if (target && !canDeleteTask(target)) return;
     if (!confirm("Are you sure you want to delete this issue?")) return;
     try {
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -628,11 +663,16 @@ export default function TasksPage() {
                       {colTasks.map((task) => {
                         const isDragging = draggingTaskId === task.id;
                         const isCardTargeted = dragOverCardId === task.id;
+                        const movable = canModifyTask(task);
                         return (
                           <div
                             key={task.id}
-                            draggable
+                            draggable={movable}
                             onDragStart={(e) => {
+                              if (!movable) {
+                                e.preventDefault();
+                                return;
+                              }
                               e.dataTransfer.setData("text/plain", task.id);
                               e.dataTransfer.effectAllowed = "move";
                               setDraggingTaskId(task.id);
@@ -669,7 +709,9 @@ export default function TasksPage() {
                             onClick={() => {
                               if (!draggingTaskId) setSelectedTaskDetail(task);
                             }}
-                            className={`group bg-[var(--nova-surface)] border rounded-md p-3 cursor-grab active:cursor-grabbing hover:border-[var(--nova-border-strong)] hover:shadow-xs transition-all duration-150 ${
+                            className={`group bg-[var(--nova-surface)] border rounded-md p-3 hover:border-[var(--nova-border-strong)] hover:shadow-xs transition-all duration-150 ${
+                              movable ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+                            } ${
                               isDragging
                                 ? "opacity-40 scale-[0.97] border-dashed border-[var(--nova-accent)]"
                                 : isCardTargeted
@@ -684,18 +726,22 @@ export default function TasksPage() {
                               </span>
                               <div className="flex items-center gap-1">
                                 <PriorityIcon priority={task.priority} />
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteTask(task.id);
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 p-0.5 text-[var(--nova-text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
-                                  title="Delete task card"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                                <GripVertical className="w-3 h-3 text-[var(--nova-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                                {canDeleteTask(task) && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteTask(task.id);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 p-0.5 text-[var(--nova-text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded transition-all cursor-pointer"
+                                    title="Delete task card"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                                {movable && (
+                                  <GripVertical className="w-3 h-3 text-[var(--nova-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                                )}
                               </div>
                             </div>
 
@@ -717,12 +763,13 @@ export default function TasksPage() {
                               {/* Quick status mover */}
                               <select
                                 value={task.status}
+                                disabled={!movable}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => {
                                   e.stopPropagation();
                                   handleUpdateStatus(task.id, e.target.value as TaskStatus);
                                 }}
-                                className="bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] text-[9px] rounded px-1 py-0.5 outline-none cursor-pointer"
+                                className="bg-[var(--nova-deep)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] text-[9px] rounded px-1 py-0.5 outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                               >
                                 <option value="backlog">Backlog</option>
                                 <option value="todo">To Do</option>
@@ -876,8 +923,9 @@ export default function TasksPage() {
                     </div>
                     <select
                       value={task.assignee.id}
+                      disabled={!canModifyTask(task) && !isAdmin}
                       onChange={(e) => handleUpdateAssignee(task.id, e.target.value)}
-                      className="text-[11px] text-[var(--nova-text-secondary)] hidden lg:block bg-transparent outline-none cursor-pointer hover:bg-[var(--nova-deep)] rounded px-1 max-w-[100px] truncate appearance-none"
+                      className="text-[11px] text-[var(--nova-text-secondary)] hidden lg:block bg-transparent outline-none cursor-pointer hover:bg-[var(--nova-deep)] rounded px-1 max-w-[100px] truncate appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <option value="unassigned">Unassigned</option>
                       {team.map((member) => (
@@ -890,27 +938,31 @@ export default function TasksPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTaskToEdit(task);
-                        setIsModalOpen(true);
-                      }}
-                      className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-surface)] rounded transition-colors duration-150"
-                      title="Edit"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTask(task.id);
-                      }}
-                      className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded transition-colors duration-150"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {canModifyTask(task) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTaskToEdit(task);
+                          setIsModalOpen(true);
+                        }}
+                        className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] hover:bg-[var(--nova-surface)] rounded transition-colors duration-150"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canDeleteTask(task) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task.id);
+                        }}
+                        className="p-1 text-[var(--nova-text-muted)] hover:text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded transition-colors duration-150"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -956,13 +1008,14 @@ export default function TasksPage() {
                   <span className="text-[11px] text-[var(--nova-text-muted)]">Status</span>
                   <select
                     value={selectedTaskDetail.status}
+                    disabled={!canModifyTask(selectedTaskDetail)}
                     onChange={(e) =>
                       handleUpdateStatus(
                         selectedTaskDetail.id,
                         e.target.value as TaskStatus
                       )
                     }
-                    className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer"
+                    className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option value="backlog">Backlog</option>
                                 <option value="todo">To Do</option>
@@ -992,8 +1045,9 @@ export default function TasksPage() {
                     </div>
                     <select
                       value={selectedTaskDetail.assignee.id}
+                      disabled={!canModifyTask(selectedTaskDetail) && !isAdmin}
                       onChange={(e) => handleUpdateAssignee(selectedTaskDetail.id, e.target.value)}
-                      className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer max-w-[120px]"
+                      className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer max-w-[120px] disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <option value="unassigned">Unassigned</option>
                       {team.map((member) => (
@@ -1048,23 +1102,27 @@ export default function TasksPage() {
 
               {/* Panel actions */}
               <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={() => {
-                    setTaskToEdit(selectedTaskDetail);
-                    setIsModalOpen(true);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--nova-deep)] hover:bg-[var(--nova-elevated)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded text-[12px] transition-colors duration-150"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteTask(selectedTaskDetail.id)}
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded text-[12px] transition-colors duration-150"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Delete
-                </button>
+                {canModifyTask(selectedTaskDetail) && (
+                  <button
+                    onClick={() => {
+                      setTaskToEdit(selectedTaskDetail);
+                      setIsModalOpen(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--nova-deep)] hover:bg-[var(--nova-elevated)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded text-[12px] transition-colors duration-150"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    Edit
+                  </button>
+                )}
+                {canDeleteTask(selectedTaskDetail) && (
+                  <button
+                    onClick={() => handleDeleteTask(selectedTaskDetail.id)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded text-[12px] transition-colors duration-150"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1113,8 +1171,9 @@ export default function TasksPage() {
                     <span className="text-[11px] text-[var(--nova-text-muted)]">Status</span>
                     <select
                       value={selectedTaskDetail.status}
+                      disabled={!canModifyTask(selectedTaskDetail)}
                       onChange={(e) => handleUpdateStatus(selectedTaskDetail.id, e.target.value as TaskStatus)}
-                      className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer"
+                      className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <option value="backlog">Backlog</option>
                       <option value="todo">To Do</option>
@@ -1142,8 +1201,9 @@ export default function TasksPage() {
                       </div>
                       <select
                         value={selectedTaskDetail.assignee.id}
+                        disabled={!canModifyTask(selectedTaskDetail) && !isAdmin}
                         onChange={(e) => handleUpdateAssignee(selectedTaskDetail.id, e.target.value)}
-                        className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer max-w-[120px]"
+                        className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded px-2 py-1 text-[11px] text-[var(--nova-text-secondary)] outline-none cursor-pointer max-w-[120px] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <option value="unassigned">Unassigned</option>
                         {team.map((member) => (
@@ -1180,20 +1240,24 @@ export default function TasksPage() {
                 </div>
                 {/* Actions */}
                 <div className="flex items-center gap-2 pt-1">
-                  <button
-                    onClick={() => { setTaskToEdit(selectedTaskDetail); setIsModalOpen(true); }}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--nova-deep)] hover:bg-[var(--nova-elevated)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded text-[12px] transition-colors duration-150"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTask(selectedTaskDetail.id)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded text-[12px] transition-colors duration-150"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    Delete
-                  </button>
+                  {canModifyTask(selectedTaskDetail) && (
+                    <button
+                      onClick={() => { setTaskToEdit(selectedTaskDetail); setIsModalOpen(true); }}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--nova-deep)] hover:bg-[var(--nova-elevated)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] rounded text-[12px] transition-colors duration-150"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      Edit
+                    </button>
+                  )}
+                  {canDeleteTask(selectedTaskDetail) && (
+                    <button
+                      onClick={() => handleDeleteTask(selectedTaskDetail.id)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[var(--nova-danger)] hover:bg-[var(--nova-danger-subtle)] rounded text-[12px] transition-colors duration-150"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

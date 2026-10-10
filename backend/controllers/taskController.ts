@@ -6,6 +6,7 @@ import {
   getAccessibleProjectIds,
   canAccessProject,
 } from "../services/projectAccessService";
+import { canUserModifyTask, canUserDeleteTask } from "../services/taskAccessService";
 
 export const taskController = {
   async getTasks(req: Request, res: Response) {
@@ -73,6 +74,7 @@ export const taskController = {
         estimate: body.estimate,
         creatorName: user.name,
         creatorInitials: user.initials,
+        creatorUserId: user.id,
       });
 
       return res.status(201).json({ success: true, task });
@@ -102,6 +104,14 @@ export const taskController = {
         if (!(await canAccessProject(access, updates.projectId))) {
           return res.status(403).json({ success: false, error: "You cannot move this task to that project." });
         }
+      }
+
+      if (!(await canUserModifyTask(req, existing))) {
+        return res.status(403).json({
+          success: false,
+          error:
+            "You can only update tasks you created, tasks assigned to you, or tasks you are permitted to manage.",
+        });
       }
 
       const task = await taskService.updateTask(
@@ -135,6 +145,14 @@ export const taskController = {
       const access = await resolveProjectAccess(req);
       if (!(await canAccessProject(access, existing.projectId))) {
         return res.status(403).json({ success: false, error: "You do not have access to this task's project." });
+      }
+
+      if (!(await canUserDeleteTask(req, existing))) {
+        return res.status(403).json({
+          success: false,
+          error:
+            "You can only delete tasks you created, tasks assigned to you (with delete permission), or if you are an organization owner/admin.",
+        });
       }
 
       const deleted = await taskService.deleteTask(orgId, id);

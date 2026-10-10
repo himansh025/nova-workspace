@@ -12,7 +12,6 @@ export type OrgPermission =
   | "team:read"
   | "team:manage"
   | "organization:manage"
-  | "task:delete"
   | "ai:use"
   | "ai:manage";
 
