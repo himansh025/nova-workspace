@@ -220,7 +220,7 @@ export default function OrgAccessControlPanel() {
     return (
       <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-5 text-[12px] text-[var(--nova-text-secondary)]">
         Only the <strong>organization owner</strong> can assign roles and extra permissions. Ask your owner to
-        update access in Settings → Access & Permissions.
+        update access in Team Directory → Access & Permissions.
       </div>
     );
   }

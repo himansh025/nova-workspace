@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Settings,
-  Shield,
   RotateCcw,
   CheckCircle2,
   AlertTriangle,
@@ -16,7 +16,6 @@ import {
   Sparkles,
   LayoutGrid,
   Layers,
-  Sliders,
   Check,
   Sun,
   User,
@@ -30,7 +29,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/workspace/ToastProvider";
 import AISettingsPanel from "@/components/workspace/AISettingsPanel";
 import ThirdPartyCredentialsPanel from "@/components/workspace/ThirdPartyCredentialsPanel";
-import OrgAccessControlPanel from "@/components/workspace/OrgAccessControlPanel";
 import { setActiveOrganization, clearActiveOrganization } from "@/lib/activeOrganization";
 import {
   useTheme,
@@ -41,8 +39,16 @@ import {
   RadiusOption,
   deriveSemanticTokens,
 } from "@/context/ThemeContext";
+import {
+  DEFAULT_SETTINGS_TAB,
+  isSettingsTabId,
+  settingsTabHref,
+  SettingsTabId,
+} from "@/lib/settingsTabs";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { addToast } = useToast();
   const {
     themePreset,
@@ -57,8 +63,11 @@ export default function SettingsPage() {
     derivedTokens,
   } = useTheme();
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<string>("appearance");
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab =
+    tabFromUrl && isSettingsTabId(tabFromUrl) ? tabFromUrl : DEFAULT_SETTINGS_TAB;
+
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [showAdvancedHex, setShowAdvancedHex] = useState(false);
 
   // User Profile state
@@ -90,16 +99,35 @@ export default function SettingsPage() {
       .catch(() => {});
   };
 
+  const selectSettingsTab = useCallback(
+    (tabId: SettingsTabId) => {
+      setActiveTab(tabId);
+      router.replace(settingsTabHref(tabId), { scroll: false });
+    },
+    [router]
+  );
+
   useEffect(() => {
     fetchUserOrgs();
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab");
-      if (tabParam) {
-        setActiveTab(tabParam);
-      }
-    }
   }, []);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "access") {
+      router.replace("/app/team?tab=access", { scroll: false });
+      return;
+    }
+    if (tabParam === "all") {
+      router.replace(settingsTabHref(DEFAULT_SETTINGS_TAB), { scroll: false });
+      return;
+    }
+    if (tabParam && isSettingsTabId(tabParam)) {
+      setActiveTab(tabParam);
+      return;
+    }
+    setActiveTab(DEFAULT_SETTINGS_TAB);
+    router.replace(settingsTabHref(DEFAULT_SETTINGS_TAB), { scroll: false });
+  }, [searchParams, router]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -379,12 +407,10 @@ export default function SettingsPage() {
     { id: "profile", label: "Profile & Role", icon: User },
     { id: "appearance", label: "Appearance & Theme", icon: Palette },
     { id: "general", label: "General & Org", icon: Settings },
-    { id: "access", label: "Access & Permissions", icon: Shield },
     { id: "ai", label: "AI Copilot", icon: Sparkles },
     { id: "credentials", label: "Credentials & Keys", icon: Key },
     { id: "integrations", label: "Git & Webhooks", icon: GitBranch },
     { id: "danger", label: "System Reset", icon: AlertTriangle },
-    { id: "all", label: "All Settings", icon: Sliders },
   ];
 
   const presetList: { key: ThemePresetKey; name: string; subtitle: string }[] = [
@@ -399,7 +425,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[var(--nova-bg)] text-[var(--nova-text-primary)] transition-colors duration-150">
       {/* Top Header & Navigation Tabs */}
       <div className="border-b border-[var(--nova-border)] bg-[var(--nova-surface)]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
             <div>
               <h1 className="text-[15px] sm:text-lg font-semibold tracking-tight text-[var(--nova-text-primary)] flex items-center gap-2">
@@ -421,7 +447,7 @@ export default function SettingsPage() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => selectSettingsTab(tab.id as SettingsTabId)}
                   className={`flex items-center gap-2 px-3 py-2 text-[12px] whitespace-nowrap transition-colors duration-150 border-b-2 cursor-pointer ${
                     isActive
                       ? "border-b-2 border-[var(--nova-accent)] text-[var(--nova-text-primary)] font-medium bg-[var(--nova-accent-subtle)]/40 rounded-t-md"
@@ -438,7 +464,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {savedSuccess && (
           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -454,7 +480,7 @@ export default function SettingsPage() {
         )}
 
         {/* ─── TAB 0: User Profile & Role ────────────────────────── */}
-        {(activeTab === "profile" || activeTab === "all") && (
+        {(activeTab === "profile") && (
           <div className="space-y-6">
             <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl p-5 sm:p-6 shadow-xs">
               <div className="flex items-center justify-between pb-4 border-b border-[var(--nova-border)]">
@@ -691,7 +717,7 @@ export default function SettingsPage() {
         )}
 
         {/* ─── TAB 1: Appearance & Theme Customization ────────────────────────── */}
-        {(activeTab === "appearance" || activeTab === "all") && (
+        {(activeTab === "appearance") && (
           <div className="space-y-6">
             <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-xl p-6 space-y-6 shadow-sm">
               {/* Header Bar with Action Controls */}
@@ -861,7 +887,7 @@ export default function SettingsPage() {
         )}
 
         {/* ─── TAB 2: General & Organization Settings ────────────────────────── */}
-        {(activeTab === "general" || activeTab === "all") && (
+        {(activeTab === "general") && (
           <form
             onSubmit={handleSaveSettings}
             className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-5 space-y-5"
@@ -927,16 +953,14 @@ export default function SettingsPage() {
           </form>
         )}
 
-        {(activeTab === "access" || activeTab === "all") && <OrgAccessControlPanel />}
-
         {/* ─── TAB 3: AI Copilot Settings ────────────────────────────────────── */}
-        {(activeTab === "ai" || activeTab === "all") && <AISettingsPanel />}
+        {(activeTab === "ai") && <AISettingsPanel />}
 
         {/* ─── TAB 4: Credentials & Keys ─────────────────────────────────────── */}
-        {(activeTab === "credentials" || activeTab === "all") && <ThirdPartyCredentialsPanel />}
+        {(activeTab === "credentials") && <ThirdPartyCredentialsPanel />}
 
         {/* ─── TAB 5: Git Providers & Webhooks Hub ───────────────────────────── */}
-        {(activeTab === "integrations" || activeTab === "all") && (
+        {(activeTab === "integrations") && (
           <div className="space-y-6">
             {/* Git Providers */}
             <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-5 space-y-5">
@@ -1109,7 +1133,7 @@ export default function SettingsPage() {
         )}
 
         {/* ─── TAB 6: Danger Zone / Reset State ───────────────────────────────── */}
-        {(activeTab === "danger" || activeTab === "all") && (
+        {(activeTab === "danger") && (
           <div className="bg-[var(--nova-surface)] border border-rose-500/30 rounded-lg p-5 space-y-4">
             <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
               <AlertTriangle className="w-4 h-4" />

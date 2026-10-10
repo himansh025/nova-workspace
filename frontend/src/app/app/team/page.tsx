@@ -12,10 +12,13 @@ import {
   Pencil,
   Trash2,
   UserCircle2,
+  Shield,
 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TeamMember } from "@/types";
 import { TeamSkeleton } from "@/components/workspace/Skeletons";
 import { useOrgPermissions } from "@/hooks/useOrgPermissions";
+import OrgAccessControlPanel from "@/components/workspace/OrgAccessControlPanel";
 
 interface TeamGroup {
   id: string;
@@ -23,9 +26,13 @@ interface TeamGroup {
   description?: string;
 }
 
-type PageTab = "squads" | "members";
+type PageTab = "squads" | "members" | "access";
+
+const TEAM_TABS: PageTab[] = ["squads", "members", "access"];
 
 export default function TeamPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { canManageTeam } = useOrgPermissions();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
@@ -91,6 +98,18 @@ export default function TeamPage() {
   useEffect(() => {
     fetchTeam();
   }, []);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && TEAM_TABS.includes(tab as PageTab)) {
+      setActiveTab(tab as PageTab);
+    }
+  }, [searchParams]);
+
+  const selectTeamTab = (tab: PageTab) => {
+    setActiveTab(tab);
+    router.replace(`/app/team?tab=${tab}`, { scroll: false });
+  };
 
   const resetMemberForm = () => {
     setName("");
@@ -371,7 +390,7 @@ export default function TeamPage() {
   if (loading) return <TeamSkeleton />;
 
   return (
-    <div className="min-h-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] p-4 sm:p-6 lg:p-8 space-y-5 max-w-7xl mx-auto">
+    <div className="min-h-full w-full bg-[var(--nova-bg)] text-[var(--nova-text-primary)] p-4 sm:p-6 lg:p-8 space-y-5">
       <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 shadow-xs space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -427,7 +446,7 @@ export default function TeamPage() {
         <div className="flex gap-1 border-b border-[var(--nova-border)]">
           <button
             type="button"
-            onClick={() => setActiveTab("squads")}
+            onClick={() => selectTeamTab("squads")}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "squads"
                 ? "border-[var(--nova-accent)] text-[var(--nova-accent)]"
@@ -439,7 +458,7 @@ export default function TeamPage() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("members")}
+            onClick={() => selectTeamTab("members")}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
               activeTab === "members"
                 ? "border-[var(--nova-accent)] text-[var(--nova-accent)]"
@@ -448,6 +467,18 @@ export default function TeamPage() {
           >
             <UserCircle2 className="w-3.5 h-3.5" />
             Members ({team.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => selectTeamTab("access")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === "access"
+                ? "border-[var(--nova-accent)] text-[var(--nova-accent)]"
+                : "border-transparent text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)]"
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            Access & Permissions
           </button>
         </div>
       </div>
@@ -516,6 +547,8 @@ export default function TeamPage() {
           )}
         </div>
       )}
+
+      {activeTab === "access" && <OrgAccessControlPanel />}
 
       {activeTab === "members" && (
         <>

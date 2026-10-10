@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -20,8 +20,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
-import { ProfileModal } from "./ProfileModal";
 import { useAuth } from "@/context/AuthContext";
+import { settingsTabHref } from "@/lib/settingsTabs";
 
 interface WorkspaceSidebarProps {
   className?: string;
@@ -52,6 +52,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   onCloseMobile,
 }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [counts, setCounts] = useState<{ tasks: number; specs: number; team: number }>({
     tasks: 0,
@@ -60,7 +61,17 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
   });
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isOrgSubmenuOpen, setIsOrgSubmenuOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const profileFooterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isProfileDropdownOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (profileFooterRef.current?.contains(e.target as Node)) return;
+      if (!isOrgSubmenuOpen) setIsProfileDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [isProfileDropdownOpen, isOrgSubmenuOpen]);
 
   useEffect(() => {
     let headers: Record<string, string> = {};
@@ -316,12 +327,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       </nav>
 
       {/* ── Bottom: user area (pinned) ── */}
-      <div 
+      <div
+        ref={profileFooterRef}
         className="bg-[var(--nova-deep)] border-t border-[var(--nova-border)] px-2 py-2 shrink-0 relative group/profile"
-        onMouseEnter={() => setIsProfileDropdownOpen(true)}
-        onMouseLeave={() => {
-          if (!isOrgSubmenuOpen) setIsProfileDropdownOpen(false);
-        }}
       >
         {/* Dropdown Menu */}
         {isProfileDropdownOpen && (
@@ -330,7 +338,8 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               <button
                 onClick={() => {
                   setIsProfileDropdownOpen(false);
-                  setIsProfileModalOpen(true);
+                  onCloseMobile?.();
+                  router.push(settingsTabHref("profile"));
                 }}
                 className="w-full text-left px-3 py-2 text-[11px] text-[var(--nova-text-primary)] hover:bg-[var(--nova-deep)] transition-colors rounded-t cursor-pointer"
               >
@@ -356,8 +365,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
         {/* User profile trigger */}
         <button
           type="button"
-          onClick={() => setIsProfileModalOpen(true)}
-          title="Edit Profile & Role"
+          onClick={() => setIsProfileDropdownOpen((open) => !open)}
+          title="Account menu"
+          aria-expanded={isProfileDropdownOpen}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded hover:bg-[var(--nova-sidebar)] text-left transition-all duration-150 group cursor-pointer"
         >
           {/* Avatar initial */}
@@ -375,10 +385,6 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
         </button>
       </div>
 
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-      />
     </aside>
   );
 };
