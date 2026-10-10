@@ -4,7 +4,15 @@ import {
   getUserOrganizations,
   getOrganizationMembers,
   getOrganizationMembership,
+  invalidateOrganizationMembershipCache,
 } from "../services/organizationService";
+import {
+  GRANTABLE_PERMISSIONS,
+  OWNER_ONLY_GRANTABLE,
+  PERMISSION_LABELS,
+  Permission,
+  sanitizePermissionList,
+} from "../services/rbac";
 import { OrganizationModel } from "../models/Organization";
 import { OrganizationMemberModel, OrgRole } from "../models/OrganizationMember";
 import { UserModel } from "../models/User";
@@ -185,18 +193,26 @@ export const organizationController = {
         joinedAt: new Date(),
       });
 
-      // Synchronize into TeamMember collection for the organization
+      // Link org membership to team directory (preserve squad if invited earlier)
+      const normalizedEmail = targetUser.email.toLowerCase().trim();
       await TeamMemberModel.findOneAndUpdate(
-        { organizationId: orgId, email: targetUser.email },
+        { organizationId: orgId, email: normalizedEmail },
         {
-          id: targetUser.id,
-          organizationId: orgId,
-          name: targetUser.name,
-          email: targetUser.email,
-          role: targetUser.role,
-          avatar: targetUser.avatar,
-          initials: targetUser.initials,
-          status: "online",
+          $set: {
+            name: targetUser.name,
+            role: targetUser.role,
+            avatar: targetUser.avatar,
+            initials: targetUser.initials,
+            status: "online",
+            inviteToken: null,
+            inviteExpiresAt: null,
+          },
+          $setOnInsert: {
+            id: targetUser.id,
+            organizationId: orgId,
+            email: normalizedEmail,
+            activeTasksCount: 0,
+          },
         },
         { upsert: true, returnDocument: "after" }
       );
@@ -205,6 +221,93 @@ export const organizationController = {
         success: true,
         message: `${targetUser.name} added to organization as ${assignedRole}.`,
       });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  },
+
+  async permissionCatalog(_req: Request, res: Response) {
+    const mapEntry = (p: Permission) => ({ id: p, label: PERMISSION_LABELS[p] });
+    return res.json({
+      success: true,
+      grantable: GRANTABLE_PERMISSIONS.map(mapEntry),
+      ownerOnly: OWNER_ONLY_GRANTABLE.map(mapEntry),
+    });
+  },
+
+  async updateMember(req: Request, res: Response) {
+    try {
+      const orgId = (req as any).organizationId;
+      const targetUserId = req.params.userId as string;
+      const granterRole = (req as any).userRole as OrgRole;
+      const { role, permissionGrants, permissionRevokes } = req.body;
+
+      const targetMember = await OrganizationMemberModel.findOne({
+        organizationId: orgId,
+        userId: targetUserId,
+        deletedAt: null,
+      });
+
+      if (!targetMember) {
+        return res.status(404).json({ success: false, error: "Member not found in this organization." });
+      }
+
+      if (targetMember.role === "owner") {
+        return res.status(403).json({ success: false, error: "Organization owner permissions cannot be changed." });
+      }
+
+      const updates: Record<string, unknown> = {};
+
+      if (role !== undefined) {
+        if (granterRole !== "owner") {
+          return res.status(403).json({ success: false, error: "Only the organization owner can change member roles." });
+        }
+        const validRoles: OrgRole[] = ["admin", "member", "viewer"];
+        if (!validRoles.includes(role)) {
+          return res.status(400).json({ success: false, error: "Invalid role. Use admin, member, or viewer." });
+        }
+        updates.role = role;
+      }
+
+      const allowedForGranter = new Set<Permission>([
+        ...GRANTABLE_PERMISSIONS,
+        ...(granterRole === "owner" ? OWNER_ONLY_GRANTABLE : []),
+      ]);
+
+      if (permissionGrants !== undefined) {
+        const grants = sanitizePermissionList(permissionGrants);
+        for (const p of grants) {
+          if (!allowedForGranter.has(p)) {
+            return res.status(400).json({ success: false, error: `Cannot grant permission: ${p}` });
+          }
+        }
+        updates.permissionGrants = grants;
+      }
+
+      if (permissionRevokes !== undefined) {
+        const revokes = sanitizePermissionList(permissionRevokes);
+        for (const p of revokes) {
+          if (!allowedForGranter.has(p)) {
+            return res.status(400).json({ success: false, error: `Cannot revoke permission: ${p}` });
+          }
+        }
+        updates.permissionRevokes = revokes;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ success: false, error: "No updates provided." });
+      }
+
+      await OrganizationMemberModel.updateOne(
+        { organizationId: orgId, userId: targetUserId },
+        { $set: updates }
+      );
+      invalidateOrganizationMembershipCache(orgId, targetUserId);
+
+      const members = await getOrganizationMembers(orgId);
+      const updated = members.find((m) => m.userId === targetUserId);
+
+      return res.json({ success: true, member: updated });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }
@@ -234,6 +337,7 @@ export const organizationController = {
       }
 
       await OrganizationMemberModel.deleteOne({ organizationId: orgId, userId: targetUserId });
+      invalidateOrganizationMembershipCache(orgId, targetUserId);
       await TeamMemberModel.deleteOne({ organizationId: orgId, id: targetUserId });
 
       return res.json({ success: true, message: "Member removed from organization." });

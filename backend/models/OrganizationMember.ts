@@ -9,6 +9,10 @@ export interface IOrganizationMember {
   organizationId: string;
   userId: string;
   role: OrgRole;
+  /** Extra permissions on top of org role (set by owner/admin). */
+  permissionGrants?: string[];
+  /** Permissions removed from org role (set by owner/admin). */
+  permissionRevokes?: string[];
   invitedBy?: string;
   joinedAt: Date;
   deletedAt?: Date | null;
@@ -27,6 +31,8 @@ const OrganizationMemberSchema = new Schema<IOrganizationMemberDocument>(
       enum: ["owner", "admin", "member", "viewer"],
       default: "member",
     },
+    permissionGrants: { type: [String], default: [] },
+    permissionRevokes: { type: [String], default: [] },
     invitedBy: { type: String },
     joinedAt: { type: Date, default: () => new Date() },
     deletedAt: { type: Date, default: null },

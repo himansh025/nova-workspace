@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "./ToastProvider";
+import { setActiveOrganization } from "@/lib/activeOrganization";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       if (data.success && data.organization) {
         const created = data.organization;
         if (typeof window !== "undefined") {
-          localStorage.setItem("nova_active_org_id", created.id);
+          setActiveOrganization({ id: created.id, name: created.name });
           window.dispatchEvent(
             new CustomEvent("nova:org_switched", { detail: created })
           );
@@ -176,7 +177,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
   const handleSwitchOrg = (orgId: string, orgName: string) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("nova_active_org_id", orgId);
+      setActiveOrganization({ id: orgId, name: orgName });
       window.dispatchEvent(
         new CustomEvent("nova:org_switched", { detail: { id: orgId, name: orgName } })
       );

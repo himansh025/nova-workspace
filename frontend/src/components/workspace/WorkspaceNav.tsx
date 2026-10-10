@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -21,10 +21,14 @@ import {
   Network,
   Kanban,
 } from "lucide-react";
-import { Project, Task, Spec } from "@/types";
+import { Task, Spec } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { NotificationCenter } from "./NotificationCenter";
 import { apiFetchInit } from "@/lib/apiHeaders";
+import {
+  getActiveOrganizationName,
+  subscribeActiveOrganization,
+} from "@/lib/activeOrganization";
 
 interface WorkspaceNavProps {
   onOpenCommandPalette?: () => void;
@@ -57,8 +61,7 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [activeOrgName, setActiveOrgName] = useState("");
 
   // Search dropdown states
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -68,17 +71,10 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch initial data
-  useEffect(() => {
-    fetch("/api/projects", apiFetchInit())
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.projects && data.projects.length > 0) {
-          setProjects(data.projects);
-          setActiveProject(data.projects[0]);
-        }
-      })
-      .catch(() => {});
+  useLayoutEffect(() => {
+    const cached = getActiveOrganizationName();
+    if (cached) setActiveOrgName(cached);
+    return subscribeActiveOrganization((org) => setActiveOrgName(org.name));
   }, []);
 
   // Fetch tasks and specs when search is opened for the first time
@@ -210,9 +206,10 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
         <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium pl-1 text-[var(--nova-text-secondary)] min-w-0">
           <Link
             href="/app"
-            className="text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] transition-colors truncate max-w-[130px] hidden sm:inline"
+            className="text-[var(--nova-text-muted)] hover:text-[var(--nova-text-primary)] transition-colors truncate max-w-[130px] hidden sm:inline min-w-[4ch]"
+            suppressHydrationWarning
           >
-            {activeProject?.name || "Workspace"}
+            {activeOrgName || "\u00a0"}
           </Link>
           <span className="text-[var(--nova-text-muted)] opacity-40 hidden sm:inline">
             /

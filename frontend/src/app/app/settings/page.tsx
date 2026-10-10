@@ -30,6 +30,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/workspace/ToastProvider";
 import AISettingsPanel from "@/components/workspace/AISettingsPanel";
 import ThirdPartyCredentialsPanel from "@/components/workspace/ThirdPartyCredentialsPanel";
+import OrgAccessControlPanel from "@/components/workspace/OrgAccessControlPanel";
+import { setActiveOrganization, clearActiveOrganization } from "@/lib/activeOrganization";
 import {
   useTheme,
   THEME_PRESETS,
@@ -145,7 +147,10 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success && data.organization) {
         if (typeof window !== "undefined") {
-          localStorage.setItem("nova_active_org_id", data.organization.id);
+          setActiveOrganization({
+            id: data.organization.id,
+            name: data.organization.name,
+          });
           window.dispatchEvent(
             new CustomEvent("nova:org_switched", { detail: data.organization })
           );
@@ -342,7 +347,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         if (typeof window !== "undefined") {
-          localStorage.removeItem("nova_active_org_id");
+          clearActiveOrganization();
           window.location.reload();
         }
       } else {
@@ -374,6 +379,7 @@ export default function SettingsPage() {
     { id: "profile", label: "Profile & Role", icon: User },
     { id: "appearance", label: "Appearance & Theme", icon: Palette },
     { id: "general", label: "General & Org", icon: Settings },
+    { id: "access", label: "Access & Permissions", icon: Shield },
     { id: "ai", label: "AI Copilot", icon: Sparkles },
     { id: "credentials", label: "Credentials & Keys", icon: Key },
     { id: "integrations", label: "Git & Webhooks", icon: GitBranch },
@@ -920,6 +926,8 @@ export default function SettingsPage() {
             </div>
           </form>
         )}
+
+        {(activeTab === "access" || activeTab === "all") && <OrgAccessControlPanel />}
 
         {/* ─── TAB 3: AI Copilot Settings ────────────────────────────────────── */}
         {(activeTab === "ai" || activeTab === "all") && <AISettingsPanel />}

@@ -1,5 +1,6 @@
 import { OrganizationModel, IOrganizationDocument } from "../models/Organization";
 import { OrganizationMemberModel, OrgRole } from "../models/OrganizationMember";
+import { Permission, sanitizePermissionList } from "./rbac";
 import { UserModel } from "../models/User";
 import { TeamMemberModel } from "../models/TeamMember";
 import { ProjectModel } from "../models/Project";
@@ -79,9 +80,23 @@ export async function createOrganization(name: string, ownerUserId: string): Pro
   return org;
 }
 
-const orgRoleCache = new Map<string, { role: OrgRole | null; expiresAt: number }>();
+export interface OrganizationMembershipContext {
+  role: OrgRole;
+  permissionGrants: Permission[];
+  permissionRevokes: Permission[];
+}
+
+const orgMembershipCache = new Map<
+  string,
+  { ctx: OrganizationMembershipContext | null; expiresAt: number }
+>();
 const userOrgsCache = new Map<string, { orgs: OrgWithRole[]; expiresAt: number }>();
 const CACHE_TTL_MS = 60 * 1000;
+
+export function invalidateOrganizationMembershipCache(orgId: string, userId: string) {
+  orgMembershipCache.delete(`${orgId}:${userId}`);
+  userOrgsCache.delete(userId);
+}
 
 export async function getUserOrganizations(userId: string): Promise<OrgWithRole[]> {
   const now = Date.now();
@@ -108,12 +123,15 @@ export async function getUserOrganizations(userId: string): Promise<OrgWithRole[
   return result;
 }
 
-export async function getOrganizationMembership(orgId: string, userId: string): Promise<OrgRole | null> {
+export async function getOrganizationMembershipContext(
+  orgId: string,
+  userId: string
+): Promise<OrganizationMembershipContext | null> {
   const cacheKey = `${orgId}:${userId}`;
   const now = Date.now();
-  const cached = orgRoleCache.get(cacheKey);
+  const cached = orgMembershipCache.get(cacheKey);
   if (cached && cached.expiresAt > now) {
-    return cached.role;
+    return cached.ctx;
   }
 
   const membership = await OrganizationMemberModel.findOne({
@@ -122,9 +140,21 @@ export async function getOrganizationMembership(orgId: string, userId: string): 
     deletedAt: null,
   }).lean();
 
-  const role = membership ? membership.role : null;
-  orgRoleCache.set(cacheKey, { role, expiresAt: now + CACHE_TTL_MS });
-  return role;
+  const ctx: OrganizationMembershipContext | null = membership
+    ? {
+        role: membership.role,
+        permissionGrants: sanitizePermissionList(membership.permissionGrants),
+        permissionRevokes: sanitizePermissionList(membership.permissionRevokes),
+      }
+    : null;
+
+  orgMembershipCache.set(cacheKey, { ctx, expiresAt: now + CACHE_TTL_MS });
+  return ctx;
+}
+
+export async function getOrganizationMembership(orgId: string, userId: string): Promise<OrgRole | null> {
+  const ctx = await getOrganizationMembershipContext(orgId, userId);
+  return ctx?.role ?? null;
 }
 
 export async function getOrganizationMembers(orgId: string) {
@@ -137,6 +167,8 @@ export async function getOrganizationMembers(orgId: string) {
     return {
       userId: m.userId,
       role: m.role,
+      permissionGrants: sanitizePermissionList(m.permissionGrants),
+      permissionRevokes: sanitizePermissionList(m.permissionRevokes),
       joinedAt: m.joinedAt,
       name: u?.name || "Unknown",
       email: u?.email || "",

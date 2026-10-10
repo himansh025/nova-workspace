@@ -127,6 +127,15 @@ export async function acceptTeamInviteByToken(token: string, user?: SafeUser | n
     }
     await ensureOrganizationMembership(user.id, member.organizationId);
     await notificationService.dismissTeamInviteNotifications(user.id, member.id);
+    if (user.id && member.id !== user.id) {
+      const conflict = await TeamMemberModel.findOne({
+        organizationId: member.organizationId,
+        id: user.id,
+      });
+      if (!conflict) {
+        member.id = user.id;
+      }
+    }
   }
 
   member.status = "online";
@@ -150,6 +159,16 @@ export async function acceptTeamInviteByMemberId(memberId: string, user: SafeUse
   }
 
   await ensureOrganizationMembership(user.id, member.organizationId);
+
+  if (user.id && member.id !== user.id) {
+    const conflict = await TeamMemberModel.findOne({
+      organizationId: member.organizationId,
+      id: user.id,
+    });
+    if (!conflict) {
+      member.id = user.id;
+    }
+  }
 
   member.status = "online";
   member.inviteToken = null;

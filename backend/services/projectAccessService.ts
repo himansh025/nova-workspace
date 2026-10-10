@@ -6,12 +6,31 @@ import { OrgRole } from "../models/OrganizationMember";
 export interface ProjectAccessContext {
   organizationId: string;
   isPrivileged: boolean;
+  /** Squad on the team directory row (including pending invites). */
   teamGroupId: string | null;
   memberFound: boolean;
+  /** Accepted invite / active roster row — required for squad-scoped projects. */
+  isActiveTeamMember: boolean;
 }
 
 const accessCache = new Map<string, { ctx: ProjectAccessContext; expiresAt: number }>();
 const ACCESS_CACHE_TTL_MS = 60 * 1000;
+
+async function findTeamMemberForUser(
+  organizationId: string,
+  user: { id?: string; email?: string }
+) {
+  const email = user.email ? String(user.email).toLowerCase().trim() : "";
+  if (email) {
+    const byEmail = await TeamMemberModel.findOne({ organizationId, email }).lean();
+    if (byEmail) return byEmail;
+  }
+  if (user.id) {
+    const byId = await TeamMemberModel.findOne({ organizationId, id: user.id }).lean();
+    if (byId) return byId;
+  }
+  return null;
+}
 
 export async function resolveProjectAccess(req: Request): Promise<ProjectAccessContext> {
   const organizationId = (req as any).organizationId || "org-default";
@@ -22,11 +41,23 @@ export async function resolveProjectAccess(req: Request): Promise<ProjectAccessC
 
   // Fast path: Owners and admins have full access, skip querying TeamMember entirely!
   if (isPrivileged) {
-    return { organizationId, isPrivileged: true, teamGroupId: null, memberFound: true };
+    return {
+      organizationId,
+      isPrivileged: true,
+      teamGroupId: null,
+      memberFound: true,
+      isActiveTeamMember: true,
+    };
   }
 
   if (!user?.id && !user?.email) {
-    return { organizationId, isPrivileged: false, teamGroupId: null, memberFound: false };
+    return {
+      organizationId,
+      isPrivileged: false,
+      teamGroupId: null,
+      memberFound: false,
+      isActiveTeamMember: false,
+    };
   }
 
   const cacheKey = `${organizationId}:${user.id || user.email}`;
@@ -36,30 +67,29 @@ export async function resolveProjectAccess(req: Request): Promise<ProjectAccessC
     return cached.ctx;
   }
 
-  const email = user.email ? String(user.email).toLowerCase().trim() : "";
-  const member = email
-    ? await TeamMemberModel.findOne({
-        organizationId,
-        email,
-      }).lean()
-    : null;
+  const member = await findTeamMemberForUser(organizationId, user);
 
-  if (!member || (member as any).status === "pending") {
+  if (!member) {
     const ctx = {
       organizationId,
       isPrivileged: false,
       teamGroupId: null,
-      memberFound: Boolean(member),
+      memberFound: false,
+      isActiveTeamMember: false,
     };
     accessCache.set(cacheKey, { ctx, expiresAt: now + ACCESS_CACHE_TTL_MS });
     return ctx;
   }
 
+  const teamGroupId = (member as any).teamGroupId || null;
+  const isActiveTeamMember = (member as any).status !== "pending";
+
   const ctx = {
     organizationId,
     isPrivileged: false,
-    teamGroupId: (member as any).teamGroupId || null,
+    teamGroupId,
     memberFound: true,
+    isActiveTeamMember,
   };
   accessCache.set(cacheKey, { ctx, expiresAt: now + ACCESS_CACHE_TTL_MS });
   return ctx;
@@ -73,14 +103,14 @@ export function projectVisibilityFilter(access: ProjectAccessContext): Record<st
     return base;
   }
 
-  if (access.teamGroupId) {
+  if (access.isActiveTeamMember && access.teamGroupId) {
     return {
       ...base,
       teamGroupId: access.teamGroupId,
     };
   }
 
-  // Member without a squad assignment — no squad-scoped projects
+  // Not on roster, pending invite, or no squad — no squad-scoped projects
   return {
     ...base,
     id: { $exists: false },
@@ -98,6 +128,7 @@ export async function canAccessProject(
 ): Promise<boolean> {
   if (!projectId) return access.isPrivileged;
   if (access.isPrivileged) return true;
+  if (!access.isActiveTeamMember) return false;
 
   const project = await ProjectModel.findOne({
     organizationId: access.organizationId,
@@ -106,6 +137,6 @@ export async function canAccessProject(
   if (!project) return false;
 
   const squadId = (project as any).teamGroupId;
-  if (!squadId) return true;
+  if (!squadId) return access.isPrivileged;
   return squadId === access.teamGroupId;
 }

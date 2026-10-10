@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifySessionToken, SafeUser } from "../services/auth";
-import { getOrganizationMembership } from "../services/organizationService";
-import { hasPermission, Permission } from "../services/rbac";
+import { getOrganizationMembershipContext } from "../services/organizationService";
+import { hasEffectivePermission, Permission } from "../services/rbac";
 import { OrgRole } from "../models/OrganizationMember";
 
 // Extend Express Request interface with authenticated context
@@ -59,18 +59,25 @@ export async function authGuard(req: Request, res: Response, next: NextFunction)
 
     // Allow switching organization via custom header if user belongs to that organization
     const requestedOrgId = (req.headers["x-organization-id"] as string) || sessionData.organizationId;
+    const attachMembership = async (orgId: string) => {
+      const membership = await getOrganizationMembershipContext(orgId, sessionData.user.id);
+      if (!membership) return false;
+      (req as any).organizationId = orgId;
+      (req as any).userRole = membership.role;
+      (req as any).permissionGrants = membership.permissionGrants;
+      (req as any).permissionRevokes = membership.permissionRevokes;
+      return true;
+    };
+
     if (requestedOrgId) {
-      const role = await getOrganizationMembership(requestedOrgId, sessionData.user.id);
-      if (role) {
-        (req as any).organizationId = requestedOrgId;
-        (req as any).userRole = role;
-      } else {
-        // Fallback to primary session org
-        (req as any).organizationId = sessionData.organizationId;
-        (req as any).userRole = await getOrganizationMembership(sessionData.organizationId || "", sessionData.user.id);
+      if (!(await attachMembership(requestedOrgId))) {
+        await attachMembership(sessionData.organizationId || "");
       }
     } else {
       (req as any).organizationId = sessionData.organizationId;
+      if (sessionData.organizationId) {
+        await attachMembership(sessionData.organizationId);
+      }
     }
 
     next();
@@ -132,6 +139,8 @@ export async function requireOrg(req: Request, res: Response, next: NextFunction
 export function requirePermission(permission: Permission) {
   return (req: Request, res: Response, next: NextFunction) => {
     const userRole = (req as any).userRole as OrgRole | undefined;
+    const permissionGrants = ((req as any).permissionGrants || []) as Permission[];
+    const permissionRevokes = ((req as any).permissionRevokes || []) as Permission[];
 
     if (!userRole) {
       return res.status(403).json({
@@ -140,7 +149,7 @@ export function requirePermission(permission: Permission) {
       });
     }
 
-    if (!hasPermission(userRole, permission)) {
+    if (!hasEffectivePermission(userRole, permission, permissionGrants, permissionRevokes)) {
       return res.status(403).json({
         data: null,
         error: {

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useToast } from "./ToastProvider";
 import { useAuth } from "@/context/AuthContext";
+import { setActiveOrganization } from "@/lib/activeOrganization";
 
 export interface Organization {
   id: string;
@@ -50,7 +51,9 @@ export const prefetchOrgs = () => {
         
         let savedOrgId = localStorage.getItem("nova_active_org_id");
         cachedActiveOrg = formattedOrgs.find((o: any) => o.id === savedOrgId) || formattedOrgs[0];
-        if (cachedActiveOrg) localStorage.setItem("nova_active_org_id", cachedActiveOrg.id);
+        if (cachedActiveOrg) {
+          setActiveOrganization({ id: cachedActiveOrg.id, name: cachedActiveOrg.name });
+        }
       }
     });
 };
@@ -118,9 +121,7 @@ export const OrgSwitcher: React.FC<{
             formattedOrgs[0];
           setActiveOrg(targetOrg);
           cachedActiveOrg = targetOrg;
-          if (typeof window !== "undefined") {
-            localStorage.setItem("nova_active_org_id", targetOrg.id);
-          }
+          setActiveOrganization({ id: targetOrg.id, name: targetOrg.name });
         }
       });
   }, []);
@@ -130,7 +131,7 @@ export const OrgSwitcher: React.FC<{
     setDropdownOpen(false);
 
     if (typeof window !== "undefined") {
-      localStorage.setItem("nova_active_org_id", org.id);
+      setActiveOrganization({ id: org.id, name: org.name });
       window.dispatchEvent(
         new CustomEvent("nova:org_switched", { detail: org })
       );
@@ -175,7 +176,7 @@ export const OrgSwitcher: React.FC<{
         setNewOrgSlug("");
 
         if (typeof window !== "undefined") {
-          localStorage.setItem("nova_active_org_id", newOrg.id);
+          setActiveOrganization({ id: newOrg.id, name: newOrg.name });
           window.dispatchEvent(
             new CustomEvent("nova:org_switched", { detail: newOrg })
           );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import WorkspaceNav from "@/components/workspace/WorkspaceNav";
@@ -20,8 +20,11 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     prefetchOrgs();
+  }, []);
+
+  useEffect(() => {
     if (!isLoading && !user) {
       router.replace("/login");
     }

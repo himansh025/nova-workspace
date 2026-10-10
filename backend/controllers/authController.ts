@@ -9,8 +9,8 @@ import {
   requestPasswordReset,
   resetPasswordWithToken,
 } from "../services/auth";
-import { getUserOrganizations, getOrganizationMembership } from "../services/organizationService";
-import { getRolePermissions } from "../services/rbac";
+import { getUserOrganizations, getOrganizationMembershipContext } from "../services/organizationService";
+import { resolveEffectivePermissions } from "../services/rbac";
 import { syncTeamInviteNotificationsForUser } from "../services/teamInviteService";
 import { broadcastEvent } from "../services/events";
 import { parseCookies } from "../middlewares/auth";
@@ -142,8 +142,8 @@ export const authController = {
         userOrgs.some((o) => o.organization.id === requestedOrgId)
           ? requestedOrgId
           : sessionData.organizationId;
-      const activeRole = activeOrgId
-        ? await getOrganizationMembership(activeOrgId, sessionData.user.id)
+      const activeMembership = activeOrgId
+        ? await getOrganizationMembershipContext(activeOrgId, sessionData.user.id)
         : null;
 
       return res.json({
@@ -151,8 +151,16 @@ export const authController = {
         authenticated: true,
         user: sessionData.user,
         organizationId: activeOrgId,
-        role: activeRole,
-        permissions: activeRole ? getRolePermissions(activeRole) : [],
+        role: activeMembership?.role ?? null,
+        permissionGrants: activeMembership?.permissionGrants ?? [],
+        permissionRevokes: activeMembership?.permissionRevokes ?? [],
+        permissions: activeMembership
+          ? resolveEffectivePermissions(
+              activeMembership.role,
+              activeMembership.permissionGrants,
+              activeMembership.permissionRevokes
+            )
+          : [],
         organizations: userOrgs.map((o) => ({
           id: o.organization.id,
           name: o.organization.name,

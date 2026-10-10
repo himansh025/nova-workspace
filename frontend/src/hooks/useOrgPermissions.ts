@@ -11,7 +11,10 @@ export type OrgPermission =
   | "task:delete"
   | "team:read"
   | "team:manage"
-  | "organization:manage";
+  | "organization:manage"
+  | "task:delete"
+  | "ai:use"
+  | "ai:manage";
 
 export function useOrgPermissions() {
   const [permissions, setPermissions] = useState<OrgPermission[]>([]);
@@ -57,7 +60,10 @@ export function useOrgPermissions() {
     can,
     canManageTeam: can("team:manage"),
     canWriteProjects: can("project:write"),
+    canManageOrg: can("organization:manage"),
+    canDeleteTasks: can("task:delete"),
     isOwner: orgRole === "owner",
     isAdmin: orgRole === "admin" || orgRole === "owner",
+    refresh,
   };
 }

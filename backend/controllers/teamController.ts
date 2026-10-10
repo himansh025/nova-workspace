@@ -210,10 +210,11 @@ export const teamController = {
       const orgId = (req as any).organizationId || "org-default";
       const access = await resolveProjectAccess(req);
       const filter: Record<string, unknown> = { organizationId: orgId };
-      if (!access.isPrivileged && access.teamGroupId) {
+      if (!access.isPrivileged) {
+        if (!access.memberFound || !access.teamGroupId) {
+          return res.json({ success: true, groups: [] });
+        }
         filter.id = access.teamGroupId;
-      } else if (!access.isPrivileged && !access.memberFound) {
-        return res.json({ success: true, groups: [] });
       }
       const groups = await TeamGroupModel.find(filter).sort({ createdAt: 1 });
       return res.json({ success: true, groups });
