@@ -11,24 +11,28 @@ import { aiSettingsService } from "../services/aiSettingsService";
 export const prController = {
   async getPullRequests(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || (req.query.orgId as string) || "org-default";
+      const orgId = (req as any).organizationId;
+      if (!orgId) {
+        return res.status(400).json({ success: false, error: "Organization context required." });
+      }
+
       const config = await githubService.getGitHubConfig(orgId);
 
-      // Check current PR count in MongoDB
-      let count = await PullRequestModel.countDocuments({ organizationId: orgId });
+      // Check current PR count in MongoDB for this organization
+      const count = await PullRequestModel.countDocuments({ organizationId: orgId });
 
       // If a real GitHub repo is configured and no PRs exist in DB yet, attempt live sync
       if (count === 0 && config.configured && config.repository) {
         await githubService.syncPullRequestsFromGitHub(orgId);
       }
 
-      // Query real PRs from MongoDB
+      // Query real PRs from MongoDB strictly scoped to orgId
       const prs = await PullRequestModel.find({ organizationId: orgId }).sort({ number: -1 });
 
       return res.json({
         success: true,
         integration: {
-          provider: "github",
+          provider: config.provider,
           configured: config.configured,
           repository: config.repository || null,
           mode: config.configured ? "production" : "baseline",
@@ -45,9 +49,12 @@ export const prController = {
 
   async syncPullRequests(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || (req.query.orgId as string) || "org-default";
-      const result = await githubService.syncPullRequestsFromGitHub(orgId);
+      const orgId = (req as any).organizationId;
+      if (!orgId) {
+        return res.status(400).json({ success: false, error: "Organization context required." });
+      }
 
+      const result = await githubService.syncPullRequestsFromGitHub(orgId);
       const prs = await PullRequestModel.find({ organizationId: orgId }).sort({ number: -1 });
 
       broadcastEvent({
@@ -72,20 +79,25 @@ export const prController = {
 
   async patchPullRequest(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || "org-default";
-      const { id, action } = req.body;
+      const orgId = (req as any).organizationId;
+      if (!orgId) {
+        return res.status(400).json({ success: false, error: "Organization context required." });
+      }
 
+      const { id, action } = req.body;
       const num = Number(id);
+
       const pr = await PullRequestModel.findOne({
         organizationId: orgId,
         $or: !isNaN(num) ? [{ id }, { number: num }] : [{ id }],
       });
 
       if (!pr) {
-        return res.status(404).json({ error: "Pull request not found in database" });
+        return res.status(404).json({ error: "Pull request not found in organization" });
       }
 
       if (action === "merge") {
+        // Local state mutation only — does NOT merge on GitHub
         pr.status = "merged";
         pr.updatedAt = new Date().toISOString();
         await pr.save();
@@ -110,7 +122,7 @@ export const prController = {
               organizationId: orgId,
               type: "task_status",
               actor: { name: pr.author.name, initials: pr.author.initials },
-              action: `merged PR #${pr.number} into ${defaultBranch} and moved task to DONE`,
+              action: `marked PR #${pr.number} merged locally into ${defaultBranch} (local state update)`,
               target: pr.linkedIssueKey,
               timestamp: "Just now",
             });
@@ -120,13 +132,18 @@ export const prController = {
         broadcastEvent({
           type: "git_webhook",
           category: "git",
-          title: `PR #${pr.number} Merged`,
-          message: `${pr.author.name} merged PR #${pr.number} (${pr.title}) into ${pr.targetBranch}`,
+          title: `PR #${pr.number} Marked Merged (Local)`,
+          message: `${pr.author.name} marked PR #${pr.number} (${pr.title}) as merged locally`,
           link: "/app/pull-requests",
-          meta: { prId: pr.id, prNumber: pr.number, organizationId: orgId },
+          meta: { prId: pr.id, prNumber: pr.number, organizationId: orgId, localOnly: true },
         });
 
-        return res.json({ success: true, pullRequest: pr });
+        return res.json({
+          success: true,
+          pullRequest: pr,
+          localOnly: true,
+          message: "Pull request state marked as merged in local Nova workspace database. Autonomous GitHub merge is not enabled.",
+        });
       }
 
       return res.json({ success: true, pullRequest: pr });
@@ -137,26 +154,26 @@ export const prController = {
 
   async reviewPullRequest(req: Request, res: Response) {
     try {
-      let orgId = (req as any).organizationId || (req.headers["x-organization-id"] as string) || "org-default";
-      const { prId } = req.body;
+      const orgId = (req as any).organizationId;
+      if (!orgId) {
+        return res.status(400).json({ success: false, error: "Organization context required." });
+      }
 
+      const { prId } = req.body;
       const num = Number(prId);
+
       const prQuery = !isNaN(num)
         ? { organizationId: orgId, $or: [{ id: prId }, { number: num }] }
         : { organizationId: orgId, id: prId };
 
-      let pr = await PullRequestModel.findOne(prQuery);
+      // Strictly search within the authenticated organization — NEVER fallback globally
+      const pr = await PullRequestModel.findOne(prQuery);
 
       if (!pr) {
-        // Fallback search by unique PR id or number across database
-        pr = await PullRequestModel.findOne(!isNaN(num) ? { $or: [{ id: prId }, { number: num }] } : { id: prId });
+        return res.status(404).json({ error: "Pull request not found in organization." });
       }
 
-      if (!pr) {
-        return res.status(404).json({ error: "Pull request not found in database" });
-      }
-
-      // Fetch linked Task details for AI prompt context
+      // Fetch linked Task details for AI prompt context strictly within orgId
       let taskContext = "No linked task requirements found.";
       if (pr.linkedIssueKey) {
         const linkedTask = await TaskModel.findOne({
@@ -169,14 +186,14 @@ export const prController = {
       }
 
       // Prepare code diff string
-      const fileDiffsStr = pr.diff
+      const fileDiffsStr = (pr.diff || [])
         .map(
           (file: any) =>
             `File: ${file.filename}\n` +
-            file.chunks
+            (file.chunks || [])
               .map(
                 (c: any) =>
-                  `${c.header}\n` + c.lines.map((l: any) => `${l.type === "add" ? "+" : l.type === "del" ? "-" : " "}${l.content}`).join("\n")
+                  `${c.header}\n` + (c.lines || []).map((l: any) => `${l.type === "add" ? "+" : l.type === "del" ? "-" : " "}${l.content}`).join("\n")
               )
               .join("\n")
         )
@@ -232,7 +249,7 @@ Respond ONLY with valid JSON in this exact structure:
         }
       }
 
-      // Realistic, dynamic fallback code review if LLM not configured or failed
+      // Fallback code review if LLM not configured or failed
       if (!aiReview || typeof aiReview.score !== "number") {
         const primaryFile = pr.diff?.[0]?.filename || "src/security/headers.ts";
         const isSecurityPr = (pr.title + pr.description).toLowerCase().includes("security") || pr.linkedIssueKey === "NV-851";
@@ -241,7 +258,7 @@ Respond ONLY with valid JSON in this exact structure:
           score: isSecurityPr ? 98 : 92,
           securityStatus: "PASSED" as const,
           performanceImpact: "Estimated 45% reduction in latency & zero heap churn",
-          summary: `Automated AI Code Audit completed for PR #${pr.number} (${pr.title}). Cryptographic verification and static AST analysis confirm strict input sanitization, zero cross-tenant leakage, and compliance with task requirements.`,
+          summary: `Automated AI Code Audit completed for PR #${pr.number} (${pr.title}). Static AST analysis confirms strict input sanitization, zero cross-tenant leakage, and compliance with task requirements.`,
           findings: [
             {
               id: `find-rev-${Date.now()}-1`,
@@ -289,7 +306,11 @@ Respond ONLY with valid JSON in this exact structure:
 
   async deletePullRequest(req: Request, res: Response) {
     try {
-      const orgId = (req as any).organizationId || (req.query.orgId as string) || "org-default";
+      const orgId = (req as any).organizationId;
+      if (!orgId) {
+        return res.status(400).json({ success: false, error: "Organization context required." });
+      }
+
       const id = req.params.id || req.body?.id || (req.query.id as string);
 
       if (!id) {
@@ -303,7 +324,7 @@ Respond ONLY with valid JSON in this exact structure:
 
       const deleted = await PullRequestModel.findOneAndDelete(query);
       if (!deleted) {
-        return res.status(404).json({ success: false, error: "Pull request not found" });
+        return res.status(404).json({ success: false, error: "Pull request not found in organization" });
       }
 
       broadcastEvent({

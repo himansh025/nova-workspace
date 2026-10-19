@@ -134,8 +134,8 @@ export default function PullRequestsPage() {
           prev.map((p) => (p.id === data.pullRequest.id ? data.pullRequest : p))
         );
         addToast({
-          title: `PR #${selectedPR.number} Merged`,
-          message: `Merged into ${selectedPR.targetBranch}. Linked issue marked Done.`,
+          title: `PR #${selectedPR.number} Marked Merged (Local)`,
+          message: `Local tracking updated for ${selectedPR.targetBranch}. (Autonomous GitHub merge is disabled).`,
           type: "commit",
         });
       }
@@ -459,10 +459,11 @@ export default function PullRequestsPage() {
                       <span>{isReviewing ? "Analyzing…" : "AI Review"}</span>
                     </button>
 
-                    {/* Merge */}
+                    {/* Merge (Local status tracking) */}
                     <button
                       onClick={handleMergePR}
                       disabled={isMerging || selectedPR.status === "merged"}
+                      title="Updates local Nova tracking status. Does not push merge to GitHub."
                       className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 cursor-pointer ${
                         selectedPR.status === "merged"
                           ? "bg-[var(--nova-ai-subtle)] border border-[var(--nova-ai-border)] text-[var(--nova-ai-text)] cursor-not-allowed opacity-60"
@@ -472,12 +473,12 @@ export default function PullRequestsPage() {
                       {selectedPR.status === "merged" ? (
                         <>
                           <Check className="w-3 h-3" />
-                          <span>Merged</span>
+                          <span>Merged (Local)</span>
                         </>
                       ) : (
                         <>
                           <GitPullRequest className="w-3 h-3" />
-                          <span>{isMerging ? "Merging…" : "Merge PR"}</span>
+                          <span>{isMerging ? "Updating…" : "Mark Merged (Local)"}</span>
                         </>
                       )}
                     </button>

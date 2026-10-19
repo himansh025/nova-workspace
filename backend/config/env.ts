@@ -77,10 +77,37 @@ export const ENV = {
   // App URL (used in email links)
   APP_URL: process.env.APP_URL || "http://localhost:3007",
 
-  // GitHub OAuth (optional)
-  GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
-  GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
-  GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET || "",
+  // GitHub App & Webhook Configuration
+  get GITHUB_APP_ID(): string {
+    return process.env.GITHUB_APP_ID || "";
+  },
+  get GITHUB_CLIENT_ID(): string {
+    return process.env.GITHUB_CLIENT_ID || "";
+  },
+  get GITHUB_CLIENT_SECRET(): string {
+    return process.env.GITHUB_CLIENT_SECRET || "";
+  },
+  get GITHUB_PRIVATE_KEY(): string {
+    return process.env.GITHUB_PRIVATE_KEY || "";
+  },
+  get GITHUB_WEBHOOK_SECRET(): string {
+    return process.env.GITHUB_WEBHOOK_SECRET || "";
+  },
+  get GITHUB_APP_URL(): string {
+    return process.env.GITHUB_APP_URL || "";
+  },
+  get GITHUB_CALLBACK_URL(): string {
+    return process.env.GITHUB_CALLBACK_URL || "";
+  },
+  get CREDENTIAL_ENCRYPTION_KEY(): string {
+    return process.env.CREDENTIAL_ENCRYPTION_KEY || "";
+  },
+  get GITHUB_MAX_SOURCE_FILE_SIZE(): number {
+    return Number(process.env.GITHUB_MAX_SOURCE_FILE_SIZE || 1024 * 1024); // 1 MB default
+  },
+  get GITHUB_REQUEST_TIMEOUT_MS(): number {
+    return Number(process.env.GITHUB_REQUEST_TIMEOUT_MS || 10000); // 10s default
+  },
 
   // GitLab OAuth (optional)
   GITLAB_CLIENT_ID: process.env.GITLAB_CLIENT_ID || "",

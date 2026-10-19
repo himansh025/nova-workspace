@@ -10,7 +10,11 @@ const AUTH_TAG_LENGTH = 16;
  * Derives a 32-byte key from SESSION_SECRET for symmetric encryption of sensitive credentials (e.g. AI API keys).
  */
 function getEncryptionKey(): Buffer {
-  return crypto.createHash("sha256").update(ENV.SESSION_SECRET).digest();
+  const keyMaterial = ENV.CREDENTIAL_ENCRYPTION_KEY || ENV.SESSION_SECRET;
+  if (!ENV.CREDENTIAL_ENCRYPTION_KEY && ENV.IS_PRODUCTION) {
+    console.warn("[cryptoService] CREDENTIAL_ENCRYPTION_KEY is not set; falling back to SESSION_SECRET for legacy credential decryption.");
+  }
+  return crypto.createHash("sha256").update(keyMaterial).digest();
 }
 
 /**
@@ -52,7 +56,7 @@ export function encryptSecret(plainText: string): string {
   const authTag = cipher.getAuthTag();
 
   // Return formatted string: iv:authTag:encryptedContent (all hex)
-  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`;
+  return `v1:${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`;
 }
 
 /**
@@ -61,7 +65,8 @@ export function encryptSecret(plainText: string): string {
 export function decryptSecret(cipherText: string): string {
   if (!cipherText || !cipherText.includes(":")) return "";
   try {
-    const [ivHex, tagHex, contentHex] = cipherText.split(":");
+    const parts = cipherText.split(":");
+    const [ivHex, tagHex, contentHex] = parts[0] === "v1" ? parts.slice(1) : parts;
     const key = getEncryptionKey();
     const iv = Buffer.from(ivHex, "hex");
     const authTag = Buffer.from(tagHex, "hex");

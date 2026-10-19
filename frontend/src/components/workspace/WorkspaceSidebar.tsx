@@ -18,6 +18,8 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  FolderGit2,
+  Bot,
 } from "lucide-react";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { useAuth } from "@/context/AuthContext";
@@ -135,6 +137,11 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           href: "/app/pull-requests",
           icon: <GitPullRequest size={14} />,
         },
+        {
+          label: "Repository Explorer",
+          href: "/app/code",
+          icon: <FolderGit2 size={14} />,
+        },
       ],
     },
     {
@@ -162,6 +169,12 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           label: "AI Copilot",
           href: "/app/ai",
           icon: <Sparkles size={14} />,
+          iconClass: "text-[var(--nova-ai)]",
+        },
+        {
+          label: "Coding Agent",
+          href: "/app/agent",
+          icon: <Bot size={14} />,
           iconClass: "text-[var(--nova-ai)]",
         },
         {

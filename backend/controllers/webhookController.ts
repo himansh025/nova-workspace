@@ -7,10 +7,13 @@ import { TaskModel } from "../models/Task";
 import { ActivityItemModel } from "../models/Activity";
 import { OrganizationModel } from "../models/Organization";
 import { OrganizationMemberModel } from "../models/OrganizationMember";
-import { ProjectModel } from "../models/Project";
 import { IntegrationSettingsModel } from "../models/IntegrationSettings";
-import { githubService, extractTaskKey, parsePatchToDiffFiles, generateRealisticDiffForTopic } from "../services/githubService";
+import { GitHubInstallationModel } from "../models/GitHubInstallation";
+import { RepositoryModel } from "../models/Repository";
+import { GitHubWebhookDeliveryModel } from "../models/GitHubWebhookDelivery";
+import { githubService, extractTaskKey } from "../services/githubService";
 import { notificationService } from "../services/notificationService";
+import { decryptSecret } from "../services/cryptoService";
 import { ENV } from "../config/env";
 
 const defaultWebhooks = [
@@ -50,6 +53,7 @@ export const webhookController = {
   async getOutgoingWebhooks(req: Request, res: Response) {
     try {
       const orgId = (req as any).organizationId || (req.query.orgId as string) || "org-default";
+
       let count = await OutgoingWebhookModel.countDocuments({ organizationId: orgId });
 
       if (count === 0) {
@@ -72,12 +76,10 @@ export const webhookController = {
       const orgId = (req as any).organizationId || "org-default";
       const { action, id } = req.body;
 
-      const webhook = await OutgoingWebhookModel.findOne({
-        $or: [{ organizationId: orgId, id }, { id }],
-      });
+      const webhook = await OutgoingWebhookModel.findOne({ organizationId: orgId, id });
 
       if (!webhook) {
-        return res.status(404).json({ error: "Webhook not found in database" });
+        return res.status(404).json({ error: "Webhook not found in organization" });
       }
 
       if (action === "test") {
@@ -91,6 +93,7 @@ export const webhookController = {
           title: `Webhook Test Dispatched: ${webhook.name}`,
           message: `Successfully dispatched HMAC test payload to ${webhook.target.toUpperCase()} endpoint (${webhook.url})`,
           link: "/app/settings",
+          meta: { organizationId: orgId },
         });
 
         return res.json({
@@ -107,90 +110,222 @@ export const webhookController = {
   },
 
   async handleGithubWebhook(req: Request, res: Response) {
-    try {
-      let orgId =
-        (req as any).organizationId ||
-        (req.query.orgId as string) ||
-        (req.headers["x-organization-id"] as string) ||
-        req.body.organizationId;
-      const repoFullName = req.body.repository?.full_name || req.body.repository?.name;
+    const deliveryId = req.headers["x-github-delivery"] as string;
+    const rawEvent = (req.headers["x-github-event"] as string) || req.body.event || "push";
+    let deliveryDoc: any = null;
 
-      if ((!orgId || orgId === "org-default") && repoFullName) {
+    try {
+      // ─── 1. Webhook Delivery Idempotency ──────────────────────────────────────
+      if (deliveryId) {
+        const existing = await GitHubWebhookDeliveryModel.findOne({ deliveryId });
+        if (existing && (existing.status === "COMPLETED" || existing.status === "PROCESSING")) {
+          return res.status(200).json({
+            success: true,
+            message: "Duplicate webhook delivery ignored.",
+            duplicate: true,
+            deliveryId,
+          });
+        }
+
+        deliveryDoc = await GitHubWebhookDeliveryModel.create({
+          deliveryId,
+          event: rawEvent,
+          status: "PROCESSING",
+        });
+      }
+
+      // ─── 2. Resolve Organization Routing First ────────────────────────────────
+      let orgId: string | undefined;
+
+      // Priority 1: GitHub App Installation ID
+      const installationId = req.body.installation?.id;
+      if (installationId) {
+        const installation = await GitHubInstallationModel.findOne({
+          githubInstallationId: Number(installationId),
+        });
+        if (installation) {
+          orgId = installation.organizationId;
+        }
+      }
+
+      // Priority 2: Registered Repository Identity
+      const repoFullName = req.body.repository?.full_name || req.body.repository?.name;
+      const repoId = req.body.repository?.id;
+
+      if (!orgId && (repoId || repoFullName)) {
+        const repoDoc = await RepositoryModel.findOne(
+          repoId ? { githubRepositoryId: Number(repoId) } : { fullName: repoFullName }
+        );
+        if (repoDoc) {
+          orgId = repoDoc.organizationId;
+        }
+      }
+
+      // Priority 3: Legacy PAT Integration Settings
+      if (!orgId && repoFullName) {
         const escaped = repoFullName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const setting = await IntegrationSettingsModel.findOne({
           "github.repository": new RegExp(`^${escaped}$`, "i"),
         });
         if (setting) {
           orgId = setting.organizationId;
-        } else {
-          const project = await ProjectModel.findOne({
-            repository: new RegExp(escaped, "i"),
-          });
-          if (project) {
-            orgId = project.organizationId;
+        }
+      }
+
+      // Priority 4: Test Harness / Simulator bypass in non-production only
+      if (!orgId && !ENV.IS_PRODUCTION) {
+        const candidateOrg =
+          (req as any).organizationId ||
+          (req.headers["x-organization-id"] as string) ||
+          req.body.organizationId;
+        if (candidateOrg) {
+          const orgDoc = await OrganizationModel.findOne({ id: candidateOrg });
+          if (orgDoc) {
+            orgId = candidateOrg;
           }
         }
       }
 
-      // If orgId is still not resolved, check linked task key
-      if (!orgId || orgId === "org-default") {
-        const earlyTaskKey =
-          req.body.taskKey ||
-          extractTaskKey(
-            req.body.ref || req.body.branch || req.body.pull_request?.head?.ref,
-            req.body.title || req.body.pull_request?.title,
-            req.body.body || req.body.pull_request?.body,
-            req.body.head_commit?.message
-          );
-        if (earlyTaskKey) {
-          const taskDoc = await TaskModel.findOne({
-            $or: [{ id: earlyTaskKey }, { key: earlyTaskKey }],
-          });
-          if (taskDoc) {
-            orgId = taskDoc.organizationId;
-          }
-        }
-      }
-
-      // Fallback: If only 1 configured GitHub organization exists in DB, route to it
-      if (!orgId || orgId === "org-default") {
-        const anyConfigured = await IntegrationSettingsModel.findOne({ "github.enabled": true });
-        if (anyConfigured) {
-          orgId = anyConfigured.organizationId;
-        }
-      }
-
+      // If organization could not be resolved from trusted mapping: REJECT/IGNORE SAFELY
       if (!orgId) {
-        orgId = "org-default";
+        if (deliveryDoc) {
+          deliveryDoc.status = "COMPLETED";
+          deliveryDoc.error = "Unmapped repository or installation; safely ignored.";
+          await deliveryDoc.save();
+        }
+        return res.status(202).json({
+          success: false,
+          message: "Webhook ignored: No authorized Nova organization matches repository or installation.",
+        });
       }
 
-      const config = await githubService.getGitHubConfig(orgId);
-
-      // Verify HMAC-SHA256 signature if secret is present
-      const webhookSecret = config.webhookSecret || ENV.GITHUB_WEBHOOK_SECRET;
+      // ─── 3. Webhook Signature Verification with RAW BYTES ─────────────────────
       const signature = req.headers["x-hub-signature-256"] as string;
+      const rawBytes: Buffer =
+        (req as any).rawBody ||
+        (Buffer.isBuffer(req.body)
+          ? req.body
+          : typeof req.body === "string"
+          ? Buffer.from(req.body, "utf8")
+          : Buffer.from(JSON.stringify(req.body), "utf8"));
 
-      if (webhookSecret && signature) {
-        const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+      let orgWebhookSecret = "";
+      if (orgId) {
+        const setting = await IntegrationSettingsModel.findOne({ organizationId: orgId });
+        if (setting?.github?.encryptedWebhookSecret) {
+          try {
+            orgWebhookSecret = decryptSecret(setting.github.encryptedWebhookSecret);
+          } catch {}
+        }
+      }
+
+      const effectiveSecret = ENV.GITHUB_WEBHOOK_SECRET || orgWebhookSecret;
+
+      if (ENV.IS_PRODUCTION && !effectiveSecret) {
+        if (deliveryDoc) {
+          deliveryDoc.status = "FAILED";
+          deliveryDoc.error = "GITHUB_WEBHOOK_SECRET not configured in production.";
+          await deliveryDoc.save();
+        }
+        return res.status(500).json({
+          success: false,
+          error: "Webhook security failure: GITHUB_WEBHOOK_SECRET is not configured on the server.",
+        });
+      }
+
+      if (ENV.IS_PRODUCTION && !signature) {
+        if (deliveryDoc) {
+          deliveryDoc.status = "FAILED";
+          deliveryDoc.error = "Missing required X-Hub-Signature-256 header in production.";
+          await deliveryDoc.save();
+        }
+        return res.status(401).json({
+          success: false,
+          error: "Unauthorized: Missing X-Hub-Signature-256 signature header.",
+        });
+      }
+
+      if (signature) {
+        if (!effectiveSecret) {
+          if (deliveryDoc) {
+            deliveryDoc.status = "FAILED";
+            deliveryDoc.error = "Signature provided but webhook secret is not configured.";
+            await deliveryDoc.save();
+          }
+          return res.status(401).json({
+            success: false,
+            error: "Webhook secret is not configured on server.",
+          });
+        }
+
         const expectedSig = `sha256=${crypto
-          .createHmac("sha256", webhookSecret)
-          .update(rawBody)
+          .createHmac("sha256", effectiveSecret)
+          .update(rawBytes)
           .digest("hex")}`;
 
+        const sigBuffer = Buffer.from(signature);
+        const expectedBuffer = Buffer.from(expectedSig);
+
         if (
-          signature.length !== expectedSig.length ||
-          !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))
+          sigBuffer.length !== expectedBuffer.length ||
+          !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
         ) {
-          return res.status(401).json({ success: false, error: "Invalid webhook signature." });
+          if (deliveryDoc) {
+            deliveryDoc.status = "FAILED";
+            deliveryDoc.error = "Invalid HMAC-SHA256 signature.";
+            await deliveryDoc.save();
+          }
+          return res.status(401).json({
+            success: false,
+            error: "Invalid webhook signature.",
+          });
         }
-      } else if (signature && !webhookSecret) {
-        // Signature supplied but secret not configured
-        return res.status(401).json({ success: false, error: "Webhook secret not configured on server." });
       }
 
-      const rawEvent = (req.headers["x-github-event"] as string) || req.body.event || "push";
+      if (deliveryDoc) {
+        deliveryDoc.organizationId = orgId;
+        deliveryDoc.githubInstallationId = installationId;
+        deliveryDoc.repositoryFullName = repoFullName;
+      }
 
-      // Standardize simulator payloads if sent from settings test harness
+      // ─── 4. Handle GitHub App Installation Lifecycle Events ───────────────────
+      if (rawEvent === "installation" && req.body.installation) {
+        const action = req.body.action;
+        const instId = Number(req.body.installation.id);
+
+        if (action === "deleted") {
+          await GitHubInstallationModel.updateOne(
+            { githubInstallationId: instId },
+            { $set: { status: "REVOKED" } }
+          );
+          await RepositoryModel.updateMany(
+            { githubInstallationId: instId },
+            { $set: { selected: false } }
+          );
+        } else if (action === "suspend") {
+          await GitHubInstallationModel.updateOne(
+            { githubInstallationId: instId },
+            { $set: { status: "SUSPENDED" } }
+          );
+        } else if (action === "unsuspend") {
+          await GitHubInstallationModel.updateOne(
+            { githubInstallationId: instId },
+            { $set: { status: "ACTIVE" } }
+          );
+        }
+
+        if (deliveryDoc) {
+          deliveryDoc.status = "COMPLETED";
+          await deliveryDoc.save();
+        }
+
+        return res.json({
+          success: true,
+          message: `Handled GitHub App installation ${action} event successfully.`,
+        });
+      }
+
+      // ─── 5. Normalize Simulator / Settings Test Payloads ──────────────────────
       let ghEvent = rawEvent;
       let ghPR = req.body.pull_request;
       let prAction = req.body.action || "opened";
@@ -216,11 +351,11 @@ export const webhookController = {
           deletions: 18,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          html_url: `https://github.com/${config.repository || "organization/repo"}/pull/104`,
+          html_url: `https://github.com/${repoFullName || "organization/repo"}/pull/104`,
         };
       }
 
-      // Handle GitHub Pull Request events
+      // ─── 6. Handle Pull Request Events ────────────────────────────────────────
       if (ghEvent === "pull_request" && ghPR) {
         const prId = `pr-gh-${ghPR.id}`;
         const authorName = ghPR.user?.login || "GitHub User";
@@ -244,8 +379,14 @@ export const webhookController = {
         const orgDoc = await OrganizationModel.findOne({ id: orgId });
         const configuredDefaultBranch = orgDoc?.defaultBranch || "main";
 
-        // Construct dynamic, realistic code diff files for the PR
-        const diffFiles = await githubService.fetchPullRequestDiff(orgId, ghPR.number, ghPR.title, linkedIssueKey);
+        // Fetch diff for the PR (in non-simulation, only real diffs from GitHub)
+        const diffFiles = await githubService.fetchPullRequestDiff(
+          orgId,
+          ghPR.number,
+          ghPR.title,
+          linkedIssueKey,
+          !ENV.IS_PRODUCTION
+        );
 
         await PullRequestModel.findOneAndUpdate(
           { organizationId: orgId, $or: [{ id: prId }, { number: ghPR.number }] },
@@ -265,7 +406,7 @@ export const webhookController = {
               targetBranch,
               status,
               commitsCount: ghPR.commits || 1,
-              filesChangedCount: ghPR.changed_files || 1,
+              filesChangedCount: ghPR.changed_files || diffFiles.length,
               additions: ghPR.additions || 0,
               deletions: ghPR.deletions || 0,
               updatedAt: new Date().toISOString(),
@@ -275,32 +416,22 @@ export const webhookController = {
               diff: diffFiles,
             },
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: "after" }
         );
 
-        // Link Task branch and update status on merge
+        // Link Task branch and update status strictly scoped to orgId
         if (linkedIssueKey) {
-          let taskDoc = await TaskModel.findOne({
+          const taskDoc = await TaskModel.findOne({
             organizationId: orgId,
             $or: [{ id: linkedIssueKey }, { key: linkedIssueKey }],
           });
-          if (!taskDoc) {
-            taskDoc = await TaskModel.findOne({
-              $or: [{ id: linkedIssueKey }, { key: linkedIssueKey }],
-            });
-            if (taskDoc) {
-              orgId = taskDoc.organizationId;
-            }
-          }
 
           if (taskDoc) {
-            // Update branch reference if not already set
             if (!taskDoc.branch) {
               taskDoc.branch = headBranch;
               await taskDoc.save();
             }
 
-            // Check merge condition: MUST be merged AND target branch MUST match configured default branch
             if (isMerged && targetBranch === configuredDefaultBranch) {
               if (taskDoc.status !== "done") {
                 taskDoc.status = "done";
@@ -331,7 +462,7 @@ export const webhookController = {
           }
         }
 
-        // Dispatch persistent notifications to active organization members
+        // Dispatch notifications to active organization members
         try {
           const orgMembers = await OrganizationMemberModel.find({ organizationId: orgId, deletedAt: null });
           const notifTitle = `GitHub PR #${ghPR.number} ${prAction}`;
@@ -351,8 +482,8 @@ export const webhookController = {
               { broadcast: false }
             );
           }
-        } catch (notifErr) {
-          console.warn("[Webhook PR Notification Warning]:", notifErr);
+        } catch (notifErr: any) {
+          console.warn("[Webhook PR Notification Warning]:", notifErr.message);
         }
 
         broadcastEvent({
@@ -364,6 +495,11 @@ export const webhookController = {
           meta: { prNumber: ghPR.number, action: prAction, organizationId: orgId },
         });
 
+        if (deliveryDoc) {
+          deliveryDoc.status = "COMPLETED";
+          await deliveryDoc.save();
+        }
+
         return res.json({
           success: true,
           message: `Processed pull_request (${prAction}) event successfully for ${linkedIssueKey ? `task ${linkedIssueKey}` : "PR #" + ghPR.number}.`,
@@ -374,7 +510,7 @@ export const webhookController = {
         });
       }
 
-      // Handle Push events
+      // ─── 7. Handle Push Events ────────────────────────────────────────────────
       if (ghEvent === "push") {
         const branchRef = req.body.ref || req.body.branch || "refs/heads/main";
         const branchName = branchRef.replace(/^refs\/heads\//, "");
@@ -384,15 +520,11 @@ export const webhookController = {
         const taskKey = extractTaskKey(branchName, undefined, undefined, commitMessage);
 
         if (taskKey) {
-          let taskDoc = await TaskModel.findOne({
+          const taskDoc = await TaskModel.findOne({
             organizationId: orgId,
             $or: [{ id: taskKey }, { key: taskKey }],
           });
-          if (!taskDoc) {
-            taskDoc = await TaskModel.findOne({
-              $or: [{ id: taskKey }, { key: taskKey }],
-            });
-          }
+
           if (taskDoc) {
             taskDoc.branch = branchName;
             if (taskDoc.status === "backlog" || taskDoc.status === "todo") {
@@ -403,7 +535,6 @@ export const webhookController = {
           }
         }
 
-        // Dispatch persistent notifications to active organization members
         try {
           const orgMembers = await OrganizationMemberModel.find({ organizationId: orgId, deletedAt: null });
           const notifTitle = `GitHub Push to ${branchName}`;
@@ -423,8 +554,8 @@ export const webhookController = {
               { broadcast: false }
             );
           }
-        } catch (notifErr) {
-          console.warn("[Webhook Push Notification Warning]:", notifErr);
+        } catch (notifErr: any) {
+          console.warn("[Webhook Push Notification Warning]:", notifErr.message);
         }
 
         broadcastEvent({
@@ -436,6 +567,11 @@ export const webhookController = {
           meta: { organizationId: orgId, branch: branchName, taskKey },
         });
 
+        if (deliveryDoc) {
+          deliveryDoc.status = "COMPLETED";
+          await deliveryDoc.save();
+        }
+
         return res.json({
           success: true,
           message: `Handled push event on branch ${branchName} successfully.`,
@@ -443,7 +579,7 @@ export const webhookController = {
         });
       }
 
-      // Handle CI / Check Run events
+      // ─── 8. Handle CI / Check Run Events ──────────────────────────────────────
       if (ghEvent === "check_run" || ghEvent === "workflow_run" || ghEvent === "ci_passed") {
         const status = req.body.check_run?.conclusion || req.body.workflow_run?.conclusion || "success";
         const name = req.body.check_run?.name || req.body.workflow_run?.name || "CI Test Suite";
@@ -457,15 +593,29 @@ export const webhookController = {
           meta: { organizationId: orgId, status },
         });
 
+        if (deliveryDoc) {
+          deliveryDoc.status = "COMPLETED";
+          await deliveryDoc.save();
+        }
+
         return res.json({
           success: true,
           message: `Handled CI/Check event (${status}) successfully.`,
         });
       }
 
-      // Fallback response for other events
+      if (deliveryDoc) {
+        deliveryDoc.status = "COMPLETED";
+        await deliveryDoc.save();
+      }
+
       return res.json({ success: true, message: `Handled ${ghEvent} event successfully.` });
     } catch (error: any) {
+      if (deliveryDoc) {
+        deliveryDoc.status = "FAILED";
+        deliveryDoc.error = error.message;
+        await deliveryDoc.save().catch(() => {});
+      }
       return res.status(500).json({ success: false, error: error.message });
     }
   },

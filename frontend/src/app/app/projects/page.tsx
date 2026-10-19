@@ -26,6 +26,18 @@ export default function ProjectsPage() {
   const [teamGroupId, setTeamGroupId] = useState("");
   const [isDefaultForTasks, setIsDefaultForTasks] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [connectedRepos, setConnectedRepos] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/integrations/github/repositories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.repositories)) {
+          setConnectedRepos(data.repositories);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const squadNameById = (id?: string | null) =>
     id ? squads.find((s) => s.id === id)?.name || "Unknown squad" : "Unassigned";
@@ -503,14 +515,36 @@ export default function ProjectsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[var(--nova-text-secondary)] text-[11px] mb-1 font-medium">Repository URL</label>
-                  <input
-                    type="text"
-                    value={repository}
-                    onChange={(e) => setRepository(e.target.value)}
-                    placeholder="github.com/org/repo"
-                    className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)] text-xs"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[var(--nova-text-secondary)] text-[11px] font-medium">Repository URL</label>
+                    {connectedRepos.length > 0 && (
+                      <span className="text-[10px] text-[var(--nova-accent)] font-mono">
+                        {connectedRepos.length} connected
+                      </span>
+                    )}
+                  </div>
+                  {connectedRepos.length > 0 ? (
+                    <select
+                      value={repository}
+                      onChange={(e) => setRepository(e.target.value)}
+                      className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] focus:outline-none focus:border-[var(--nova-accent)] text-xs font-mono"
+                    >
+                      <option value="">Select connected repository or custom...</option>
+                      {connectedRepos.map((r) => (
+                        <option key={r.id} value={`github.com/${r.fullName}`}>
+                          {r.fullName} ({r.defaultBranch})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={repository}
+                      onChange={(e) => setRepository(e.target.value)}
+                      placeholder="github.com/org/repo"
+                      className="w-full px-3 py-2 rounded-md bg-[var(--nova-bg)] border border-[var(--nova-border)] text-[var(--nova-text-primary)] placeholder-[var(--nova-text-placeholder)] focus:outline-none focus:border-[var(--nova-accent)] text-xs font-mono"
+                    />
+                  )}
                 </div>
               </div>
 
