@@ -60,7 +60,7 @@ async function runAgentFoundationTests() {
   assert(toolNames.includes("write_file"), "write_file registered");
   assert(toolNames.includes("read_file"), "read_file registered");
   assert(getAgentTool("read_file") !== undefined, "read_file tool registered");
-  assert(getAgentTool("write_file") === undefined, "No write_file tool");
+  assert(getAgentTool("write_file") !== undefined, "write_file tool gated by enableEdits");
 
   // ─── Iteration / context limits configured ───────────────────────────────
   assert(AGENT_CONFIG.maxIterations > 0 && AGENT_CONFIG.maxIterations <= 50, "Iteration limit bounded");

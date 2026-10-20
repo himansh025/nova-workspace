@@ -144,7 +144,7 @@ export default function OrgAccessControlPanel() {
       if (catalogData.grantable) setCatalog(catalogData.grantable);
       if (catalogData.ownerOnly) setOwnerOnly(catalogData.ownerOnly);
     } catch {
-      addToast({ title: "Error", message: "Could not load access control data.", type: "error" });
+      addToast({ title: "Error", message: "Could not load access control data.", type: "warning" });
     } finally {
       setLoading(false);
     }
@@ -201,7 +201,7 @@ export default function OrgAccessControlPanel() {
       addToast({
         title: "Save failed",
         message: e instanceof Error ? e.message : "Could not update permissions.",
-        type: "error",
+        type: "warning",
       });
     } finally {
       setSaving(false);

@@ -209,7 +209,7 @@ export const agentGithubPublishService = {
       },
     });
     if (!res.ok) return null;
-    const data: any[] = await res.json();
+    const data = (await res.json()) as any[];
     const pr = data[0];
     if (!pr) return null;
     return { number: pr.number, html_url: pr.html_url, id: pr.id };

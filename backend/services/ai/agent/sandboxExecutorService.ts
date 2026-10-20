@@ -50,7 +50,7 @@ async function runMockSandbox(
   const started = Date.now();
   const mock = await readMockConfig(workspace);
   if (mock?.delayMs) {
-    await new Promise((r) => setTimeout(r, Math.min(mock.delayMs, 5000)));
+    await new Promise((r) => setTimeout(r, Math.min(mock.delayMs ?? 0, 5000)));
   }
   if (mock) {
     return {
