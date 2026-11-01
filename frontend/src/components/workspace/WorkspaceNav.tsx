@@ -129,10 +129,10 @@ export const WorkspaceNav: React.FC<WorkspaceNavProps> = ({
     { label: "Sprint Planning", href: "/app/sprints", icon: <Kanban className="w-3.5 h-3.5" />, category: "Navigation" },
     { label: "Pull Requests", href: "/app/pull-requests", icon: <GitPullRequest className="w-3.5 h-3.5" />, category: "Navigation" },
     { label: "Architecture Specs", href: "/app/specs", icon: <FileCode2 className="w-3.5 h-3.5" />, category: "Navigation" },
-    { label: "Service Mesh Architecture", href: "/app/architecture", icon: <Network className="w-3.5 h-3.5" />, category: "Navigation" },
+    // { label: "Service Mesh Architecture", href: "/app/architecture", icon: <Network className="w-3.5 h-3.5" />, category: "Navigation" },
     { label: "AI Copilot Context Engine", href: "/app/ai", icon: <Sparkles className="w-3.5 h-3.5 text-[var(--nova-ai)]" />, category: "AI & Intelligence" },
     { label: "Engineering Telemetry", href: "/app/insights", icon: <TrendingUp className="w-3.5 h-3.5" />, category: "Operations" },
-    { label: "Releases & Canary Deployments", href: "/app/releases", icon: <Rocket className="w-3.5 h-3.5" />, category: "Operations" },
+    // { label: "Releases & Canary Deployments", href: "/app/releases", icon: <Rocket className="w-3.5 h-3.5" />, category: "Operations" },
     { label: "Team Directory", href: "/app/team", icon: <Users className="w-3.5 h-3.5" />, category: "Organization" },
     { label: "Workspace Settings", href: "/app/settings", icon: <Settings className="w-3.5 h-3.5" />, category: "Organization" },
   ];

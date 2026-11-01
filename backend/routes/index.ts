@@ -5,7 +5,7 @@ import taskRoutes from "./taskRoutes";
 import sprintRoutes from "./sprintRoutes";
 import prRoutes from "./prRoutes";
 import specRoutes from "./specRoutes";
-import meshRoutes from "./meshRoutes";
+// import meshRoutes from "./meshRoutes";
 import releaseRoutes from "./releaseRoutes";
 import teamRoutes from "./teamRoutes";
 import projectRoutes from "./projectRoutes";
@@ -23,7 +23,7 @@ router.use("/tasks", taskRoutes);
 router.use("/sprints", sprintRoutes);
 router.use("/", prRoutes); // /api/pull-requests & /api/ai/review-pr
 router.use("/specs", specRoutes);
-router.use("/architecture", meshRoutes);
+// router.use("/architecture", meshRoutes);
 router.use("/releases", releaseRoutes);
 router.use("/team", teamRoutes);
 router.use("/projects", projectRoutes);

@@ -457,9 +457,8 @@ export default function OverviewPage() {
 
         {/* Right column */}
         <div className="space-y-5">
-          {/* Canary Release */}
-          <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-3">
-            {/* Header */}
+          {/* Canary Release — commented out */}
+          {/* <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Rocket className="w-4 h-4 text-[var(--nova-success)]" />
@@ -467,13 +466,11 @@ export default function OverviewPage() {
                   Canary Release
                 </span>
               </div>
-              {/* Version badge */}
               <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-[var(--nova-success-subtle)] text-[var(--nova-success-text)] border border-[var(--nova-success-border)]">
                 {release?.version || "v1.0.0"}
               </span>
             </div>
 
-            {/* Canary traffic section */}
             <div className="bg-[var(--nova-deep)] border border-[var(--nova-border-muted)] rounded-md p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-[var(--nova-text-secondary)]">
@@ -498,14 +495,13 @@ export default function OverviewPage() {
               </div>
             </div>
 
-            {/* CTA */}
             <Link
               href="/app/releases"
               className="w-full flex items-center justify-center gap-1.5 bg-[var(--nova-surface)] border border-[var(--nova-border)] text-[var(--nova-text-secondary)] hover:text-[var(--nova-text-primary)] hover:border-[var(--nova-border-strong)] rounded px-3 py-1.5 text-[12px] transition-colors"
             >
               Manage Pipeline →
             </Link>
-          </div>
+          </div> */}
 
           {/* Live Activity Stream */}
           <div className="bg-[var(--nova-surface)] border border-[var(--nova-border)] rounded-lg">

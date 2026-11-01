@@ -154,11 +154,11 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           icon: <FileCode2 size={14} />,
           count: counts.specs,
         },
-        {
-          label: "Service Mesh",
-          href: "/app/architecture",
-          icon: <Network size={14} />,
-        },
+        // {
+        //   label: "Service Mesh",
+        //   href: "/app/architecture",
+        //   icon: <Network size={14} />,
+        // },
       ],
     },
     {
@@ -171,12 +171,12 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           icon: <Sparkles size={14} />,
           iconClass: "text-[var(--nova-ai)]",
         },
-        {
-          label: "Coding Agent",
-          href: "/app/agent",
-          icon: <Bot size={14} />,
-          iconClass: "text-[var(--nova-ai)]",
-        },
+        // {
+        //   label: "Coding Agent",
+        //   href: "/app/agent",
+        //   icon: <Bot size={14} />,
+        //   iconClass: "text-[var(--nova-ai)]",
+        // },
         {
           label: "Telemetry & Signals",
           href: "/app/insights",
@@ -188,11 +188,11 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       // Section 4 — OPERATIONS
       header: "Operations",
       items: [
-        {
-          label: "Releases & Canary",
-          href: "/app/releases",
-          icon: <Rocket size={14} />,
-        },
+        // {
+        //   label: "Releases & Canary",
+        //   href: "/app/releases",
+        //   icon: <Rocket size={14} />,
+        // },
         {
           label: "Projects",
           href: "/app/projects",
