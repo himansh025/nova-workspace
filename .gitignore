@@ -9,10 +9,27 @@ node_modules/
 # Environment variable files (Keep secrets safe!)
 .env
 .env.*
+.env*.local
 *.env
 **/.env
 **/.env.*
+**/.env*.local
 !.env.example
+!**/.env.example
+
+# Certificates & Private Keys
+*.pem
+*.key
+*.p8
+*.pkcs12
+*.pfx
+*.crt
+*.cert
+id_rsa*
+id_ed25519*
+**/*.pem
+**/*.key
+
 
 # Next.js Build Outputs & Cache
 .next/
